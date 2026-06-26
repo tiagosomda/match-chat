@@ -46,6 +46,25 @@ class Formatting {
     return gmt;
   }
 
+  /// Bare duration until kickoff, e.g. "3h 20m", "2d 4h", "5m", or "<1m".
+  /// Returns null once kickoff has passed or the time is unknown — callers wrap
+  /// it with a localized "Starts in …" label.
+  static String? untilKickoff(DateTime? utc) {
+    if (utc == null) return null;
+    final diff = utc.toLocal().difference(DateTime.now());
+    if (diff.isNegative) return null;
+    if (diff.inDays >= 1) {
+      final h = diff.inHours % 24;
+      return h > 0 ? '${diff.inDays}d ${h}h' : '${diff.inDays}d';
+    }
+    if (diff.inHours >= 1) {
+      final m = diff.inMinutes % 60;
+      return m > 0 ? '${diff.inHours}h ${m}m' : '${diff.inHours}h';
+    }
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m';
+    return '<1m';
+  }
+
   /// Short relative time like "3h", "5m", "now", or a date for old items.
   static String ago(DateTime? time) {
     if (time == null) return '';

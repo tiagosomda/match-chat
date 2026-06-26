@@ -277,11 +277,42 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   fontSize: 9,
                   letterSpacing: 1.4,
                 ),
+                _kickoffCountdown(c, match),
               ],
             ),
           ),
           _friendsCounter(context, app, match),
         ],
+      ),
+    );
+  }
+
+  /// A countdown pill ("Starts in 3h 20m") shown for upcoming matches.
+  Widget _kickoffCountdown(AppColors c, MatchModel match) {
+    if (match.status != MatchStatus.upcoming) return const SizedBox.shrink();
+    final left = Formatting.untilKickoff(match.scheduledAt);
+    if (left == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
+            const SizedBox(width: 6),
+            Text('Starts in $left',
+                style: TextStyle(
+                    color: c.accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5)),
+          ],
+        ),
       ),
     );
   }

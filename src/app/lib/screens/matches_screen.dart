@@ -298,6 +298,9 @@ class _MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final showScore = revealed && match.hasScore;
+    final countdown = match.status == MatchStatus.upcoming
+        ? Formatting.untilKickoff(match.scheduledAt)
+        : null;
     return GestureDetector(
       onTap: onOpen,
       child: Opacity(
@@ -338,6 +341,21 @@ class _MatchCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
+                  ],
+                  if (countdown != null) ...[
+                    Icon(Icons.hourglass_bottom, size: 11, color: c.accent),
+                    const SizedBox(width: 4),
+                    Text(
+                      countdown,
+                      style: TextStyle(
+                        fontFamily: AppTheme.mono,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        color: c.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                   ],
                   Text(
                     match.status.label,
