@@ -23,6 +23,23 @@ class Formatting {
     return DateFormat('EEE, MMM d · h:mm a').format(local);
   }
 
+  /// A short label for the viewer's local timezone, e.g. "EDT" or "GMT-4".
+  /// Prefers the platform abbreviation when it's short; otherwise falls back to
+  /// a GMT offset (Flutter web often returns a long/empty timeZoneName).
+  static String timezoneLabel([DateTime? at]) {
+    final now = at ?? DateTime.now();
+    final name = now.timeZoneName.trim();
+    final offset = now.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final h = offset.inHours.abs();
+    final m = offset.inMinutes.abs() % 60;
+    final gmt = 'GMT$sign$h${m == 0 ? '' : ':${m.toString().padLeft(2, '0')}'}';
+    if (name.isNotEmpty && name.length <= 5 && !name.contains(' ')) {
+      return name;
+    }
+    return gmt;
+  }
+
   /// Short relative time like "3h", "5m", "now", or a date for old items.
   static String ago(DateTime? time) {
     if (time == null) return '';

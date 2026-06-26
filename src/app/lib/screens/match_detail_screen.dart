@@ -234,7 +234,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                MonoLabel('YOUR LOCAL TIME',
+                MonoLabel('YOUR LOCAL TIME (${Formatting.timezoneLabel()})',
                     fontSize: 9, letterSpacing: 1.4),
               ],
             ),
