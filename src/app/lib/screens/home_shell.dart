@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
 import 'chat_screen.dart';
+import 'leaderboard_screen.dart';
 import 'matches_screen.dart';
 import 'no_tournament_screen.dart';
 import 'profile_screen.dart';
@@ -46,6 +47,7 @@ class _HomeShellState extends State<HomeShell> {
 
     final body = switch (_tab) {
       AppTab.matches => const MatchesScreen(),
+      AppTab.leaderboard => const LeaderboardScreen(),
       AppTab.chat => const ChatScreen(),
       AppTab.profile => const ProfileScreen(),
     };
@@ -123,6 +125,12 @@ class _BottomNav extends StatelessWidget {
               Icons.sports_soccer_outlined,
               context.l10n.t('navMatches').toUpperCase(),
               AppTab.matches,
+            ),
+            _navItem(
+              c,
+              Icons.emoji_events_outlined,
+              context.l10n.t('navRanks').toUpperCase(),
+              AppTab.leaderboard,
             ),
             _navItem(
               c,

@@ -24,7 +24,7 @@ services/            One class per Firestore concern (match, comment, prediction
 state/app_state.dart Single ChangeNotifier holding the session: signed-in user,
                      active tournament, theme + language, and the shared services.
 screens/             One file per screen (auth, matches, match detail, chat,
-                     profile, user profile, admin, …)
+                     leaderboard, country matches, profile, user profile, …)
 widgets/             Reusable UI (avatar, buttons, friends sheet, …)
 theme/               Color palette + Material theme (light / dark / auto)
 utils/               Formatting, validation, team→flag lookup
@@ -35,7 +35,7 @@ l10n/                Hand-rolled localization (en, es, pt-PT, pt-BR)
 
 1. `main.dart` wraps the app in an `AppState` provider and renders `RootGate`.
 2. `RootGate` watches auth state and shows the landing/auth screen, a loading
-   splash, or the signed-in `HomeShell` (Matches / Chat / Profile tabs).
+   splash, or the signed-in `HomeShell` (Matches / Ranks / Chat / Profile tabs).
 3. Screens read live data with Firestore `StreamBuilder`s wired to the
    `services/`. Writes call the same services.
 4. `AppState` exposes the current user, role flags (`isAdmin`,

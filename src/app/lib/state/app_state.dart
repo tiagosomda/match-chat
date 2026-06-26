@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/comment_service.dart';
 import '../services/invite_service.dart';
+import '../services/leaderboard_service.dart';
 import '../services/match_service.dart';
 import '../services/prediction_service.dart';
 import '../services/reveal_service.dart';
@@ -21,7 +22,7 @@ import '../services/user_service.dart';
 enum AppThemeMode { auto, light, dark }
 
 /// Top-level navigation tabs.
-enum AppTab { matches, chat, profile }
+enum AppTab { matches, leaderboard, chat, profile }
 
 /// Holds session-wide state: the authenticated user, the active tournament, the
 /// theme preference, and shared service instances.
@@ -40,6 +41,7 @@ class AppState extends ChangeNotifier {
   final PredictionService predictions = PredictionService();
   final ChatService chat = ChatService();
   final InviteService invites = InviteService();
+  final LeaderboardService leaderboard = LeaderboardService();
   final RevealService reveals = RevealService();
   final SeedService seed = SeedService();
 

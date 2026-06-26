@@ -287,6 +287,22 @@ const Map<String, String> _en = {
   'noTournamentAdmin': 'Seed the sample World Cup 2026 data to get started.',
   'noTournamentViewer': 'Check back soon — an admin needs to set things up.',
   'seedSampleData': 'Seed sample data',
+  // leaderboard (#8)
+  'navRanks': 'Ranks',
+  'leaderboard': 'Leaderboard',
+  'playersCount': '{n} PLAYERS',
+  'lbGlobal': 'Global',
+  'lbFriends': 'Friends',
+  'lbNearMe': 'Near me',
+  'searchPlayers': 'Search players…',
+  'scoreExact': 'Exact score',
+  'scoreGoalDiff': 'Goal difference',
+  'scoreResult': 'Correct result',
+  'lbStats': '{exact} exact · {played} scored',
+  'ptsUpper': 'PTS',
+  'leaderboardEmpty':
+      'No scored predictions yet — check back once some matches have finished.',
+  'leaderboardNoneHere': 'Nobody here yet.',
 };
 
 // ---------------------------------------------------------------------------
@@ -467,6 +483,21 @@ const Map<String, String> _es = {
   'noTournamentViewer':
       'Vuelve pronto — un administrador debe configurar todo.',
   'seedSampleData': 'Cargar datos de ejemplo',
+  'navRanks': 'Ranking',
+  'leaderboard': 'Clasificación',
+  'playersCount': '{n} JUGADORES',
+  'lbGlobal': 'Global',
+  'lbFriends': 'Amigos',
+  'lbNearMe': 'Cerca de ti',
+  'searchPlayers': 'Buscar jugadores…',
+  'scoreExact': 'Marcador exacto',
+  'scoreGoalDiff': 'Diferencia de goles',
+  'scoreResult': 'Resultado correcto',
+  'lbStats': '{exact} exactos · {played} jugados',
+  'ptsUpper': 'PTS',
+  'leaderboardEmpty':
+      'Aún no hay pronósticos puntuados — vuelve cuando terminen algunos partidos.',
+  'leaderboardNoneHere': 'Aún no hay nadie aquí.',
 };
 
 // ---------------------------------------------------------------------------
@@ -645,6 +676,21 @@ const Map<String, String> _pt = {
   'noTournamentViewer':
       'Volta em breve — um administrador precisa de configurar tudo.',
   'seedSampleData': 'Carregar dados de exemplo',
+  'navRanks': 'Ranking',
+  'leaderboard': 'Classificação',
+  'playersCount': '{n} JOGADORES',
+  'lbGlobal': 'Global',
+  'lbFriends': 'Amigos',
+  'lbNearMe': 'Perto de ti',
+  'searchPlayers': 'Procurar jogadores…',
+  'scoreExact': 'Resultado exato',
+  'scoreGoalDiff': 'Diferença de golos',
+  'scoreResult': 'Resultado certo',
+  'lbStats': '{exact} exatos · {played} jogados',
+  'ptsUpper': 'PTS',
+  'leaderboardEmpty':
+      'Ainda não há palpites pontuados — volta quando alguns jogos terminarem.',
+  'leaderboardNoneHere': 'Ainda não há ninguém aqui.',
 };
 
 // ---------------------------------------------------------------------------
@@ -739,4 +785,10 @@ const Map<String, String> _ptBR = {
   'noTournamentViewer':
       'Volte em breve — um administrador precisa configurar tudo.',
   'seedSampleData': 'Carregar dados de exemplo',
+  'lbNearMe': 'Perto de você',
+  'searchPlayers': 'Buscar jogadores…',
+  'scoreGoalDiff': 'Diferença de gols',
+  'scoreResult': 'Resultado correto',
+  'leaderboardEmpty':
+      'Ainda não há palpites pontuados — volte quando algumas partidas terminarem.',
 };
