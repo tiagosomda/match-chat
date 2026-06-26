@@ -30,9 +30,9 @@ class Tournament {
   }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'name': name,
-        'sport': sport,
-        'isDefault': isDefault,
-        'order': order,
-      };
+    'name': name,
+    'sport': sport,
+    'isDefault': isDefault,
+    'order': order,
+  };
 }

@@ -37,11 +37,7 @@ class AppTheme {
 
   static TextTheme _textTheme(TextTheme base, Color text) {
     return base
-        .apply(
-          fontFamily: grotesk,
-          bodyColor: text,
-          displayColor: text,
-        )
+        .apply(fontFamily: grotesk, bodyColor: text, displayColor: text)
         .copyWith();
   }
 }

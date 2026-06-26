@@ -31,16 +31,19 @@ class Refs {
       tournament(tid).collection('matches');
 
   static DocumentReference<Map<String, dynamic>> match(
-          String tid, String mid) =>
-      matches(tid).doc(mid);
+    String tid,
+    String mid,
+  ) => matches(tid).doc(mid);
 
   static CollectionReference<Map<String, dynamic>> comments(
-          String tid, String mid) =>
-      match(tid, mid).collection('comments');
+    String tid,
+    String mid,
+  ) => match(tid, mid).collection('comments');
 
   static CollectionReference<Map<String, dynamic>> predictions(
-          String tid, String mid) =>
-      match(tid, mid).collection('predictions');
+    String tid,
+    String mid,
+  ) => match(tid, mid).collection('predictions');
 
   static CollectionReference<Map<String, dynamic>> chat(String tid) =>
       tournament(tid).collection('chat');
@@ -55,6 +58,7 @@ class Refs {
       appDoc.collection('userMatchStates');
 
   static DocumentReference<Map<String, dynamic>> userMatchState(
-          String uid, String mid) =>
-      userMatchStates.doc('${uid}_$mid');
+    String uid,
+    String mid,
+  ) => userMatchStates.doc('${uid}_$mid');
 }

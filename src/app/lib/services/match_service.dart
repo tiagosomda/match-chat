@@ -5,15 +5,17 @@ import 'firestore_refs.dart';
 
 class MatchService {
   Stream<List<MatchModel>> watchAll(String tid) {
-    return Refs.matches(tid).orderBy('scheduledAt').snapshots().map(
-          (snap) => snap.docs.map(MatchModel.fromDoc).toList(),
-        );
+    return Refs.matches(tid)
+        .orderBy('scheduledAt')
+        .snapshots()
+        .map((snap) => snap.docs.map(MatchModel.fromDoc).toList());
   }
 
   Stream<MatchModel?> watch(String tid, String mid) {
-    return Refs.match(tid, mid).snapshots().map(
-          (doc) => doc.exists ? MatchModel.fromDoc(doc) : null,
-        );
+    return Refs.match(
+      tid,
+      mid,
+    ).snapshots().map((doc) => doc.exists ? MatchModel.fromDoc(doc) : null);
   }
 
   Future<MatchModel?> fetch(String tid, String mid) async {
@@ -37,8 +39,9 @@ class MatchService {
       'status': MatchStatus.upcoming.id,
       'scoreA': null,
       'scoreB': null,
-      'scheduledAt':
-          scheduledAt == null ? null : Timestamp.fromDate(scheduledAt),
+      'scheduledAt': scheduledAt == null
+          ? null
+          : Timestamp.fromDate(scheduledAt),
       'commentCount': 0,
       'predictionCount': 0,
       'archived': false,
@@ -63,8 +66,9 @@ class MatchService {
       'teamB': teamB,
       'description': description,
       'status': status.id,
-      'scheduledAt':
-          scheduledAt == null ? null : Timestamp.fromDate(scheduledAt),
+      'scheduledAt': scheduledAt == null
+          ? null
+          : Timestamp.fromDate(scheduledAt),
       'scoreA': scoreA,
       'scoreB': scoreB,
     });

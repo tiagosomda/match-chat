@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/app_user.dart';
 import '../models/match.dart';
 import '../state/app_state.dart';
@@ -60,7 +61,9 @@ class FriendsRevealBadge extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              count == 1 ? 'friend' : 'friends',
+              count == 1
+                  ? context.l10n.t('friendSingular')
+                  : context.l10n.t('friendPlural'),
               style: TextStyle(color: c.muted, fontSize: 11.5),
             ),
           ],
@@ -150,10 +153,20 @@ class _FriendsRevealSheetState extends State<_FriendsRevealSheet> {
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                   children: [
-                    _section(c, 'REVEALED', revealed, true),
+                    _section(
+                      c,
+                      context.l10n.t('revealedUpper'),
+                      revealed,
+                      true,
+                    ),
                     if (revealed.isNotEmpty && hidden.isNotEmpty)
                       const SizedBox(height: 18),
-                    _section(c, 'NOT YET REVEALED', hidden, false),
+                    _section(
+                      c,
+                      context.l10n.t('notYetRevealed'),
+                      hidden,
+                      false,
+                    ),
                   ],
                 );
               },
@@ -177,7 +190,7 @@ class _FriendsRevealSheetState extends State<_FriendsRevealSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Friends',
+                  context.l10n.t('friends'),
                   style: TextStyle(
                     fontFamily: AppTheme.grotesk,
                     fontWeight: FontWeight.w700,
@@ -235,8 +248,8 @@ class _FriendsRevealSheetState extends State<_FriendsRevealSheet> {
         if (users.isEmpty)
           Text(
             revealed
-                ? 'No friends have revealed yet.'
-                : 'Everyone has revealed.',
+                ? context.l10n.t('noFriendsRevealed')
+                : context.l10n.t('everyoneRevealed'),
             style: TextStyle(color: c.muted, fontSize: 12.5),
           )
         else

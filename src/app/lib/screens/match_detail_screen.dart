@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/comment.dart';
 import '../models/match.dart';
 import '../models/prediction.dart';
@@ -73,7 +74,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             if (match == null) {
               return Center(
                 child: Text(
-                  'Match not found.',
+                  context.l10n.t('matchNotFound'),
                   style: TextStyle(color: c.muted),
                 ),
               );
@@ -142,14 +143,16 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           if (app.isAdmin) ...[
             _pillBtn(
               c,
-              match.archived ? 'RESTORE' : 'ARCHIVE',
+              match.archived
+                  ? context.l10n.t('restoreUpper')
+                  : context.l10n.t('archiveUpper'),
               Icons.archive_outlined,
               () => _toggleArchive(app, match),
             ),
             const SizedBox(width: 8),
             _pillBtn(
               c,
-              'EDIT',
+              context.l10n.t('editUpper'),
               Icons.edit_outlined,
               () => _edit(context, app, match),
               highlight: true,
@@ -273,7 +276,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                 ),
                 const SizedBox(height: 3),
                 MonoLabel(
-                  'YOUR LOCAL TIME (${Formatting.timezoneLabel()})',
+                  context.l10n.tp('yourLocalTime', {
+                    'tz': Formatting.timezoneLabel(),
+                  }),
                   fontSize: 9,
                   letterSpacing: 1.4,
                 ),
@@ -306,11 +311,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           children: [
             Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
             const SizedBox(width: 6),
-            Text('Starts in $left',
-                style: TextStyle(
-                    color: c.accent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.5)),
+            Text(
+              context.l10n.tp('startsIn', {'time': left}),
+              style: TextStyle(
+                color: c.accent,
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
+            ),
           ],
         ),
       ),
@@ -373,10 +381,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Widget _goalsReveal(AppColors c, AppState app, MatchModel match) {
     return Column(
       children: [
-        MonoLabel('${match.goals.length} GOALS', fontSize: 9.5),
+        MonoLabel(
+          context.l10n.tp('goalsCount', {'n': '${match.goals.length}'}),
+          fontSize: 9.5,
+        ),
         const SizedBox(height: 10),
         AccentButton(
-          label: 'Reveal goals',
+          label: context.l10n.t('revealGoals'),
           icon: Icons.sports_soccer,
           pill: true,
           onPressed: () => app.reveals.setReveal(
@@ -394,7 +405,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     return Column(
       children: [
         MonoLabel(
-          'GOALS · TAP TO SEE SCORERS',
+          context.l10n.t('goalsTapScorers'),
           fontSize: 9,
           letterSpacing: 1.4,
         ),
@@ -439,7 +450,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     return Column(
       children: [
         MonoLabel(
-          'SCORERS · TAP TO HIDE NAMES',
+          context.l10n.t('scorersTapHide'),
           fontSize: 9,
           letterSpacing: 1.4,
         ),
@@ -572,7 +583,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               children: [
                 Icon(Icons.visibility_off_outlined, size: 11, color: c.muted),
                 const SizedBox(width: 4),
-                MonoLabel('HIDE', fontSize: 9.5, fontWeight: FontWeight.w700),
+                MonoLabel(
+                  context.l10n.t('hideUpper'),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ],
             ),
           ),
@@ -581,7 +596,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     }
     return Center(
       child: AccentButton(
-        label: 'Reveal',
+        label: context.l10n.t('reveal'),
         icon: Icons.visibility_outlined,
         pill: true,
         onPressed: () =>
@@ -603,13 +618,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         children: [
           _tabButton(
             c,
-            'Predictions',
+            context.l10n.t('predictions'),
             '${match.predictionCount}',
             _DetailTab.predictions,
           ),
           _tabButton(
             c,
-            'Comments',
+            context.l10n.t('comments'),
             '${match.commentCount}',
             _DetailTab.comments,
           ),
@@ -713,7 +728,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     final a = int.tryParse(_a.text.trim());
     final b = int.tryParse(_b.text.trim());
     if (a == null || b == null || a < 0 || b < 0) {
-      showToast(context, 'Enter both scores');
+      showToast(context, context.l10n.t('enterBothScores'));
       return;
     }
     setState(() => _busy = true);
@@ -733,11 +748,15 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         setState(() => _editing = false);
         showToast(
           context,
-          isUpdate ? 'Prediction updated ✅' : 'Prediction submitted ✅',
+          isUpdate
+              ? context.l10n.t('predictionUpdated')
+              : context.l10n.t('predictionSubmitted'),
         );
       }
     } catch (e) {
-      if (mounted) showToast(context, 'Could not submit: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotSubmit', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -755,10 +774,12 @@ class _PredictionsTabState extends State<_PredictionsTab> {
       _b.clear();
       if (mounted) {
         setState(() => _editing = false);
-        showToast(context, 'Prediction removed');
+        showToast(context, context.l10n.t('predictionRemoved'));
       }
     } catch (e) {
-      if (mounted) showToast(context, 'Could not remove: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotRemove', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -802,15 +823,17 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               if (!app.isParticipant) ...[
                 _invitePrompt(
                   context,
-                  'Get an invite code to add your prediction →',
+                  context.l10n.t('invitePredictionPrompt'),
                 ),
                 const SizedBox(height: 13),
               ],
               _revealableBox(
                 context,
                 revealed: widget.revealed,
-                hiddenLabel: '${preds.length} PREDICTIONS HIDDEN',
-                revealLabel: 'Reveal predictions',
+                hiddenLabel: context.l10n.tp('predictionsHidden', {
+                  'n': '${preds.length}',
+                }),
+                revealLabel: context.l10n.t('revealPredictions'),
                 revealColor: c.accent2,
                 revealFg: const Color(0xFF1A1200),
                 onReveal: () =>
@@ -840,7 +863,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
             children: [
               Expanded(
                 child: Text(
-                  isUpdate ? 'Update your prediction' : 'Your prediction',
+                  isUpdate
+                      ? context.l10n.t('updateYourPrediction')
+                      : context.l10n.t('yourPrediction'),
                   style: TextStyle(
                     color: c.text,
                     fontWeight: FontWeight.w700,
@@ -852,7 +877,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 GestureDetector(
                   onTap: _busy ? null : _cancelEdit,
                   child: MonoLabel(
-                    'CANCEL',
+                    context.l10n.t('cancelUpper'),
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -878,7 +903,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: AccentButton(
-                  label: isUpdate ? 'Update' : 'Predict',
+                  label: isUpdate
+                      ? context.l10n.t('update')
+                      : context.l10n.t('predict'),
                   expand: true,
                   busy: _busy,
                   onPressed: () => _submit(app, isUpdate: isUpdate),
@@ -930,7 +957,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
-                  'Your prediction is in',
+                  context.l10n.t('yourPredictionIsIn'),
                   style: TextStyle(
                     color: c.text,
                     fontSize: 13,
@@ -956,14 +983,14 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 _predAction(
                   c,
                   Icons.edit_outlined,
-                  'Edit',
+                  context.l10n.t('editUpper'),
                   _busy ? null : () => _startEdit(mine),
                 ),
                 const SizedBox(width: 9),
                 _predAction(
                   c,
                   Icons.delete_outline,
-                  'Delete',
+                  context.l10n.t('deleteUpper'),
                   _busy ? null : () => _delete(app),
                 ),
               ],
@@ -1010,11 +1037,15 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MonoLabel("EVERYONE'S PREDICTIONS", fontSize: 9.5, letterSpacing: 1.4),
+        MonoLabel(
+          context.l10n.t('everyonesPredictions'),
+          fontSize: 9.5,
+          letterSpacing: 1.4,
+        ),
         const SizedBox(height: 11),
         if (preds.isEmpty)
           Text(
-            'No predictions yet.',
+            context.l10n.t('noPredictionsYet'),
             style: TextStyle(color: c.muted, fontSize: 12.5),
           )
         else
@@ -1114,7 +1145,9 @@ class _CommentsTabState extends State<_CommentsTab> {
       );
       if (mounted) setState(() => _editingId = null);
     } catch (e) {
-      if (mounted) showToast(context, 'Could not save: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotSave', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1136,7 +1169,9 @@ class _CommentsTabState extends State<_CommentsTab> {
         setState(() => _editingId = null);
       }
     } catch (e) {
-      if (mounted) showToast(context, 'Could not delete: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotDelete', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1149,23 +1184,29 @@ class _CommentsTabState extends State<_CommentsTab> {
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
         title: Text(
-          'Delete comment?',
+          context.l10n.t('deleteCommentTitle'),
           style: TextStyle(color: c.text, fontSize: 17),
         ),
         content: Text(
           byAdmin
-              ? 'This will replace it with “deleted by admin”. Replies stay.'
-              : 'This will replace it with “deleted by user”. Replies stay.',
+              ? context.l10n.t('deleteCommentBodyAdmin')
+              : context.l10n.t('deleteCommentBodyUser'),
           style: TextStyle(color: c.muted, fontSize: 13.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: TextStyle(color: c.muted)),
+            child: Text(
+              context.l10n.t('cancel'),
+              style: TextStyle(color: c.muted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Delete', style: TextStyle(color: c.accent)),
+            child: Text(
+              context.l10n.t('delete'),
+              style: TextStyle(color: c.accent),
+            ),
           ),
         ],
       ),
@@ -1194,7 +1235,9 @@ class _CommentsTabState extends State<_CommentsTab> {
       ctrl.clear();
       if (mounted) setState(() => _replyTo = null);
     } catch (e) {
-      if (mounted) showToast(context, 'Could not post: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotPost', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1219,8 +1262,10 @@ class _CommentsTabState extends State<_CommentsTab> {
               _revealableBox(
                 context,
                 revealed: widget.revealed,
-                hiddenLabel: '${widget.match.commentCount} COMMENTS HIDDEN',
-                revealLabel: 'Reveal comments',
+                hiddenLabel: context.l10n.tp('commentsHidden', {
+                  'n': '${widget.match.commentCount}',
+                }),
+                revealLabel: context.l10n.t('revealComments'),
                 revealColor: c.accent,
                 revealFg: Colors.white,
                 onReveal: () => app.reveals.setReveal(
@@ -1234,10 +1279,7 @@ class _CommentsTabState extends State<_CommentsTab> {
               if (app.isParticipant)
                 _commentInput(c, app)
               else
-                _invitePrompt(
-                  context,
-                  'Get an invite code to join the conversation →',
-                ),
+                _invitePrompt(context, context.l10n.t('inviteCommentPrompt')),
             ],
           ),
         );
@@ -1248,7 +1290,7 @@ class _CommentsTabState extends State<_CommentsTab> {
   Widget _thread(AppColors c, AppState app, List<CommentNode> tree) {
     if (tree.isEmpty) {
       return Text(
-        'No comments yet — be the first.',
+        context.l10n.t('noCommentsYet'),
         style: TextStyle(color: c.muted, fontSize: 12.5),
       );
     }
@@ -1307,7 +1349,11 @@ class _CommentsTabState extends State<_CommentsTab> {
                 ),
                 if (comment.edited && !comment.deleted) ...[
                   const SizedBox(width: 6),
-                  MonoLabel('· EDITED', fontSize: 9.5, letterSpacing: 1),
+                  MonoLabel(
+                    context.l10n.t('editedTag'),
+                    fontSize: 9.5,
+                    letterSpacing: 1,
+                  ),
                 ],
               ],
             ),
@@ -1331,13 +1377,14 @@ class _CommentsTabState extends State<_CommentsTab> {
   }
 
   Widget _deletedPlaceholder(AppColors c, CommentModel comment) {
-    final who = comment.deletedBy == 'admin' ? 'admin' : 'user';
     return Row(
       children: [
         Icon(Icons.block, size: 13, color: c.muted),
         const SizedBox(width: 6),
         Text(
-          'Comment deleted by $who',
+          comment.deletedBy == 'admin'
+              ? context.l10n.t('commentDeletedByAdmin')
+              : context.l10n.t('commentDeletedByUser'),
           style: TextStyle(
             color: c.muted,
             fontSize: 13,
@@ -1358,13 +1405,16 @@ class _CommentsTabState extends State<_CommentsTab> {
               controller: _edit,
               autofocus: true,
               style: TextStyle(color: c.text, fontSize: 13),
-              decoration: appInputDecoration(context, hint: 'Edit comment…'),
+              decoration: appInputDecoration(
+                context,
+                hint: context.l10n.t('editComment'),
+              ),
               onSubmitted: (_) => _saveEdit(app, commentId),
             ),
           ),
           const SizedBox(width: 6),
           AccentButton(
-            label: 'Save',
+            label: context.l10n.t('save'),
             busy: _busy,
             onPressed: () => _saveEdit(app, commentId),
           ),
@@ -1372,7 +1422,7 @@ class _CommentsTabState extends State<_CommentsTab> {
           GestureDetector(
             onTap: _busy ? null : () => setState(() => _editingId = null),
             child: MonoLabel(
-              'CANCEL',
+              context.l10n.t('cancelUpper'),
               fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
@@ -1397,7 +1447,7 @@ class _CommentsTabState extends State<_CommentsTab> {
                 _reply.clear();
               }),
               child: MonoLabel(
-                '↳ REPLY',
+                context.l10n.t('replyUpper'),
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -1407,7 +1457,7 @@ class _CommentsTabState extends State<_CommentsTab> {
             GestureDetector(
               onTap: () => _startEditComment(comment),
               child: MonoLabel(
-                'EDIT',
+                context.l10n.t('editUpper'),
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -1418,7 +1468,7 @@ class _CommentsTabState extends State<_CommentsTab> {
             GestureDetector(
               onTap: () => _deleteComment(app, comment),
               child: MonoLabel(
-                'DELETE',
+                context.l10n.t('deleteUpper'),
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -1438,13 +1488,16 @@ class _CommentsTabState extends State<_CommentsTab> {
             child: TextField(
               controller: _reply,
               style: TextStyle(color: c.text, fontSize: 13),
-              decoration: appInputDecoration(context, hint: 'Reply…'),
+              decoration: appInputDecoration(
+                context,
+                hint: context.l10n.t('replyHint'),
+              ),
               onSubmitted: (_) => _post(app, parentId: parentId),
             ),
           ),
           const SizedBox(width: 6),
           AccentButton(
-            label: 'Reply',
+            label: context.l10n.t('replyButton'),
             busy: _busy,
             onPressed: () => _post(app, parentId: parentId),
           ),
@@ -1460,12 +1513,19 @@ class _CommentsTabState extends State<_CommentsTab> {
           child: TextField(
             controller: _comment,
             style: TextStyle(color: c.text, fontSize: 14),
-            decoration: appInputDecoration(context, hint: 'Add a comment…'),
+            decoration: appInputDecoration(
+              context,
+              hint: context.l10n.t('addComment'),
+            ),
             onSubmitted: (_) => _post(app),
           ),
         ),
         const SizedBox(width: 8),
-        AccentButton(label: 'Post', busy: _busy, onPressed: () => _post(app)),
+        AccentButton(
+          label: context.l10n.t('postButton'),
+          busy: _busy,
+          onPressed: () => _post(app),
+        ),
       ],
     );
   }

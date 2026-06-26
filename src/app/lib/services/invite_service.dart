@@ -16,15 +16,16 @@ class InviteService {
   final _rng = Random.secure();
 
   String _generateCode() {
-    return List.generate(8, (_) => _alphabet[_rng.nextInt(_alphabet.length)])
-        .join();
+    return List.generate(
+      8,
+      (_) => _alphabet[_rng.nextInt(_alphabet.length)],
+    ).join();
   }
 
   Stream<List<InviteCode>> watchMine(String uid) {
-    return Refs.inviteCodes
-        .where('createdBy', isEqualTo: uid)
-        .snapshots()
-        .map((snap) {
+    return Refs.inviteCodes.where('createdBy', isEqualTo: uid).snapshots().map((
+      snap,
+    ) {
       final codes = snap.docs.map(InviteCode.fromDoc).toList();
       codes.sort((a, b) {
         final at = a.createdAt ?? DateTime(2000);

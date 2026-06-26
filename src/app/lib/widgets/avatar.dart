@@ -30,7 +30,10 @@ class Avatar extends StatelessWidget {
     final c = context.colors;
     final hasFlag = favoriteTeam != null && favoriteTeam!.isNotEmpty;
     final content = hasFlag
-        ? Text(Teams.flagFor(favoriteTeam), style: TextStyle(fontSize: size * 0.9))
+        ? Text(
+            Teams.flagFor(favoriteTeam),
+            style: TextStyle(fontSize: size * 0.9),
+          )
         : Text(
             Formatting.initials(name),
             style: TextStyle(
@@ -44,19 +47,19 @@ class Avatar extends StatelessWidget {
     final decoration = hasFlag
         ? null
         : (gradient
-            ? BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [c.accent, c.accent2],
-                ),
-              )
-            : BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.surface2,
-                border: Border.all(color: c.line),
-              ));
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [c.accent, c.accent2],
+                  ),
+                )
+              : BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c.surface2,
+                  border: Border.all(color: c.line),
+                ));
 
     final avatar = Container(
       width: size,

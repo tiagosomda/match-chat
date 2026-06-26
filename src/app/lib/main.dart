@@ -1,8 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_shell.dart';
 import 'state/app_state.dart';
@@ -12,9 +14,7 @@ import 'widgets/pitch_background.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MatchChatApp());
 }
 
@@ -38,13 +38,22 @@ class _ThemedApp extends StatelessWidget {
     final app = context.watch<AppState>();
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
     final brightness = app.resolveBrightness(platformBrightness);
-    final colors =
-        brightness == Brightness.dark ? AppColors.dark : AppColors.light;
+    final colors = brightness == Brightness.dark
+        ? AppColors.dark
+        : AppColors.light;
 
     return MaterialApp(
       title: 'Match Chat',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(colors, brightness),
+      locale: app.locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: const RootGate(),
     );
   }
@@ -108,7 +117,9 @@ class _SplashScreen extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: c.accent),
+                  strokeWidth: 2,
+                  color: c.accent,
+                ),
               ),
             ],
           ),

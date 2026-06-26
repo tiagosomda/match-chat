@@ -3,9 +3,10 @@ import 'firestore_refs.dart';
 
 class TournamentService {
   Stream<List<Tournament>> watchAll() {
-    return Refs.tournaments.orderBy('order').snapshots().map(
-          (snap) => snap.docs.map(Tournament.fromDoc).toList(),
-        );
+    return Refs.tournaments
+        .orderBy('order')
+        .snapshots()
+        .map((snap) => snap.docs.map(Tournament.fromDoc).toList());
   }
 
   Future<List<Tournament>> fetchAll() async {

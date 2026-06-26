@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ui.dart';
@@ -49,7 +50,7 @@ class _NoTournamentScreenState extends State<NoTournamentScreen> {
                 Icon(Icons.emoji_events_outlined, size: 48, color: c.muted),
                 const SizedBox(height: 16),
                 Text(
-                  'No tournaments yet',
+                  context.l10n.t('noTournamentsYet'),
                   style: TextStyle(
                     color: c.text,
                     fontSize: 20,
@@ -59,15 +60,15 @@ class _NoTournamentScreenState extends State<NoTournamentScreen> {
                 const SizedBox(height: 8),
                 Text(
                   app.isAdmin
-                      ? 'Seed the sample World Cup 2026 data to get started.'
-                      : 'Check back soon — an admin needs to set things up.',
+                      ? context.l10n.t('noTournamentAdmin')
+                      : context.l10n.t('noTournamentViewer'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: c.muted, height: 1.5),
                 ),
                 const SizedBox(height: 24),
                 if (app.isAdmin)
                   AccentButton(
-                    label: 'Seed sample data',
+                    label: context.l10n.t('seedSampleData'),
                     icon: Icons.bolt,
                     busy: _busy,
                     onPressed: _seed,
@@ -75,8 +76,12 @@ class _NoTournamentScreenState extends State<NoTournamentScreen> {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => app.signOut(),
-                  child: Text('Sign out',
-                      style: TextStyle(color: c.muted)),
+                  child: Text(
+                    app.isGuest
+                        ? context.l10n.t('signInCreateAccount')
+                        : context.l10n.t('signOut'),
+                    style: TextStyle(color: c.muted),
+                  ),
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/avatar.dart';
@@ -32,9 +33,7 @@ class _HomeShellState extends State<HomeShell> {
     if (!app.tournamentResolved) {
       return Scaffold(
         backgroundColor: c.bg2,
-        body: Center(
-          child: CircularProgressIndicator(color: c.accent),
-        ),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
@@ -116,11 +115,24 @@ class _BottomNav extends StatelessWidget {
         top: false,
         child: Row(
           children: [
-            _navItem(c, Icons.sports_soccer_outlined, 'MATCHES',
-                AppTab.matches),
             _navItem(
-                c, Icons.chat_bubble_outline, 'CHAT', AppTab.chat),
-            _navItem(c, Icons.person_outline, 'PROFILE', AppTab.profile),
+              c,
+              Icons.sports_soccer_outlined,
+              context.l10n.t('navMatches').toUpperCase(),
+              AppTab.matches,
+            ),
+            _navItem(
+              c,
+              Icons.chat_bubble_outline,
+              context.l10n.t('navChat').toUpperCase(),
+              AppTab.chat,
+            ),
+            _navItem(
+              c,
+              Icons.person_outline,
+              context.l10n.t('navProfile').toUpperCase(),
+              AppTab.profile,
+            ),
           ],
         ),
       ),

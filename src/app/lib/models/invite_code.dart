@@ -35,11 +35,11 @@ class InviteCode {
   }
 
   Map<String, dynamic> toCreateMap() => <String, dynamic>{
-        'code': code,
-        'createdBy': createdBy,
-        'usedBy': null,
-        'usedByName': null,
-        'usedAt': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+    'code': code,
+    'createdBy': createdBy,
+    'usedBy': null,
+    'usedByName': null,
+    'usedAt': null,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
 }

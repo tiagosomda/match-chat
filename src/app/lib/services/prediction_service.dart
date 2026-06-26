@@ -71,7 +71,9 @@ class PredictionService {
   /// Fetches every prediction a user has made across a tournament, for their
   /// public profile.
   Future<List<({String matchId, Prediction prediction})>> fetchForUserAcross(
-      String tid, String uid) async {
+    String tid,
+    String uid,
+  ) async {
     final matchesSnap = await Refs.matches(tid).get();
     final result = <({String matchId, Prediction prediction})>[];
     for (final m in matchesSnap.docs) {

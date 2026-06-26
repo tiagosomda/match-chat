@@ -10,8 +10,10 @@ class Validation {
   static const int maxComment = 500;
 
   // Letters (incl. accented), numbers, spaces, and a few safe separators.
-  static final RegExp _nameAllowed =
-      RegExp(r"^[\p{L}\p{N} ._'-]+$", unicode: true);
+  static final RegExp _nameAllowed = RegExp(
+    r"^[\p{L}\p{N} ._'-]+$",
+    unicode: true,
+  );
 
   /// Returns an error string if invalid, or null if the name is acceptable.
   static String? displayName(String raw) {

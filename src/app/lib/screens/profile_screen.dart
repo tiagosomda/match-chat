@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/invite_code.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
@@ -28,7 +29,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _name = TextEditingController(
-        text: context.read<AppState>().appUser?.displayName ?? '');
+      text: context.read<AppState>().appUser?.displayName ?? '',
+    );
   }
 
   @override
@@ -45,7 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     await app.users.updateDisplayName(app.firebaseUser!.uid, _name.text.trim());
-    if (mounted) showToast(context, 'Name updated');
+    if (mounted) showToast(context, context.l10n.t('nameUpdated'));
   }
 
   Future<void> _redeem(AppState app) async {
@@ -89,17 +91,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
         _appearanceCard(c, app),
         const SizedBox(height: 14),
-        if (app.isAdmin) ...[
-          _adminCard(c),
-          const SizedBox(height: 14),
-        ],
+        _languageCard(c, app),
+        const SizedBox(height: 14),
+        if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
         Center(
           child: TextButton.icon(
             onPressed: () => app.signOut(),
-            icon: Icon(app.isGuest ? Icons.login : Icons.logout,
-                size: 18, color: c.muted),
-            label: Text(app.isGuest ? 'Sign in / Create account' : 'Sign out',
-                style: TextStyle(color: c.muted)),
+            icon: Icon(
+              app.isGuest ? Icons.login : Icons.logout,
+              size: 18,
+              color: c.muted,
+            ),
+            label: Text(
+              app.isGuest
+                  ? context.l10n.t('signInCreateAccount')
+                  : context.l10n.t('signOut'),
+              style: TextStyle(color: c.muted),
+            ),
           ),
         ),
       ],
@@ -123,16 +131,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(app.displayName,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontFamily: AppTheme.grotesk,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                        color: c.text)),
-                Text(app.isGuest ? 'Guest session' : (user?.email ?? ''),
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: c.muted, fontSize: 12.5)),
+                Text(
+                  app.displayName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTheme.grotesk,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: c.text,
+                  ),
+                ),
+                Text(
+                  app.isGuest ? 'Guest session' : (user?.email ?? ''),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: c.muted, fontSize: 12.5),
+                ),
                 const SizedBox(height: 7),
                 _tierBadge(c, app.isParticipant),
               ],
@@ -153,7 +166,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        participant ? 'PARTICIPANT' : 'VIEWER',
+        participant
+            ? context.l10n.t('tierParticipant')
+            : context.l10n.t('tierViewer'),
         style: TextStyle(
           fontFamily: AppTheme.mono,
           fontSize: 10,
@@ -170,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MonoLabel('DISPLAY NAME'),
+          MonoLabel(context.l10n.t('displayNameLabel')),
           const SizedBox(height: 9),
           Row(
             children: [
@@ -178,20 +193,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: TextField(
                   controller: _name,
                   style: TextStyle(
-                      color: c.text,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15),
-                  decoration: appInputDecoration(context, hint: 'Your name'),
+                    color: c.text,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                  decoration: appInputDecoration(
+                    context,
+                    hint: context.l10n.t('yourName'),
+                  ),
                   onSubmitted: (_) => _saveName(app),
                 ),
               ),
               const SizedBox(width: 8),
-              AccentButton(label: 'Save', onPressed: () => _saveName(app)),
+              AccentButton(
+                label: context.l10n.t('save'),
+                onPressed: () => _saveName(app),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('How you appear in chat, comments and predictions.',
-              style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4)),
+          Text(
+            context.l10n.t('displayNameHint'),
+            style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
+          ),
         ],
       ),
     );
@@ -209,15 +233,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Favorite team',
-                        style: TextStyle(
-                            color: c.text,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15)),
+                    Text(
+                      context.l10n.t('favoriteTeam'),
+                      style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('Your flag becomes your avatar across the app.',
-                        style: TextStyle(
-                            color: c.muted, fontSize: 11.5, height: 1.4)),
+                    Text(
+                      context.l10n.t('favoriteTeamHint'),
+                      style: TextStyle(
+                        color: c.muted,
+                        fontSize: 11.5,
+                        height: 1.4,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -232,8 +264,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: c.surface2,
                     border: Border.all(color: c.line),
                   ),
-                  child: Text(Teams.flagFor(fav),
-                      style: const TextStyle(fontSize: 22)),
+                  child: Text(
+                    Teams.flagFor(fav),
+                    style: const TextStyle(fontSize: 22),
+                  ),
                 ),
               ],
             ],
@@ -252,21 +286,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               underline: const SizedBox.shrink(),
               dropdownColor: c.surface2,
               style: TextStyle(color: c.text, fontSize: 14),
-              hint: Text('No favorite team',
-                  style: TextStyle(color: c.muted, fontSize: 14)),
+              hint: Text(
+                context.l10n.t('noFavoriteTeam'),
+                style: TextStyle(color: c.muted, fontSize: 14),
+              ),
               items: [
-                const DropdownMenuItem<String?>(
-                    value: null, child: Text('No favorite team')),
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(context.l10n.t('noFavoriteTeam')),
+                ),
                 for (final t in Teams.all)
                   DropdownMenuItem<String?>(
-                      value: t.name, child: Text('${t.flag}  ${t.name}')),
+                    value: t.name,
+                    child: Text('${t.flag}  ${t.name}'),
+                  ),
               ],
               onChanged: (v) async {
-                await app.users
-                    .updateFavoriteTeam(app.firebaseUser!.uid, v);
+                await app.users.updateFavoriteTeam(app.firebaseUser!.uid, v);
                 if (mounted) {
-                  showToast(context,
-                      v == null ? 'Favorite team cleared' : 'Favorite team set');
+                  showToast(
+                    context,
+                    v == null
+                        ? context.l10n.t('favoriteTeamCleared')
+                        : context.l10n.t('favoriteTeamSet'),
+                  );
                 }
               },
             ),
@@ -282,18 +325,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Browsing as guest',
-              style: TextStyle(
-                  color: c.text, fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            context.l10n.t('browsingAsGuest'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
-            'Create an account to comment, chat and make predictions. Your '
-            'guest reveals stay on this device only.',
+            context.l10n.t('guestCardDesc'),
             style: TextStyle(color: c.muted, fontSize: 12.5, height: 1.45),
           ),
           const SizedBox(height: 13),
           AccentButton(
-            label: 'Sign in / Create account',
+            label: context.l10n.t('signInCreateAccount'),
             icon: Icons.login,
             expand: true,
             onPressed: () => app.signOut(),
@@ -309,15 +356,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Have an invite code?',
-              style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15)),
+          Text(
+            context.l10n.t('haveInviteCode'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
-              'Unlock commenting, chat & predictions. Codes are single-use.',
-              style: TextStyle(color: c.muted, fontSize: 12.5, height: 1.45)),
+            context.l10n.t('redeemDesc'),
+            style: TextStyle(color: c.muted, fontSize: 12.5, height: 1.45),
+          ),
           const SizedBox(height: 13),
           Row(
             children: [
@@ -326,16 +377,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: _invite,
                   textCapitalization: TextCapitalization.characters,
                   style: TextStyle(
-                      color: c.text,
-                      fontFamily: AppTheme.mono,
-                      letterSpacing: 1),
-                  decoration:
-                      appInputDecoration(context, hint: 'e.g. GO4LK29P'),
+                    color: c.text,
+                    fontFamily: AppTheme.mono,
+                    letterSpacing: 1,
+                  ),
+                  decoration: appInputDecoration(
+                    context,
+                    hint: 'e.g. GO4LK29P',
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               AccentButton(
-                label: 'Redeem',
+                label: context.l10n.t('redeem'),
                 busy: _redeeming,
                 onPressed: () => _redeem(app),
               ),
@@ -351,22 +405,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Appearance',
-              style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15)),
+          Text(
+            context.l10n.t('appearance'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 13),
           Row(
             children: [
-              _themeOption(c, app, AppThemeMode.auto, Icons.brightness_auto,
-                  'Auto'),
+              _themeOption(
+                c,
+                app,
+                AppThemeMode.auto,
+                Icons.brightness_auto,
+                context.l10n.t('themeAuto'),
+              ),
               const SizedBox(width: 8),
               _themeOption(
-                  c, app, AppThemeMode.light, Icons.light_mode_outlined, 'Light'),
+                c,
+                app,
+                AppThemeMode.light,
+                Icons.light_mode_outlined,
+                context.l10n.t('themeLight'),
+              ),
               const SizedBox(width: 8),
               _themeOption(
-                  c, app, AppThemeMode.dark, Icons.dark_mode, 'Dark'),
+                c,
+                app,
+                AppThemeMode.dark,
+                Icons.dark_mode,
+                context.l10n.t('themeDark'),
+              ),
             ],
           ),
         ],
@@ -374,8 +446,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _themeOption(AppColors c, AppState app, AppThemeMode mode,
-      IconData icon, String label) {
+  Widget _themeOption(
+    AppColors c,
+    AppState app,
+    AppThemeMode mode,
+    IconData icon,
+    String label,
+  ) {
     final active = app.themeMode == mode;
     return Expanded(
       child: InkWell(
@@ -394,11 +471,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(icon, size: 18, color: active ? c.accent : c.text),
               const SizedBox(height: 7),
-              Text(label,
-                  style: TextStyle(
-                      color: active ? c.accent : c.text,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? c.accent : c.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ],
           ),
         ),
@@ -406,11 +486,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _languageCard(AppColors c, AppState app) {
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.t('language'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 11),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.line),
+            ),
+            child: DropdownButton<String?>(
+              value: app.localeCode,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              dropdownColor: c.surface2,
+              style: TextStyle(color: c.text, fontSize: 14),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(context.l10n.t('languageSystem')),
+                ),
+                for (final p in AppLocalizations.pickable)
+                  DropdownMenuItem<String?>(
+                    value: p.code,
+                    child: Text(p.label),
+                  ),
+              ],
+              onChanged: (v) => app.setLocale(v),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _adminCard(AppColors c) {
     return SurfaceCard(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AdminScreen()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AdminScreen())),
       child: Row(
         children: [
           Container(
@@ -428,13 +554,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Match admin',
-                    style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15)),
-                Text('Create, schedule & edit matches',
-                    style: TextStyle(color: c.muted, fontSize: 12)),
+                Text(
+                  context.l10n.t('matchAdmin'),
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  context.l10n.t('matchAdminDesc'),
+                  style: TextStyle(color: c.muted, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -460,13 +591,16 @@ class _InviteCodesCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Invite codes',
-                  style: TextStyle(
-                      color: c.text,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+              Text(
+                context.l10n.t('inviteCodes'),
+                style: TextStyle(
+                  color: c.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
               AccentButton(
-                label: 'New code',
+                label: context.l10n.t('newCode'),
                 icon: Icons.add,
                 color: c.accent2,
                 foreground: const Color(0xFF1A1200),
@@ -496,13 +630,18 @@ class _InviteCodesCard extends StatelessWidget {
                   Text(
                     '$unclaimed unclaimed · $claimed claimed. Revoke any code '
                     'that hasn\'t been used.',
-                    style:
-                        TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
+                    style: TextStyle(
+                      color: c.muted,
+                      fontSize: 11.5,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 13),
                   if (codes.isEmpty)
-                    Text('No codes yet — generate one to invite a friend.',
-                        style: TextStyle(color: c.muted, fontSize: 12.5))
+                    Text(
+                      'No codes yet — generate one to invite a friend.',
+                      style: TextStyle(color: c.muted, fontSize: 12.5),
+                    )
                   else
                     for (final code in codes) ...[
                       _CodeRow(code: code),
@@ -539,22 +678,26 @@ class _CodeRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(code.code,
-                    style: TextStyle(
-                        fontFamily: AppTheme.mono,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        letterSpacing: 1.4,
-                        color: c.text)),
+                Text(
+                  code.code,
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    letterSpacing: 1.4,
+                    color: c.text,
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   code.isUsed
                       ? 'Claimed by ${code.usedByName ?? 'a friend'}'
                       : 'Unclaimed · share it',
                   style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontSize: 10,
-                      color: code.isUsed ? c.muted : c.accent2),
+                    fontFamily: AppTheme.mono,
+                    fontSize: 10,
+                    color: code.isUsed ? c.muted : c.accent2,
+                  ),
                 ),
               ],
             ),
@@ -602,9 +745,14 @@ class _CodeRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: c.line),
         ),
-        child: Text(label,
-            style: TextStyle(
-                color: c.text, fontSize: 11, fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: c.text,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

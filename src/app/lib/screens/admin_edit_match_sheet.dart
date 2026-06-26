@@ -28,14 +28,17 @@ class AdminEditMatchSheet extends StatefulWidget {
 class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   late String _teamA = widget.match.teamA;
   late String _teamB = widget.match.teamB;
-  late final TextEditingController _desc =
-      TextEditingController(text: widget.match.description);
+  late final TextEditingController _desc = TextEditingController(
+    text: widget.match.description,
+  );
   late MatchStatus _status = widget.match.status;
   late DateTime? _kickoff = widget.match.scheduledAt?.toLocal();
   late final TextEditingController _scoreA = TextEditingController(
-      text: widget.match.scoreA?.toString() ?? '');
+    text: widget.match.scoreA?.toString() ?? '',
+  );
   late final TextEditingController _scoreB = TextEditingController(
-      text: widget.match.scoreB?.toString() ?? '');
+    text: widget.match.scoreB?.toString() ?? '',
+  );
   bool _busy = false;
 
   @override
@@ -70,8 +73,13 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
     );
     if (time == null) return;
     setState(() {
-      _kickoff =
-          DateTime(base.year, base.month, base.day, time.hour, time.minute);
+      _kickoff = DateTime(
+        base.year,
+        base.month,
+        base.day,
+        time.hour,
+        time.minute,
+      );
     });
   }
 
@@ -117,11 +125,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
         constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.9),
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
         decoration: BoxDecoration(
           color: c.bg2,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(26)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: c.lineStrong)),
         ),
         child: Column(
@@ -136,19 +144,29 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
                   children: [
                     MonoLabel('TEAMS'),
                     const SizedBox(height: 9),
-                    _teamDropdown(c, _teamA, 'Home team…',
-                        (v) => setState(() => _teamA = v ?? '')),
+                    _teamDropdown(
+                      c,
+                      _teamA,
+                      'Home team…',
+                      (v) => setState(() => _teamA = v ?? ''),
+                    ),
                     const SizedBox(height: 9),
-                    _teamDropdown(c, _teamB, 'Away team…',
-                        (v) => setState(() => _teamB = v ?? '')),
+                    _teamDropdown(
+                      c,
+                      _teamB,
+                      'Away team…',
+                      (v) => setState(() => _teamB = v ?? ''),
+                    ),
                     const SizedBox(height: 14),
                     MonoLabel('DESCRIPTION'),
                     const SizedBox(height: 9),
                     TextField(
                       controller: _desc,
                       style: TextStyle(color: c.text),
-                      decoration: appInputDecoration(context,
-                          hint: 'e.g. Group Stage · Group B'),
+                      decoration: appInputDecoration(
+                        context,
+                        hint: 'e.g. Group Stage · Group B',
+                      ),
                     ),
                     const SizedBox(height: 14),
                     MonoLabel('KICKOFF'),
@@ -160,8 +178,7 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
                             c,
                             _kickoff == null
                                 ? 'Pick date'
-                                : DateFormat('EEE, MMM d, y')
-                                    .format(_kickoff!),
+                                : DateFormat('EEE, MMM d, y').format(_kickoff!),
                             Icons.calendar_today_outlined,
                             _pickDate,
                           ),
@@ -189,9 +206,13 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
                         Expanded(child: _scoreInput(c, _scoreA)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(':',
-                              style: TextStyle(
-                                  fontFamily: AppTheme.mono, color: c.muted)),
+                          child: Text(
+                            ':',
+                            style: TextStyle(
+                              fontFamily: AppTheme.mono,
+                              color: c.muted,
+                            ),
+                          ),
                         ),
                         Expanded(child: _scoreInput(c, _scoreB)),
                       ],
@@ -210,23 +231,29 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   Widget _header(AppColors c) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-      decoration:
-          BoxDecoration(border: Border(bottom: BorderSide(color: c.line))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: c.line)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Edit match',
-                    style: TextStyle(
-                        fontFamily: AppTheme.grotesk,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                        color: c.text)),
+                Text(
+                  'Edit match',
+                  style: TextStyle(
+                    fontFamily: AppTheme.grotesk,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                    color: c.text,
+                  ),
+                ),
                 const SizedBox(height: 1),
-                Text('${widget.match.teamA} vs ${widget.match.teamB}',
-                    style: TextStyle(color: c.muted, fontSize: 11.5)),
+                Text(
+                  '${widget.match.teamA} vs ${widget.match.teamB}',
+                  style: TextStyle(color: c.muted, fontSize: 11.5),
+                ),
               ],
             ),
           ),
@@ -253,18 +280,19 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   Widget _footer(AppColors c) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-      decoration:
-          BoxDecoration(border: Border(top: BorderSide(color: c.line))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: c.line)),
+      ),
       child: Row(
         children: [
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: c.line),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text('Cancel', style: TextStyle(color: c.muted)),
           ),
@@ -283,7 +311,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   }
 
   Widget _teamDropdown(
-      AppColors c, String value, String hint, ValueChanged<String?> onChanged) {
+    AppColors c,
+    String value,
+    String hint,
+    ValueChanged<String?> onChanged,
+  ) {
     return _dropdownShell(
       c,
       DropdownButton<String>(
@@ -295,7 +327,10 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
         style: TextStyle(color: c.text, fontSize: 14),
         items: [
           for (final t in Teams.all)
-            DropdownMenuItem(value: t.name, child: Text('${t.flag}  ${t.name}')),
+            DropdownMenuItem(
+              value: t.name,
+              child: Text('${t.flag}  ${t.name}'),
+            ),
         ],
         onChanged: onChanged,
       ),
@@ -312,10 +347,15 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
         dropdownColor: c.surface2,
         style: TextStyle(color: c.text, fontSize: 14),
         items: const [
-          DropdownMenuItem(value: MatchStatus.upcoming, child: Text('Upcoming')),
+          DropdownMenuItem(
+            value: MatchStatus.upcoming,
+            child: Text('Upcoming'),
+          ),
           DropdownMenuItem(value: MatchStatus.live, child: Text('Live')),
           DropdownMenuItem(
-              value: MatchStatus.finished, child: Text('Finished')),
+            value: MatchStatus.finished,
+            child: Text('Finished'),
+          ),
         ],
         onChanged: (v) => setState(() => _status = v ?? MatchStatus.upcoming),
       ),
@@ -335,7 +375,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   }
 
   Widget _pickerField(
-      AppColors c, String label, IconData icon, VoidCallback onTap) {
+    AppColors c,
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(11),
@@ -351,9 +395,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
             Icon(icon, size: 15, color: c.muted),
             const SizedBox(width: 8),
             Flexible(
-              child: Text(label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: c.text, fontSize: 13)),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: c.text, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -367,10 +413,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
       keyboardType: TextInputType.number,
       textAlign: TextAlign.center,
       style: TextStyle(
-          fontFamily: AppTheme.mono,
-          fontWeight: FontWeight.w700,
-          fontSize: 16,
-          color: c.text),
+        fontFamily: AppTheme.mono,
+        fontWeight: FontWeight.w700,
+        fontSize: 16,
+        color: c.text,
+      ),
       decoration: appInputDecoration(context, hint: '–'),
     );
   }

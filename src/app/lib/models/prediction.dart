@@ -34,11 +34,11 @@ class Prediction {
   }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'userId': userId,
-        'displayName': displayName,
-        'scoreA': scoreA,
-        'scoreB': scoreB,
-        if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+    'userId': userId,
+    'displayName': displayName,
+    'scoreA': scoreA,
+    'scoreB': scoreB,
+    if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
 }

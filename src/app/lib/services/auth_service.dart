@@ -11,12 +11,16 @@ class AuthService {
 
   Future<UserCredential> signInWithEmail(String email, String password) {
     return _auth.signInWithEmailAndPassword(
-        email: email.trim(), password: password);
+      email: email.trim(),
+      password: password,
+    );
   }
 
   Future<UserCredential> registerWithEmail(String email, String password) {
     return _auth.createUserWithEmailAndPassword(
-        email: email.trim(), password: password);
+      email: email.trim(),
+      password: password,
+    );
   }
 
   Future<UserCredential> signInWithGoogle() {

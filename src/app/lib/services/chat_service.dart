@@ -10,8 +10,10 @@ class ChatService {
         .orderBy('createdAt', descending: true)
         .limit(pageSize)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map(ChatMessage.fromDoc).toList().reversed.toList());
+        .map(
+          (snap) =>
+              snap.docs.map(ChatMessage.fromDoc).toList().reversed.toList(),
+        );
   }
 
   Future<void> send({

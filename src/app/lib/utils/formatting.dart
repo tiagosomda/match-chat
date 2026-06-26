@@ -6,8 +6,11 @@ class Formatting {
   Formatting._();
 
   static String initials(String? name) {
-    final parts =
-        (name ?? '').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = (name ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '??';
     final first = parts[0].isNotEmpty ? parts[0][0] : '';
     final second = parts.length > 1

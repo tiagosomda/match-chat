@@ -14,10 +14,7 @@ class PitchBackground extends StatelessWidget {
     final c = context.colors;
     return DecoratedBox(
       decoration: BoxDecoration(color: c.bg),
-      child: CustomPaint(
-        painter: _PitchPainter(c),
-        child: child,
-      ),
+      child: CustomPaint(painter: _PitchPainter(c), child: child),
     );
   }
 }

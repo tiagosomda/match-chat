@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
@@ -54,9 +55,11 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
     final app = context.read<AppState>();
-    _runAuth(() => _register
-        ? app.auth.registerWithEmail(_email.text, _password.text)
-        : app.auth.signInWithEmail(_email.text, _password.text));
+    _runAuth(
+      () => _register
+          ? app.auth.registerWithEmail(_email.text, _password.text)
+          : app.auth.signInWithEmail(_email.text, _password.text),
+    );
   }
 
   void _google() {
@@ -106,8 +109,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children:
-                          _showForm ? _formChildren(c) : _landingChildren(c),
+                      children: _showForm
+                          ? _formChildren(c)
+                          : _landingChildren(c),
                     ),
                   ],
                 ),
@@ -122,27 +126,27 @@ class _AuthScreenState extends State<AuthScreen> {
   /// The default landing: pitch + strengths, a guest "Browse matches" button,
   /// and a secondary path into the sign-in form.
   List<Widget> _landingChildren(AppColors c) {
+    final l = context.l10n;
     return [
-      const MonoLabel('WORLD CUP 2026 · SPOILER-FREE', letterSpacing: 3),
+      MonoLabel(l.t('taglineSpoilerFree'), letterSpacing: 3),
       const SizedBox(height: 18),
       _heading(c),
       const SizedBox(height: 20),
       _strength(
         c,
         Icons.event_available_outlined,
-        'Spoiler-free schedule',
-        'Scores, comments and predictions stay hidden until you choose to '
-            'reveal them.',
+        l.t('strengthScheduleTitle'),
+        l.t('strengthScheduleDesc'),
       ),
       _strength(
         c,
         Icons.visibility_outlined,
-        'See which friends have watched',
-        'Know who has already seen a match — without giving the result away.',
+        l.t('strengthFriendsTitle'),
+        l.t('strengthFriendsDesc'),
       ),
       const SizedBox(height: 24),
       AccentButton(
-        label: 'Browse matches',
+        label: l.t('browseMatches'),
         icon: Icons.sports_soccer,
         expand: true,
         busy: _busy,
@@ -153,18 +157,24 @@ class _AuthScreenState extends State<AuthScreen> {
         onPressed: _busy
             ? null
             : () => setState(() {
-                  _showForm = true;
-                  _error = null;
-                }),
+                _showForm = true;
+                _error = null;
+              }),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
           side: BorderSide(color: c.lineStrong),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
         ),
-        child: Text('Sign in or create account',
-            style: TextStyle(
-                color: c.text, fontWeight: FontWeight.w600, fontSize: 14.5)),
+        child: Text(
+          l.t('signInOrCreate'),
+          style: TextStyle(
+            color: c.text,
+            fontWeight: FontWeight.w600,
+            fontSize: 14.5,
+          ),
+        ),
       ),
       if (_error != null) ...[
         const SizedBox(height: 12),
@@ -173,7 +183,7 @@ class _AuthScreenState extends State<AuthScreen> {
       const SizedBox(height: 8),
       Center(
         child: Text(
-          'Browsing is read-only. An invite code unlocks chat & predictions.',
+          l.t('browseReadOnly'),
           textAlign: TextAlign.center,
           style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
         ),
@@ -183,6 +193,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   /// The email / Google sign-in form, reached from the landing.
   List<Widget> _formChildren(AppColors c) {
+    final l = context.l10n;
     return [
       Row(
         children: [
@@ -205,12 +216,15 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Text(_register ? 'Create account' : 'Sign in',
-              style: TextStyle(
-                  fontFamily: AppTheme.grotesk,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 22,
-                  color: c.text)),
+          Text(
+            _register ? l.t('createAccount') : l.t('signIn'),
+            style: TextStyle(
+              fontFamily: AppTheme.grotesk,
+              fontWeight: FontWeight.w700,
+              fontSize: 22,
+              color: c.text,
+            ),
+          ),
         ],
       ),
       const SizedBox(height: 24),
@@ -222,7 +236,7 @@ class _AuthScreenState extends State<AuthScreen> {
         controller: _email,
         keyboardType: TextInputType.emailAddress,
         style: TextStyle(color: c.text),
-        decoration: appInputDecoration(context, hint: 'Email'),
+        decoration: appInputDecoration(context, hint: l.t('email')),
         onSubmitted: (_) => _submitEmail(),
       ),
       const SizedBox(height: 11),
@@ -230,7 +244,7 @@ class _AuthScreenState extends State<AuthScreen> {
         controller: _password,
         obscureText: true,
         style: TextStyle(color: c.text),
-        decoration: appInputDecoration(context, hint: 'Password'),
+        decoration: appInputDecoration(context, hint: l.t('password')),
         onSubmitted: (_) => _submitEmail(),
       ),
       if (_error != null) ...[
@@ -239,7 +253,7 @@ class _AuthScreenState extends State<AuthScreen> {
       ],
       const SizedBox(height: 14),
       AccentButton(
-        label: _register ? 'Create account' : 'Sign in',
+        label: _register ? l.t('createAccount') : l.t('signIn'),
         expand: true,
         busy: _busy,
         onPressed: _submitEmail,
@@ -256,13 +270,14 @@ class _AuthScreenState extends State<AuthScreen> {
               style: TextStyle(color: c.muted, fontSize: 13),
               children: [
                 TextSpan(
-                    text: _register
-                        ? 'Already have an account? '
-                        : 'New here? '),
+                  text: _register ? l.t('alreadyHaveAccount') : l.t('newHere'),
+                ),
                 TextSpan(
-                  text: _register ? 'Sign in' : 'Create an account',
+                  text: _register ? l.t('signIn') : l.t('createAnAccount'),
                   style: TextStyle(
-                      color: c.accent, fontWeight: FontWeight.w600),
+                    color: c.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -284,7 +299,9 @@ class _AuthScreenState extends State<AuthScreen> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Color.alphaBlend(
-                  c.accent.withValues(alpha: 0.16), c.surface),
+                c.accent.withValues(alpha: 0.16),
+                c.surface,
+              ),
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(icon, size: 19, color: c.accent),
@@ -294,15 +311,19 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(desc,
-                    style: TextStyle(
-                        color: c.muted, fontSize: 13, height: 1.45)),
+                Text(
+                  desc,
+                  style: TextStyle(color: c.muted, fontSize: 13, height: 1.45),
+                ),
               ],
             ),
           ),
@@ -324,7 +345,10 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         children: [
           const TextSpan(text: 'MATCH\n'),
-          TextSpan(text: 'CHAT', style: TextStyle(color: c.accent)),
+          TextSpan(
+            text: 'CHAT',
+            style: TextStyle(color: c.accent),
+          ),
         ],
       ),
     );
@@ -349,11 +373,12 @@ class _AuthScreenState extends State<AuthScreen> {
               const _GoogleG(),
               const SizedBox(width: 10),
               Text(
-                'Continue with Google',
+                context.l10n.t('continueWithGoogle'),
                 style: TextStyle(
-                    color: c.text,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15),
+                  color: c.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
             ],
           ),
@@ -368,7 +393,11 @@ class _AuthScreenState extends State<AuthScreen> {
         Expanded(child: Container(height: 1, color: c.line)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: MonoLabel('OR', fontSize: 11, letterSpacing: 1),
+          child: MonoLabel(
+            context.l10n.t('orLabel'),
+            fontSize: 11,
+            letterSpacing: 1,
+          ),
         ),
         Expanded(child: Container(height: 1, color: c.line)),
       ],
@@ -382,11 +411,13 @@ class _GoogleG extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('G',
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: 18,
-          color: Color(0xFF4285F4),
-        ));
+    return const Text(
+      'G',
+      style: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 18,
+        color: Color(0xFF4285F4),
+      ),
+    );
   }
 }

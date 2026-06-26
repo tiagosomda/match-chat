@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/chat_message.dart';
 import '../models/match.dart';
 import '../models/user_match_state.dart';
@@ -52,7 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       _text.clear();
     } catch (e) {
-      if (mounted) showToast(context, 'Could not send: $e');
+      if (mounted) {
+        showToast(context, context.l10n.tp('couldNotSend', {'e': '$e'}));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -73,8 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return StreamBuilder<Map<String, UserMatchState>>(
           stream: app.reveals.watchAllForUser(app.firebaseUser!.uid),
           builder: (context, revealSnap) {
-            final reveals =
-                revealSnap.data ?? const <String, UserMatchState>{};
+            final reveals = revealSnap.data ?? const <String, UserMatchState>{};
             return Column(
               children: [
                 Expanded(
@@ -83,24 +85,29 @@ class _ChatScreenState extends State<ChatScreen> {
                     builder: (context, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
                         return Center(
-                            child:
-                                CircularProgressIndicator(color: c.accent));
+                          child: CircularProgressIndicator(color: c.accent),
+                        );
                       }
                       final messages = snap.data ?? const <ChatMessage>[];
                       return ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
                           Center(
-                            child: MonoLabel('GLOBAL CHAT · LIVE',
-                                fontSize: 10.5, letterSpacing: 1.6),
+                            child: MonoLabel(
+                              context.l10n.t('globalChatLive'),
+                              fontSize: 10.5,
+                              letterSpacing: 1.6,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           if (messages.isEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 40),
                               child: Center(
-                                child: Text('No messages yet — say hello 👋',
-                                    style: TextStyle(color: c.muted)),
+                                child: Text(
+                                  context.l10n.t('noMessagesYet'),
+                                  style: TextStyle(color: c.muted),
+                                ),
                               ),
                             ),
                           for (final m in messages) ...[
@@ -155,14 +162,20 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Switches the composer's channel to a tagged match (item #9).
   void _selectChannel(MatchModel match) {
     setState(() => _tag = match.id);
-    showToast(context, 'Posting to ${match.teamA} vs ${match.teamB}');
+    showToast(
+      context,
+      context.l10n.tp('postingTo', {
+        'match': '${match.teamA} vs ${match.teamB}',
+      }),
+    );
   }
 
   void _openUser(BuildContext context, String tid, String name) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          UserProfileScreen(tournamentId: tid, displayName: name),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UserProfileScreen(tournamentId: tid, displayName: name),
+      ),
+    );
   }
 
   Widget _composer(AppColors c, AppState app, List<MatchModel> matches) {
@@ -179,7 +192,11 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Row(
               children: [
-                MonoLabel('POST TO', fontSize: 9.5, letterSpacing: 1.2),
+                MonoLabel(
+                  context.l10n.t('postTo'),
+                  fontSize: 9.5,
+                  letterSpacing: 1.2,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Container(
@@ -198,16 +215,18 @@ class _ChatScreenState extends State<ChatScreen> {
                       dropdownColor: c.surface2,
                       style: TextStyle(color: c.text, fontSize: 13),
                       items: [
-                        const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('🌐 General (everyone)')),
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(context.l10n.t('generalEveryone')),
+                        ),
                         for (final m in active)
                           DropdownMenuItem<String?>(
                             value: m.id,
                             child: Text(
-                                '${Formatting.shortKickoff(m.scheduledAt)} · '
-                                '${m.flagA} ${m.teamA} vs ${m.teamB} ${m.flagB}',
-                                overflow: TextOverflow.ellipsis),
+                              '${Formatting.shortKickoff(m.scheduledAt)} · '
+                              '${m.flagA} ${m.teamA} vs ${m.teamB} ${m.flagB}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (v) => setState(() => _tag = v),
@@ -225,16 +244,21 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: TextField(
                     controller: _text,
                     style: TextStyle(color: c.text, fontSize: 14),
-                    decoration: appInputDecoration(context,
-                        hint: _tag == null
-                            ? 'Message everyone…'
-                            : 'Message about this match…'),
+                    decoration: appInputDecoration(
+                      context,
+                      hint: _tag == null
+                          ? context.l10n.t('messageEveryone')
+                          : context.l10n.t('messageAboutMatch'),
+                    ),
                     onSubmitted: (_) => _send(app),
                   ),
                 ),
                 const SizedBox(width: 8),
                 AccentButton(
-                    label: 'Send', busy: _busy, onPressed: () => _send(app)),
+                  label: context.l10n.t('send'),
+                  busy: _busy,
+                  onPressed: () => _send(app),
+                ),
               ],
             ),
           ],
@@ -249,12 +273,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final enabled = _tag != null;
     return InkWell(
       onTap: enabled
-          ? () => Navigator.of(context).push(MaterialPageRoute(
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute(
                 builder: (_) => MatchDetailScreen(
                   tournamentId: app.tournamentId!,
                   matchId: _tag!,
                 ),
-              ))
+              ),
+            )
           : null,
       borderRadius: BorderRadius.circular(11),
       child: Opacity(
@@ -285,10 +311,13 @@ class _ChatScreenState extends State<ChatScreen> {
       child: SafeArea(
         top: false,
         child: Text(
-          'Get an invite code to join the chat →',
+          context.l10n.t('inviteChatPrompt'),
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: c.accent, fontWeight: FontWeight.w600, fontSize: 13),
+            color: c.accent,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
         ),
       ),
     );
@@ -338,20 +367,26 @@ class _ChatRow extends StatelessWidget {
                   Flexible(
                     child: GestureDetector(
                       onTap: onUser,
-                      child: Text(message.displayName,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: c.text,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.5)),
+                      child: Text(
+                        message.displayName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: c.text,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(Formatting.ago(message.createdAt),
-                      style: TextStyle(
-                          fontFamily: AppTheme.mono,
-                          fontSize: 11,
-                          color: c.muted)),
+                  Text(
+                    Formatting.ago(message.createdAt),
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 11,
+                      color: c.muted,
+                    ),
+                  ),
                 ],
               ),
               if (taggedMatch != null) ...[
@@ -384,7 +419,10 @@ class _ChatRow extends StatelessWidget {
             Text(
               '${m.flagA} ${m.flagB}  ${m.teamA} vs ${m.teamB}',
               style: TextStyle(
-                  color: c.text, fontSize: 11, fontWeight: FontWeight.w600),
+                color: c.text,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             if (onTagTap != null) ...[
               const SizedBox(width: 5),
@@ -417,11 +455,15 @@ class _ChatRow extends StatelessWidget {
             onTap: onReveal,
             child: Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Color.alphaBlend(
-                      c.accent.withValues(alpha: 0.16), c.surface),
+                    c.accent.withValues(alpha: 0.16),
+                    c.surface,
+                  ),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: c.accent.withValues(alpha: 0.35)),
                 ),
@@ -430,11 +472,14 @@ class _ChatRow extends StatelessWidget {
                   children: [
                     Icon(Icons.visibility_outlined, size: 12, color: c.accent),
                     const SizedBox(width: 6),
-                    Text('Reveal match to read',
-                        style: TextStyle(
-                            color: c.accent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
+                    Text(
+                      context.l10n.t('revealMatchToRead'),
+                      style: TextStyle(
+                        color: c.accent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),

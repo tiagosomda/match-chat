@@ -22,7 +22,10 @@ class AppLogo extends StatelessWidget {
         ),
         children: [
           const TextSpan(text: 'MATCH'),
-          TextSpan(text: ' CHAT', style: TextStyle(color: c.accent)),
+          TextSpan(
+            text: ' CHAT',
+            style: TextStyle(color: c.accent),
+          ),
         ],
       ),
     );
@@ -139,7 +142,10 @@ class AccentButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2, color: fg),
           )
         else ...[
-          if (icon != null) ...[Icon(icon, size: 17, color: fg), const SizedBox(width: 8)],
+          if (icon != null) ...[
+            Icon(icon, size: 17, color: fg),
+            const SizedBox(width: 8),
+          ],
           Text(
             label,
             style: TextStyle(
@@ -215,9 +221,7 @@ void showToast(BuildContext context, String message) {
         backgroundColor: c.text,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 2200),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         margin: const EdgeInsets.fromLTRB(40, 0, 40, 90),
       ),
     );

@@ -41,8 +41,15 @@ class _AdminScreenState extends State<AdminScreen> {
     );
     if (date == null) return;
     final t = TimeOfDay.fromDateTime(_kickoff ?? now);
-    setState(() =>
-        _kickoff = DateTime(date.year, date.month, date.day, t.hour, t.minute));
+    setState(
+      () => _kickoff = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        t.hour,
+        t.minute,
+      ),
+    );
   }
 
   Future<void> _pickTime() async {
@@ -52,8 +59,15 @@ class _AdminScreenState extends State<AdminScreen> {
       initialTime: TimeOfDay.fromDateTime(base),
     );
     if (time == null) return;
-    setState(() => _kickoff =
-        DateTime(base.year, base.month, base.day, time.hour, time.minute));
+    setState(
+      () => _kickoff = DateTime(
+        base.year,
+        base.month,
+        base.day,
+        time.hour,
+        time.minute,
+      ),
+    );
   }
 
   Future<void> _create(AppState app) async {
@@ -71,7 +85,9 @@ class _AdminScreenState extends State<AdminScreen> {
         tid: app.tournamentId!,
         teamA: _teamA!,
         teamB: _teamB!,
-        description: _desc.text.trim().isEmpty ? 'Group Stage' : _desc.text.trim(),
+        description: _desc.text.trim().isEmpty
+            ? 'Group Stage'
+            : _desc.text.trim(),
         scheduledAt: _kickoff?.toUtc(),
       );
       setState(() {
@@ -119,12 +135,15 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                   ),
                   const SizedBox(width: 11),
-                  Text('Match admin',
-                      style: TextStyle(
-                          fontFamily: AppTheme.grotesk,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 21,
-                          color: c.text)),
+                  Text(
+                    'Match admin',
+                    style: TextStyle(
+                      fontFamily: AppTheme.grotesk,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 21,
+                      color: c.text,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -149,25 +168,40 @@ class _AdminScreenState extends State<AdminScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Create match',
-              style: TextStyle(
-                  color: c.text, fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            'Create match',
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 13),
           MonoLabel('TEAMS'),
           const SizedBox(height: 9),
-          _teamDropdown(c, _teamA, 'Home team…',
-              (v) => setState(() => _teamA = v)),
+          _teamDropdown(
+            c,
+            _teamA,
+            'Home team…',
+            (v) => setState(() => _teamA = v),
+          ),
           const SizedBox(height: 9),
-          _teamDropdown(c, _teamB, 'Away team…',
-              (v) => setState(() => _teamB = v)),
+          _teamDropdown(
+            c,
+            _teamB,
+            'Away team…',
+            (v) => setState(() => _teamB = v),
+          ),
           const SizedBox(height: 13),
           MonoLabel('DESCRIPTION'),
           const SizedBox(height: 9),
           TextField(
             controller: _desc,
             style: TextStyle(color: c.text),
-            decoration: appInputDecoration(context,
-                hint: 'e.g. Group Stage · Group B'),
+            decoration: appInputDecoration(
+              context,
+              hint: 'e.g. Group Stage · Group B',
+            ),
           ),
           const SizedBox(height: 13),
           MonoLabel('KICKOFF'),
@@ -198,9 +232,11 @@ class _AdminScreenState extends State<AdminScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text('Times are stored in UTC and shown to each user in their own '
-              'local time.',
-              style: TextStyle(color: c.muted, fontSize: 11, height: 1.4)),
+          Text(
+            'Times are stored in UTC and shown to each user in their own '
+            'local time.',
+            style: TextStyle(color: c.muted, fontSize: 11, height: 1.4),
+          ),
           const SizedBox(height: 12),
           AccentButton(
             label: 'Create match',
@@ -218,16 +254,23 @@ class _AdminScreenState extends State<AdminScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Manage matches',
-              style: TextStyle(
-                  color: c.text, fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            'Manage matches',
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 11),
           TextField(
             onChanged: (v) => setState(() => _query = v),
             style: TextStyle(color: c.text, fontSize: 14),
-            decoration: appInputDecoration(context,
-                hint: 'Search matches…',
-                prefix: Icon(Icons.search, size: 18, color: c.muted)),
+            decoration: appInputDecoration(
+              context,
+              hint: 'Search matches…',
+              prefix: Icon(Icons.search, size: 18, color: c.muted),
+            ),
           ),
           const SizedBox(height: 12),
           StreamBuilder<List<MatchModel>>(
@@ -245,8 +288,10 @@ class _AdminScreenState extends State<AdminScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Center(
-                    child: Text('No matches found.',
-                        style: TextStyle(color: c.muted, fontSize: 13)),
+                    child: Text(
+                      'No matches found.',
+                      style: TextStyle(color: c.muted, fontSize: 13),
+                    ),
                   ),
                 );
               }
@@ -300,33 +345,41 @@ class _AdminScreenState extends State<AdminScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(m.title,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: c.text,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13.5)),
+                    Text(
+                      m.title,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(m.status.label,
-                            style: TextStyle(
-                                fontFamily: AppTheme.mono,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                                color: _statusColor(c, m.status))),
+                        Text(
+                          m.status.label,
+                          style: TextStyle(
+                            fontFamily: AppTheme.mono,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: _statusColor(c, m.status),
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                              m.archived
-                                  ? 'Archived · ${m.description}'
-                                  : m.description,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontFamily: AppTheme.mono,
-                                  fontSize: 10.5,
-                                  color: c.muted)),
+                            m.archived
+                                ? 'Archived · ${m.description}'
+                                : m.description,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTheme.mono,
+                              fontSize: 10.5,
+                              color: c.muted,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -334,17 +387,19 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(m.hasScore ? m.scoreText : '—',
-                  style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: c.accent2)),
+              Text(
+                m.hasScore ? m.scoreText : '—',
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: c.accent2,
+                ),
+              ),
               const SizedBox(width: 10),
               Row(
                 children: [
-                  MonoLabel('EDIT',
-                      fontSize: 10, fontWeight: FontWeight.w700),
+                  MonoLabel('EDIT', fontSize: 10, fontWeight: FontWeight.w700),
                   const SizedBox(width: 4),
                   Icon(Icons.edit_outlined, size: 14, color: c.muted),
                 ],
@@ -356,8 +411,12 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Widget _teamDropdown(AppColors c, String? value, String hint,
-      ValueChanged<String?> onChanged) {
+  Widget _teamDropdown(
+    AppColors c,
+    String? value,
+    String hint,
+    ValueChanged<String?> onChanged,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13),
       decoration: BoxDecoration(
@@ -374,7 +433,10 @@ class _AdminScreenState extends State<AdminScreen> {
         style: TextStyle(color: c.text, fontSize: 14),
         items: [
           for (final t in Teams.all)
-            DropdownMenuItem(value: t.name, child: Text('${t.flag}  ${t.name}')),
+            DropdownMenuItem(
+              value: t.name,
+              child: Text('${t.flag}  ${t.name}'),
+            ),
         ],
         onChanged: onChanged,
       ),
@@ -382,7 +444,11 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _pickerField(
-      AppColors c, String label, IconData icon, VoidCallback onTap) {
+    AppColors c,
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(11),
@@ -398,9 +464,11 @@ class _AdminScreenState extends State<AdminScreen> {
             Icon(icon, size: 15, color: c.muted),
             const SizedBox(width: 8),
             Flexible(
-              child: Text(label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: c.text, fontSize: 13)),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: c.text, fontSize: 13),
+              ),
             ),
           ],
         ),

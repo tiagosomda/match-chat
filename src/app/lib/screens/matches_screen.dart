@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/match.dart';
 import '../models/user_match_state.dart';
 import '../state/app_state.dart';
@@ -137,7 +138,12 @@ class _MatchesScreenState extends State<MatchesScreen> {
                             color: c.text,
                           ),
                         ),
-                        MonoLabel('${visible.length} SHOWN', fontSize: 11),
+                        MonoLabel(
+                          context.l10n.tp('shownCount', {
+                            'n': '${visible.length}',
+                          }),
+                          fontSize: 11,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 13),
@@ -150,7 +156,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Center(
                           child: Text(
-                            'No matches match your search.',
+                            context.l10n.t('noMatchesSearch'),
                             style: TextStyle(color: c.muted),
                           ),
                         ),
@@ -201,19 +207,20 @@ class _MatchesScreenState extends State<MatchesScreen> {
       style: TextStyle(color: c.text, fontSize: 14),
       decoration: appInputDecoration(
         context,
-        hint: 'Search teams or stage…',
+        hint: context.l10n.t('searchHint'),
         prefix: Icon(Icons.search, size: 18, color: c.muted),
       ),
     );
   }
 
   Widget _chips(AppColors c) {
-    const defs = <(_Filter, String)>[
-      (_Filter.all, 'All'),
-      (_Filter.upcoming, 'Upcoming'),
-      (_Filter.live, 'Live'),
-      (_Filter.finished, 'Finished'),
-      (_Filter.archived, 'Archived'),
+    final l = context.l10n;
+    final defs = <(_Filter, String)>[
+      (_Filter.all, l.t('filterAll')),
+      (_Filter.upcoming, l.t('filterUpcoming')),
+      (_Filter.live, l.t('filterLive')),
+      (_Filter.finished, l.t('filterFinished')),
+      (_Filter.archived, l.t('filterArchived')),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -335,7 +342,9 @@ class _MatchCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: MonoLabel(
-                        match.archived ? 'ARCHIVED' : 'HIDDEN',
+                        match.archived
+                            ? context.l10n.t('archivedUpper')
+                            : context.l10n.t('hiddenUpper'),
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                       ),
@@ -358,7 +367,7 @@ class _MatchCard extends StatelessWidget {
                     const SizedBox(width: 10),
                   ],
                   Text(
-                    match.status.label,
+                    _statusLabel(context, match.status),
                     style: TextStyle(
                       fontFamily: AppTheme.mono,
                       fontSize: 10,
@@ -516,6 +525,18 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
+/// Localized status label (UPCOMING / ● LIVE / FULL TIME).
+String _statusLabel(BuildContext context, MatchStatus status) {
+  switch (status) {
+    case MatchStatus.live:
+      return context.l10n.t('statusLive');
+    case MatchStatus.finished:
+      return context.l10n.t('statusFullTime');
+    case MatchStatus.upcoming:
+      return context.l10n.t('statusUpcoming');
+  }
+}
+
 /// Wraps [child] in a blur when [blur] is true; otherwise returns it as-is.
 Widget _maybeBlur({required bool blur, required Widget child}) {
   if (!blur) return child;
@@ -540,7 +561,7 @@ class _ErrorState extends StatelessWidget {
             Icon(Icons.error_outline, color: c.accent, size: 36),
             const SizedBox(height: 12),
             Text(
-              'Could not load matches.',
+              context.l10n.t('couldNotLoadMatches'),
               style: TextStyle(color: c.text, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/app_user.dart';
 import '../models/match.dart';
 import '../models/prediction.dart';
@@ -88,7 +89,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 11),
-                  MonoLabel('PROFILE', fontSize: 11, letterSpacing: 1.6),
+                  MonoLabel(
+                    context.l10n.t('profileUpper'),
+                    fontSize: 11,
+                    letterSpacing: 1.6,
+                  ),
                 ],
               ),
             ),
@@ -105,7 +110,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   if (data == null || data.user == null) {
                     return Center(
                       child: Text(
-                        'User not found.',
+                        context.l10n.t('userNotFound'),
                         style: TextStyle(color: c.muted),
                       ),
                     );
@@ -171,7 +176,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ),
                       const SizedBox(width: 7),
                       Text(
-                        'Supports',
+                        context.l10n.t('supports'),
                         style: TextStyle(color: c.muted, fontSize: 12.5),
                       ),
                       const SizedBox(width: 5),
@@ -196,7 +201,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Predictions',
+                context.l10n.t('predictions'),
                 style: TextStyle(
                   color: c.text,
                   fontWeight: FontWeight.w700,
@@ -206,7 +211,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               const SizedBox(height: 13),
               if (data.predictions.isEmpty)
                 Text(
-                  'No predictions yet.',
+                  context.l10n.t('noPredictionsYet'),
                   style: TextStyle(color: c.muted, fontSize: 13),
                 )
               else
@@ -228,10 +233,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final uid = app.firebaseUser!.uid;
         if (isFriend) {
           await app.users.removeFriend(uid, user.id);
-          if (mounted) showToast(context, 'Removed from friends');
+          if (mounted) showToast(context, context.l10n.t('removedFromFriends'));
         } else {
           await app.users.addFriend(uid, user.id);
-          if (mounted) showToast(context, 'Added to friends');
+          if (mounted) showToast(context, context.l10n.t('addedToFriends'));
         }
       },
       borderRadius: BorderRadius.circular(999),
@@ -254,7 +259,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              isFriend ? 'Friend · tap to remove' : 'Add friend',
+              isFriend
+                  ? context.l10n.t('friendTapRemove')
+                  : context.l10n.t('addFriend'),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,

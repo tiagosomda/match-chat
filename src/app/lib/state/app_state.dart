@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/app_user.dart';
 import '../models/tournament.dart';
 import '../services/auth_service.dart';
@@ -25,9 +26,8 @@ enum AppTab { matches, chat, profile }
 /// Holds session-wide state: the authenticated user, the active tournament, the
 /// theme preference, and shared service instances.
 class AppState extends ChangeNotifier {
-  AppState({
-    fb.FirebaseAuth? auth,
-  })  : auth = AuthService(auth ?? fb.FirebaseAuth.instance) {
+  AppState({fb.FirebaseAuth? auth})
+    : auth = AuthService(auth ?? fb.FirebaseAuth.instance) {
     _init();
   }
 
@@ -59,6 +59,10 @@ class AppState extends ChangeNotifier {
   AppThemeMode _themeMode = AppThemeMode.auto;
   static const _themeKey = 'themeMode';
 
+  // Language. null = follow the device locale.
+  Locale? _locale;
+  static const _localeKey = 'localeCode';
+
   // Getters.
   fb.User? get firebaseUser => _firebaseUser;
   AppUser? get appUser => _appUser;
@@ -78,6 +82,13 @@ class AppState extends ChangeNotifier {
 
   AppThemeMode get themeMode => _themeMode;
 
+  /// The active locale override, or null to follow the device locale.
+  Locale? get locale => _locale;
+
+  /// The stored locale code ("en"/"es"/"pt"/"pt_BR"), or null for system.
+  String? get localeCode =>
+      _locale == null ? null : AppLocalizations.codeForLocale(_locale!);
+
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_themeKey);
@@ -87,9 +98,22 @@ class AppState extends ChangeNotifier {
         orElse: () => AppThemeMode.auto,
       );
     }
+    _locale = AppLocalizations.localeFromCode(prefs.getString(_localeKey));
     notifyListeners();
 
     _authSub = auth.authStateChanges().listen(_onAuthChanged);
+  }
+
+  /// Sets the app language. Pass null to follow the device locale.
+  Future<void> setLocale(String? code) async {
+    _locale = AppLocalizations.localeFromCode(code);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (code == null) {
+      await prefs.remove(_localeKey);
+    } else {
+      await prefs.setString(_localeKey, code);
+    }
   }
 
   Future<void> _onAuthChanged(fb.User? user) async {
@@ -112,8 +136,8 @@ class AppState extends ChangeNotifier {
       final fallbackName = user.isAnonymous
           ? 'Guest'
           : (user.displayName?.trim().isNotEmpty == true
-              ? user.displayName!.trim()
-              : (user.email?.split('@').first ?? 'Player'));
+                ? user.displayName!.trim()
+                : (user.email?.split('@').first ?? 'Player'));
       await users.ensureUser(
         uid: user.uid,
         email: user.email ?? '',

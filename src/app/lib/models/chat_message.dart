@@ -36,11 +36,11 @@ class ChatMessage {
   }
 
   Map<String, dynamic> toCreateMap() => <String, dynamic>{
-        'userId': userId,
-        'displayName': displayName,
-        'body': body,
-        if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
-        'matchId': matchId,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+    'userId': userId,
+    'displayName': displayName,
+    'body': body,
+    if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
+    'matchId': matchId,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
 }
