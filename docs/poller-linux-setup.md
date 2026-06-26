@@ -143,7 +143,7 @@ Common issues:
 - **Firestore connection failed**: Verify `GOOGLE_APPLICATION_CREDENTIALS` path and that the service account key is accessible
 
 ### High memory/CPU usage
-The poller sleeps during idle time and only polls during active match windows. If consuming resources during idle periods, there may be a bug — check the logs and ensure `POLL_INTERVAL_SECONDS` and `MAX_POLL_INTERVAL_SECONDS` are set reasonably (default: 300s and 900s).
+The poller sleeps during idle time and only polls during active match windows. If consuming resources during idle periods, there may be a bug — check the logs and ensure `POLL_INTERVAL_SECONDS` and `MAX_POLL_INTERVAL_SECONDS` are set reasonably (default: 30s and 120s).
 
 ### Updates and restarts
 To pull and deploy a newer version:
@@ -155,7 +155,7 @@ sudo systemctl restart match-chat-poller
 
 ## Notes
 
-- The poller respects API-Football's free tier (100 requests/day) and will throttle requests if approaching the limit
+- The poller is tuned for the paid plan (7000 requests/day); it throttles, then stops, as it nears the daily budget, and backs off on errors instead of crashing
 - The local cache file (`.poller-cache.json`) prevents redundant writes to Firestore
 - Logs are sent to the systemd journal and can be queried at any time
 - The service will automatically restart if it crashes (after 10 seconds)

@@ -50,6 +50,9 @@ l10n/                Hand-rolled localization (en, es, pt-PT, pt-BR)
 - **Auth modes** — email/password, Google popup, and **anonymous** ("Browse
   matches" guest, read-only). An invite code promotes a user to *participant*
   (chat / comment / predict). See [invite-system.md](./invite-system.md).
+- **Predictions & leaderboard** — participants predict scores before kickoff
+  (locked after); the Ranks tab scores them (5 exact / 3 goal-diff / 1 result)
+  with Global / Friends / Near-me views. Computed client-side.
 - **Tournaments are generic** — the data is keyed by tournament; World Cup 2026
   is just the first one.
 - **Localization** — device locale is auto-detected; a picker in

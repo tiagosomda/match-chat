@@ -7,6 +7,15 @@ and scores in one place, and potentially chatting about the games with friends
 and family. Scores, comments and predictions stay hidden until you choose to
 reveal them, so you can catch up on your own clock.
 
+## Features
+
+- Spoiler-free schedule & live scores — reveal on your own clock
+- Score predictions with a skill-weighted leaderboard (Global / Friends / Near you)
+- Invite-only chat & threaded comments
+- See which friends have already watched a match
+- Tap a team for its full schedule & results
+- Match venues, and English / Spanish / Portuguese (PT & BR)
+
 ## Layout
 
 ```
