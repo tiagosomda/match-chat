@@ -9,6 +9,7 @@ class CommentModel {
     required this.userId,
     required this.displayName,
     required this.body,
+    this.favoriteTeam,
     this.parentId,
     this.votes = 0,
     this.createdAt,
@@ -18,6 +19,7 @@ class CommentModel {
   final String userId;
   final String displayName;
   final String body;
+  final String? favoriteTeam;
   final String? parentId;
   final int votes;
   final DateTime? createdAt;
@@ -29,6 +31,7 @@ class CommentModel {
       userId: (d['userId'] ?? '') as String,
       displayName: (d['displayName'] ?? '') as String,
       body: (d['body'] ?? '') as String,
+      favoriteTeam: d['favoriteTeam'] as String?,
       parentId: d['parentId'] as String?,
       votes: (d['votes'] ?? 0) as int,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
@@ -39,6 +42,7 @@ class CommentModel {
         'userId': userId,
         'displayName': displayName,
         'body': body,
+        if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
         'parentId': parentId,
         'votes': 0,
         'createdAt': FieldValue.serverTimestamp(),

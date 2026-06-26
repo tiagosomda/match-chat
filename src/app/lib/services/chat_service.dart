@@ -19,6 +19,7 @@ class ChatService {
     required String userId,
     required String displayName,
     required String body,
+    String? favoriteTeam,
     String? matchId,
   }) {
     return Refs.chat(tid).add(
@@ -27,6 +28,7 @@ class ChatService {
         userId: userId,
         displayName: displayName,
         body: body,
+        favoriteTeam: favoriteTeam,
         matchId: matchId,
       ).toCreateMap(),
     );

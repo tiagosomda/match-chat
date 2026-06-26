@@ -27,6 +27,7 @@ class PredictionService {
     required String displayName,
     required int scoreA,
     required int scoreB,
+    String? favoriteTeam,
   }) async {
     final ref = Refs.predictions(tid, mid).doc(userId);
     final existing = await ref.get();
@@ -38,6 +39,7 @@ class PredictionService {
         displayName: displayName,
         scoreA: scoreA,
         scoreB: scoreB,
+        favoriteTeam: favoriteTeam,
       ).toMap(),
     );
     if (!existing.exists) {

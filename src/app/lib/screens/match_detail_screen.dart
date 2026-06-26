@@ -600,7 +600,11 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           for (final p in preds) ...[
             Row(
               children: [
-                Avatar(name: p.displayName, size: 30),
+                Avatar(
+                  name: p.displayName,
+                  favoriteTeam: p.favoriteTeam,
+                  size: 30,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(p.displayName,
@@ -670,6 +674,7 @@ class _CommentsTabState extends State<_CommentsTab> {
         mid: widget.match.id,
         userId: app.firebaseUser!.uid,
         displayName: app.displayName,
+        favoriteTeam: app.appUser?.favoriteTeam,
         body: ctrl.text.trim(),
         parentId: parentId,
       );
@@ -754,6 +759,7 @@ class _CommentsTabState extends State<_CommentsTab> {
               children: [
                 Avatar(
                   name: comment.displayName,
+                  favoriteTeam: comment.favoriteTeam,
                   size: 20,
                   onTap: () => _openUser(context, comment.displayName),
                 ),

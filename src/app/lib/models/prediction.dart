@@ -8,6 +8,7 @@ class Prediction {
     required this.displayName,
     required this.scoreA,
     required this.scoreB,
+    this.favoriteTeam,
     this.createdAt,
   });
 
@@ -15,6 +16,7 @@ class Prediction {
   final String displayName;
   final int scoreA;
   final int scoreB;
+  final String? favoriteTeam;
   final DateTime? createdAt;
 
   String get scoreText => '$scoreA : $scoreB';
@@ -26,6 +28,7 @@ class Prediction {
       displayName: (d['displayName'] ?? '') as String,
       scoreA: (d['scoreA'] ?? 0) as int,
       scoreB: (d['scoreB'] ?? 0) as int,
+      favoriteTeam: d['favoriteTeam'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -35,6 +38,7 @@ class Prediction {
         'displayName': displayName,
         'scoreA': scoreA,
         'scoreB': scoreB,
+        if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
         'createdAt': FieldValue.serverTimestamp(),
       };
 }

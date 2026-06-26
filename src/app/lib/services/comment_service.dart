@@ -19,6 +19,7 @@ class CommentService {
     required String userId,
     required String displayName,
     required String body,
+    String? favoriteTeam,
     String? parentId,
   }) async {
     final batch = Refs.db.batch();
@@ -30,6 +31,7 @@ class CommentService {
         userId: userId,
         displayName: displayName,
         body: body,
+        favoriteTeam: favoriteTeam,
         parentId: parentId,
       ).toCreateMap(),
     );

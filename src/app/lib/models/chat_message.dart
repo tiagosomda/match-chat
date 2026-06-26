@@ -9,6 +9,7 @@ class ChatMessage {
     required this.userId,
     required this.displayName,
     required this.body,
+    this.favoriteTeam,
     this.matchId,
     this.createdAt,
   });
@@ -17,6 +18,7 @@ class ChatMessage {
   final String userId;
   final String displayName;
   final String body;
+  final String? favoriteTeam;
   final String? matchId;
   final DateTime? createdAt;
 
@@ -27,6 +29,7 @@ class ChatMessage {
       userId: (d['userId'] ?? '') as String,
       displayName: (d['displayName'] ?? '') as String,
       body: (d['body'] ?? '') as String,
+      favoriteTeam: d['favoriteTeam'] as String?,
       matchId: d['matchId'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -36,6 +39,7 @@ class ChatMessage {
         'userId': userId,
         'displayName': displayName,
         'body': body,
+        if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
         'matchId': matchId,
         'createdAt': FieldValue.serverTimestamp(),
       };

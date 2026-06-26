@@ -45,6 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
         tid: app.tournamentId!,
         userId: app.firebaseUser!.uid,
         displayName: app.displayName,
+        favoriteTeam: app.appUser?.favoriteTeam,
         body: _text.text.trim(),
         matchId: _tag,
       );
@@ -268,7 +269,12 @@ class _ChatRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Avatar(name: message.displayName, size: 32, onTap: onUser),
+        Avatar(
+          name: message.displayName,
+          favoriteTeam: message.favoriteTeam,
+          size: 32,
+          onTap: onUser,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
