@@ -2,13 +2,13 @@
 
 We only ever need scores, so every call goes through /fixtures. One request to
 the status-filtered endpoint returns the live score for *every* simultaneous
-match, which keeps us comfortably inside the free plan (100 requests/day).
+match, which keeps daily usage tiny relative to the paid plan's 7000/day.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
@@ -29,7 +29,8 @@ class RequestBudget:
 
     def __init__(self, daily_budget: int) -> None:
         self.daily_budget = daily_budget
-        self._day = date.today().__str__()
+        # Track the day in UTC, matching the quota reset and _roll_day_if_needed.
+        self._day = datetime.now(timezone.utc).date().isoformat()
         self._used = 0
         self._remaining_header: Optional[int] = None
 

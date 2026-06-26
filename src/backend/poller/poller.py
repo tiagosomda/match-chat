@@ -8,7 +8,11 @@ A single long-running process meant to run on a personal machine. It:
      Firestore only when it actually changes.
   4. Goes back to sleep when every match has finished.
 
-Designed to stay inside API-Football's free plan (100 requests/day).
+Sized for the paid plan (7000 requests/day): it polls briskly while matches
+are live, and is defensive about the daily quota — a budget guard widens the
+interval as the quota runs low, requests stop entirely once it is exhausted,
+and every unexpected error backs off before retrying so a failure (or a
+crash-restart loop) can never hammer the API.
 
 Run:  python poller.py
 """
@@ -139,31 +143,38 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
             time.sleep(cfg.max_poll_interval)
             continue
 
-        live = api.live()
-        current_ids = set()
-        wrote = 0
-        for fixture in live:
-            current_ids.add(fixture["fixture"]["id"])
-            if _write_live(api, fs, cache, fixture):
-                wrote += 1
+        try:
+            live = api.live()
+            current_ids = set()
+            wrote = 0
+            for fixture in live:
+                current_ids.add(fixture["fixture"]["id"])
+                if _write_live(api, fs, cache, fixture):
+                    wrote += 1
 
-        # Matches that left the live set just finished — fetch their final score.
-        finished = list(seen_live - current_ids)
-        if finished:
-            for fixture in api.fixtures_by_ids(finished):
-                _write_live(api, fs, cache, fixture)
-        seen_live = current_ids
+            # Matches that left the live set just finished — fetch their final
+            # score.
+            finished = list(seen_live - current_ids)
+            if finished:
+                for fixture in api.fixtures_by_ids(finished):
+                    _write_live(api, fs, cache, fixture)
+            seen_live = current_ids
 
-        if wrote or finished:
-            cache.save()
+            if wrote or finished:
+                cache.save()
+        except Exception as e:  # one bad poll shouldn't abandon the window
+            log.warning("Live poll failed (%s); retrying after the interval", e)
 
         time.sleep(_poll_interval(cfg, api.budget))
 
     # Window closed; reconcile anything still marked live (edge case).
     if seen_live and not api.budget.exhausted:
-        for fixture in api.fixtures_by_ids(list(seen_live)):
-            _write_live(api, fs, cache, fixture)
-        cache.save()
+        try:
+            for fixture in api.fixtures_by_ids(list(seen_live)):
+                _write_live(api, fs, cache, fixture)
+            cache.save()
+        except Exception as e:
+            log.warning("Final reconcile failed (%s); will retry next window", e)
 
 
 def _setup():
@@ -195,18 +206,27 @@ def run_forever() -> None:
 
     log.info("Poller started for %s (league=%s season=%s)", cfg.tournament_name, cfg.league_id, cfg.season)
     while True:
-        today = _utcnow().date()
-        if last_sync_date != today and budget.remaining > 2:
-            schedule, _ = daily_sync(api, fs, cache)
-            last_sync_date = today
+        # Any unexpected failure here backs off instead of crashing. A crash
+        # under an auto-restart supervisor would re-run the daily sync on every
+        # restart and could burn through the quota — the back-off prevents that.
+        try:
+            today = _utcnow().date()
+            if last_sync_date != today and budget.remaining > 2:
+                schedule, _ = daily_sync(api, fs, cache)
+                last_sync_date = today
 
-        now = _utcnow()
-        if _in_any_window(schedule, now, cfg.prekickoff_wake):
-            run_live_loop(api, fs, cache, schedule, cfg)
-        else:
-            sleep_s = _seconds_until_next_window(schedule, now, cfg.prekickoff_wake)
-            log.info("Idle; sleeping %ds (budget remaining: %d)", sleep_s, budget.remaining)
-            time.sleep(sleep_s)
+            now = _utcnow()
+            if _in_any_window(schedule, now, cfg.prekickoff_wake):
+                run_live_loop(api, fs, cache, schedule, cfg)
+            else:
+                sleep_s = _seconds_until_next_window(schedule, now, cfg.prekickoff_wake)
+                log.info("Idle; sleeping %ds (budget remaining: %d)", sleep_s, budget.remaining)
+                time.sleep(sleep_s)
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            log.exception("Loop iteration failed (%s); backing off %ds", e, cfg.error_backoff)
+            time.sleep(cfg.error_backoff)
 
 
 def main() -> None:
