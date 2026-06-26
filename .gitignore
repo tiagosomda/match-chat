@@ -1,8 +1,32 @@
+# Repo-wide safety net. Each sub-project also has its own .gitignore
+# (src/app for Flutter, src/backend for Firebase).
+
+# Symlink to my other repos (see README)
 example-*
+
+# OS / editor
 .DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.iml
+.vscode/
+
+# Flutter / Dart (anywhere in the tree)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+**/doc/api/
+*.log
 
 # Firebase
 .firebase/
+.firebaserc
 firebase-debug.log
 firestore-debug.log
-.firebaserc
+ui-debug.log
+.runtimeconfig.json

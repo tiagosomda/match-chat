@@ -1,0 +1,14 @@
+# Firebase CLI artifacts
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+.runtimeconfig.json
+
+# Cloud Functions (if added later)
+functions/node_modules/
+functions/.env
+functions/lib/
