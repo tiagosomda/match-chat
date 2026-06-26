@@ -103,17 +103,23 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                           for (final m in messages) ...[
-                            _ChatRow(
-                              message: m,
-                              taggedMatch: m.matchId == null
+                            () {
+                              final tagged = m.matchId == null
                                   ? null
-                                  : matchById[m.matchId],
-                              revealed: _isRevealed(m, reveals),
-                              onReveal: () => _revealMatch(app, m.matchId),
-                              onUser: () => _openUser(context, tid,
-                                  m.displayName),
-                              isMe: m.userId == app.firebaseUser!.uid,
-                            ),
+                                  : matchById[m.matchId];
+                              return _ChatRow(
+                                message: m,
+                                taggedMatch: tagged,
+                                revealed: _isRevealed(m, reveals),
+                                onReveal: () => _revealMatch(app, m.matchId),
+                                onUser: () =>
+                                    _openUser(context, tid, m.displayName),
+                                onTagTap: tagged == null
+                                    ? null
+                                    : () => _selectChannel(tagged),
+                                isMe: m.userId == app.firebaseUser!.uid,
+                              );
+                            }(),
                             const SizedBox(height: 16),
                           ],
                         ],
@@ -143,6 +149,12 @@ class _ChatScreenState extends State<ChatScreen> {
   void _revealMatch(AppState app, String? matchId) {
     if (matchId == null) return;
     app.reveals.setReveal(app.firebaseUser!.uid, matchId, score: true);
+  }
+
+  /// Switches the composer's channel to a tagged match (item #9).
+  void _selectChannel(MatchModel match) {
+    setState(() => _tag = match.id);
+    showToast(context, 'Posting to ${match.teamA} vs ${match.teamB}');
   }
 
   void _openUser(BuildContext context, String tid, String name) {
@@ -256,6 +268,7 @@ class _ChatRow extends StatelessWidget {
     required this.revealed,
     required this.onReveal,
     required this.onUser,
+    required this.onTagTap,
     required this.isMe,
   });
 
@@ -264,6 +277,7 @@ class _ChatRow extends StatelessWidget {
   final bool revealed;
   final VoidCallback onReveal;
   final VoidCallback onUser;
+  final VoidCallback? onTagTap;
   final bool isMe;
 
   @override
@@ -320,16 +334,30 @@ class _ChatRow extends StatelessWidget {
   }
 
   Widget _tagChip(AppColors c, MatchModel m) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Text(
-        '${m.flagA} ${m.flagB}  ${m.teamA} vs ${m.teamB}',
-        style: TextStyle(color: c.text, fontSize: 11, fontWeight: FontWeight.w600),
+    return InkWell(
+      onTap: onTagTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${m.flagA} ${m.flagB}  ${m.teamA} vs ${m.teamB}',
+              style: TextStyle(
+                  color: c.text, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+            if (onTagTap != null) ...[
+              const SizedBox(width: 5),
+              Icon(Icons.arrow_outward, size: 12, color: c.muted),
+            ],
+          ],
+        ),
       ),
     );
   }
