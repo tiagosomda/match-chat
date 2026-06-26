@@ -99,7 +99,11 @@ service cloud.firestore {
               && request.auth.uid == uid
               && request.resource.data.userId == request.auth.uid
               && matchDoc(tid, mid).status == 'upcoming';
-            allow delete: if isAdmin();
+            // Owners may delete their own prediction before kickoff; admins any.
+            allow delete: if isAdmin()
+              || (isParticipant()
+                  && request.auth.uid == uid
+                  && matchDoc(tid, mid).status == 'upcoming');
           }
         }
 

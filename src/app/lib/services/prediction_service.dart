@@ -50,6 +50,24 @@ class PredictionService {
     await batch.commit();
   }
 
+  /// Removes the current user's prediction and decrements the cached
+  /// predictionCount. No-op if there's nothing to delete.
+  Future<void> delete({
+    required String tid,
+    required String mid,
+    required String userId,
+  }) async {
+    final ref = Refs.predictions(tid, mid).doc(userId);
+    final existing = await ref.get();
+    if (!existing.exists) return;
+    final batch = Refs.db.batch();
+    batch.delete(ref);
+    batch.update(Refs.match(tid, mid), {
+      'predictionCount': FieldValue.increment(-1),
+    });
+    await batch.commit();
+  }
+
   /// Fetches every prediction a user has made across a tournament, for their
   /// public profile.
   Future<List<({String matchId, Prediction prediction})>> fetchForUserAcross(

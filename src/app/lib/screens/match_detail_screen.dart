@@ -403,6 +403,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   final _a = TextEditingController();
   final _b = TextEditingController();
   bool _busy = false;
+  bool _editing = false;
 
   @override
   void dispose() {
@@ -411,7 +412,23 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     super.dispose();
   }
 
-  Future<void> _submit(AppState app) async {
+  void _startEdit(Prediction mine) {
+    setState(() {
+      _editing = true;
+      _a.text = '${mine.scoreA}';
+      _b.text = '${mine.scoreB}';
+    });
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editing = false;
+      _a.clear();
+      _b.clear();
+    });
+  }
+
+  Future<void> _submit(AppState app, {required bool isUpdate}) async {
     final a = int.tryParse(_a.text.trim());
     final b = int.tryParse(_b.text.trim());
     if (a == null || b == null || a < 0 || b < 0) {
@@ -425,14 +442,40 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         mid: widget.match.id,
         userId: app.firebaseUser!.uid,
         displayName: app.displayName,
+        favoriteTeam: app.appUser?.favoriteTeam,
         scoreA: a,
         scoreB: b,
       );
       _a.clear();
       _b.clear();
-      if (mounted) showToast(context, 'Prediction submitted ✅');
+      if (mounted) {
+        setState(() => _editing = false);
+        showToast(context,
+            isUpdate ? 'Prediction updated ✅' : 'Prediction submitted ✅');
+      }
     } catch (e) {
       if (mounted) showToast(context, 'Could not submit: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete(AppState app) async {
+    setState(() => _busy = true);
+    try {
+      await app.predictions.delete(
+        tid: widget.tournamentId,
+        mid: widget.match.id,
+        userId: app.firebaseUser!.uid,
+      );
+      _a.clear();
+      _b.clear();
+      if (mounted) {
+        setState(() => _editing = false);
+        showToast(context, 'Prediction removed');
+      }
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not remove: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -456,17 +499,21 @@ class _PredictionsTabState extends State<_PredictionsTab> {
             break;
           }
         }
-        final canPredict =
-            app.isParticipant && mine == null && match.status == MatchStatus.upcoming;
+        // Predictions can be created/edited/removed only while the match is
+        // still upcoming.
+        final editable =
+            app.isParticipant && match.status == MatchStatus.upcoming;
+        final showInput = editable && (mine == null || _editing);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (canPredict) _predictionInput(c, app),
-              if (mine != null) ...[
-                _yourPredChip(c, mine),
+              if (showInput)
+                _predictionInput(c, app, isUpdate: mine != null)
+              else if (mine != null) ...[
+                _yourPredChip(c, app, mine, editable),
                 const SizedBox(height: 13),
               ],
               if (!app.isParticipant) ...[
@@ -492,7 +539,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     );
   }
 
-  Widget _predictionInput(AppColors c, AppState app) {
+  Widget _predictionInput(AppColors c, AppState app, {required bool isUpdate}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 13),
       padding: const EdgeInsets.all(14),
@@ -504,11 +551,23 @@ class _PredictionsTabState extends State<_PredictionsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Your prediction',
-              style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.5)),
+          Row(
+            children: [
+              Expanded(
+                child: Text(isUpdate ? 'Update your prediction' : 'Your prediction',
+                    style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5)),
+              ),
+              if (isUpdate)
+                GestureDetector(
+                  onTap: _busy ? null : _cancelEdit,
+                  child: MonoLabel('CANCEL',
+                      fontSize: 10.5, fontWeight: FontWeight.w700),
+                ),
+            ],
+          ),
           const SizedBox(height: 11),
           Row(
             children: [
@@ -527,10 +586,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: AccentButton(
-                  label: 'Predict',
+                  label: isUpdate ? 'Update' : 'Predict',
                   expand: true,
                   busy: _busy,
-                  onPressed: () => _submit(app),
+                  onPressed: () => _submit(app, isUpdate: isUpdate),
                 ),
               ),
             ],
@@ -557,7 +616,8 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     );
   }
 
-  Widget _yourPredChip(AppColors c, Prediction mine) {
+  Widget _yourPredChip(
+      AppColors c, AppState app, Prediction mine, bool editable) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -565,24 +625,65 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: c.accent2.withValues(alpha: 0.28)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(Icons.check, size: 16, color: c.accent2),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text('Your prediction is in',
-                style: TextStyle(
-                    color: c.text,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
+          Row(
+            children: [
+              Icon(Icons.check, size: 16, color: c.accent2),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text('Your prediction is in',
+                    style: TextStyle(
+                        color: c.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ),
+              Text(mine.scoreText,
+                  style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: c.accent2)),
+            ],
           ),
-          Text(mine.scoreText,
-              style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: c.accent2)),
+          if (editable) ...[
+            const SizedBox(height: 11),
+            Row(
+              children: [
+                _predAction(c, Icons.edit_outlined, 'Edit',
+                    _busy ? null : () => _startEdit(mine)),
+                const SizedBox(width: 9),
+                _predAction(c, Icons.delete_outline, 'Delete',
+                    _busy ? null : () => _delete(app)),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _predAction(
+      AppColors c, IconData icon, String label, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: c.muted),
+            const SizedBox(width: 5),
+            MonoLabel(label.toUpperCase(),
+                fontSize: 10, fontWeight: FontWeight.w700),
+          ],
+        ),
       ),
     );
   }
