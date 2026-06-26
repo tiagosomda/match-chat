@@ -97,13 +97,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
       if (m.isHidden) return false;
       switch (_filter) {
         case _Filter.upcoming:
-          if (m.status != MatchStatus.upcoming) return false;
+          if (m.displayStatus != MatchStatus.upcoming) return false;
           break;
         case _Filter.live:
-          if (m.status != MatchStatus.live) return false;
+          if (m.displayStatus != MatchStatus.live) return false;
           break;
         case _Filter.finished:
-          if (m.status != MatchStatus.finished) return false;
+          if (m.displayStatus != MatchStatus.finished) return false;
           break;
         case _Filter.all:
         case _Filter.archived:
@@ -329,7 +329,7 @@ class _MatchCard extends StatelessWidget {
   final VoidCallback onToggleScore;
 
   Color _statusColor(AppColors c) {
-    switch (match.status) {
+    switch (match.displayStatus) {
       case MatchStatus.live:
         return c.accent2;
       case MatchStatus.finished:
@@ -343,7 +343,7 @@ class _MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final showScore = revealed && match.hasScore;
-    final countdown = match.status == MatchStatus.upcoming
+    final countdown = match.displayStatus == MatchStatus.upcoming
         ? Formatting.untilKickoff(match.scheduledAt)
         : null;
     return GestureDetector(
@@ -434,7 +434,7 @@ class _MatchCard extends StatelessWidget {
                     const SizedBox(width: 10),
                   ],
                   Text(
-                    _statusLabel(context, match.status),
+                    _statusLabel(context, match.displayStatus),
                     style: TextStyle(
                       fontFamily: AppTheme.mono,
                       fontSize: 10,

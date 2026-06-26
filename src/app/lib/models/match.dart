@@ -115,7 +115,25 @@ class MatchModel {
   String get flagA => Teams.flagFor(teamA);
   String get flagB => Teams.flagFor(teamB);
   bool get hasScore => scoreA != null && scoreB != null;
-  bool get isLocked => status != MatchStatus.upcoming;
+
+  /// True once the scheduled kickoff time has passed (per the wall clock).
+  /// Independent of the poller, so the UI can react the instant a match should
+  /// be underway.
+  bool get hasKickedOff =>
+      scheduledAt != null && !DateTime.now().isBefore(scheduledAt!);
+
+  /// Status reconciled with the wall clock. The poller is authoritative once it
+  /// has marked a match live or finished; until then, a match whose kickoff has
+  /// already passed is treated as live. This makes the "● LIVE" treatment
+  /// appear the moment a match kicks off, even if the poller is briefly behind
+  /// (or isn't running), and keeps a started match from still reading as
+  /// "upcoming".
+  MatchStatus get displayStatus {
+    if (status != MatchStatus.upcoming) return status;
+    return hasKickedOff ? MatchStatus.live : MatchStatus.upcoming;
+  }
+
+  bool get isLocked => displayStatus != MatchStatus.upcoming;
 
   /// True when the match is old enough to be hidden automatically.
   bool get isStale =>

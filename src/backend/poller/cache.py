@@ -39,5 +39,10 @@ class Cache:
         prev = self._state.get(str(fixture_id))
         return prev != [status, score_a, score_b]
 
+    def status_of(self, fixture_id):
+        """Last-known status string for a fixture, or None if never seen."""
+        prev = self._state.get(str(fixture_id))
+        return prev[0] if prev else None
+
     def set(self, fixture_id, status, score_a, score_b) -> None:
         self._state[str(fixture_id)] = [status, score_a, score_b]

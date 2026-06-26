@@ -105,11 +105,11 @@ class CountryMatchesScreen extends StatelessWidget {
 
   Widget _body(BuildContext context, AppColors c, List<MatchModel> mine) {
     final upcoming = mine
-        .where((m) => m.status == MatchStatus.upcoming)
+        .where((m) => m.displayStatus == MatchStatus.upcoming)
         .toList();
-    // Played first shows most-recent at the top.
+    // Played first shows most-recent at the top. Includes live matches.
     final played =
-        mine.where((m) => m.status != MatchStatus.upcoming).toList()
+        mine.where((m) => m.displayStatus != MatchStatus.upcoming).toList()
           ..sort((a, b) => _byKickoff(b, a));
 
     return ListView(
@@ -240,7 +240,7 @@ class CountryMatchesScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _statusChip(context, c, m.status),
+            _statusChip(context, c, m.displayStatus),
           ],
         ),
       ),

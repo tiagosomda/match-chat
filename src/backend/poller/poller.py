@@ -28,13 +28,17 @@ from api_football import ApiFootball, RequestBudget
 from cache import Cache
 from config import Config
 from firestore_sync import FirestoreSync
-from mapping import build_group_map, map_status, to_goals, to_match_doc
+from mapping import build_group_map, fixture_id, map_status, to_goals, to_match_doc
 
 # How long after kickoff a match might still be in play (90' + half-time +
 # stoppage + extra time + penalties, with margin). Defines the polling window.
 LIVE_WINDOW = timedelta(hours=3)
 # Outer-loop wake cap: re-evaluate (and roll the day / re-sync) at least hourly.
 MAX_IDLE_SLEEP = 3600
+# How far back to chase down matches that never got a final result. Matches
+# older than this are auto-hidden in the app anyway, so there's no point
+# re-fetching them every idle cycle.
+RECONCILE_LOOKBACK = timedelta(days=2)
 
 log = logging.getLogger("poller")
 
@@ -177,6 +181,55 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
             log.warning("Final reconcile failed (%s); will retry next window", e)
 
 
+def _overdue_unfinished(schedule: list, cache: Cache, now: datetime) -> list:
+    """Fixture ids whose live window has fully elapsed but which the cache does
+    not yet record as finished.
+
+    These are matches the live loop never saw end — typically because the poller
+    wasn't running during their window. Bounded to a recent lookback so we don't
+    keep chasing long-past fixtures (e.g. a postponed game that never resolves).
+    """
+    ids = []
+    for fx in schedule:
+        ko = _kickoff(fx)
+        if not ko:
+            continue
+        if not (ko + LIVE_WINDOW < now < ko + LIVE_WINDOW + RECONCILE_LOOKBACK):
+            continue
+        if cache.status_of(fixture_id(fx)) != "finished":
+            ids.append(fixture_id(fx))
+    return ids
+
+
+def reconcile_overdue(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: list) -> None:
+    """Mark as finished any match whose window elapsed while we weren't watching.
+
+    Runs on idle wake-ups, so a match that ended while the poller was down is
+    completed within the hour instead of waiting for the next daily sync. Once a
+    fixture is written finished it drops out of the overdue set, so this settles
+    to zero API calls when everything is up to date.
+    """
+    ids = _overdue_unfinished(schedule, cache, _utcnow())
+    if not ids or api.budget.exhausted:
+        return
+
+    wrote = 0
+    for i in range(0, len(ids), 20):  # /fixtures?ids= accepts up to 20
+        if api.budget.exhausted:
+            break
+        try:
+            for fixture in api.fixtures_by_ids(ids[i : i + 20]):
+                if _write_live(api, fs, cache, fixture):
+                    wrote += 1
+        except Exception as e:  # best-effort; the daily sync remains the backstop
+            log.warning("Overdue reconcile failed (%s); will retry next idle", e)
+            break
+
+    if wrote:
+        cache.save()
+        log.info("Reconciled %d overdue fixture(s) to their final state", wrote)
+
+
 def _setup():
     """Build the shared config + service objects used by both run modes."""
     cfg = Config.load()
@@ -219,6 +272,9 @@ def run_forever() -> None:
             if _in_any_window(schedule, now, cfg.prekickoff_wake):
                 run_live_loop(api, fs, cache, schedule, cfg)
             else:
+                # Catch any match that finished while we weren't watching before
+                # going back to sleep.
+                reconcile_overdue(api, fs, cache, schedule)
                 sleep_s = _seconds_until_next_window(schedule, now, cfg.prekickoff_wake)
                 log.info("Idle; sleeping %ds (budget remaining: %d)", sleep_s, budget.remaining)
                 time.sleep(sleep_s)

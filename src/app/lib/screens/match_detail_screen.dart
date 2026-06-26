@@ -290,7 +290,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   letterSpacing: 1.4,
                 ),
                 if (match.hasLocation) _venueLine(c, match),
-                _kickoffCountdown(c, match),
+                _statusPill(context, c, match),
               ],
             ),
           ),
@@ -321,9 +321,21 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
+  /// The status pill under the kickoff line: a countdown while the match is
+  /// upcoming, a live badge once it's underway, and full-time once it's over.
+  Widget _statusPill(BuildContext context, AppColors c, MatchModel match) {
+    switch (match.displayStatus) {
+      case MatchStatus.upcoming:
+        return _kickoffCountdown(c, match);
+      case MatchStatus.live:
+        return _livePill(context, c);
+      case MatchStatus.finished:
+        return _finishedPill(context, c);
+    }
+  }
+
   /// A countdown pill ("Starts in 3h 20m") shown for upcoming matches.
   Widget _kickoffCountdown(AppColors c, MatchModel match) {
-    if (match.status != MatchStatus.upcoming) return const SizedBox.shrink();
     final left = Formatting.untilKickoff(match.scheduledAt);
     if (left == null) return const SizedBox.shrink();
     return Padding(
@@ -349,6 +361,56 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// A "● LIVE" badge shown while a match is in play.
+  Widget _livePill(BuildContext context, AppColors c) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
+        ),
+        child: Text(
+          context.l10n.t('statusLive'),
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            color: c.accent2,
+            fontWeight: FontWeight.w700,
+            fontSize: 11.5,
+            letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A muted "FULL TIME" badge shown once a match has ended.
+  Widget _finishedPill(BuildContext context, AppColors c) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
+        ),
+        child: Text(
+          context.l10n.t('statusFullTime'),
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            color: c.muted,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            letterSpacing: 1.2,
+          ),
         ),
       ),
     );
@@ -867,8 +929,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           }
         }
         // Predictions can be created/edited/removed only while the match is
-        // still upcoming. Once it kicks off they are locked (item #5).
-        final predictionsOpen = match.status == MatchStatus.upcoming;
+        // still upcoming. They lock the moment kickoff passes (item #5) —
+        // displayStatus reflects that even before the poller flips the status.
+        final predictionsOpen = match.displayStatus == MatchStatus.upcoming;
         final editable = app.isParticipant && predictionsOpen;
         final showInput = editable && (mine == null || _editing);
 
@@ -1030,7 +1093,8 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   }
 
   /// Clamp helper: bump a score field by [delta], keeping it within 0..99 so
-  /// negative scores can never be entered (#6).
+  /// negative scores can never be entered (#6). An empty (unset) field is
+  /// treated as 0, so the up arrow sets it to 1 and the down arrow sets it to 0.
   void _bump(TextEditingController ctrl, int delta) {
     final current = int.tryParse(ctrl.text.trim()) ?? 0;
     final next = (current + delta).clamp(0, 99);
@@ -1043,10 +1107,13 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   }
 
   /// A vertical 0..99 score picker: up arrow, number field, down arrow (#6).
-  /// The field stays editable but only accepts digits, so the value is always a
-  /// valid non-negative integer.
+  /// Until a score is chosen the field is empty and shows a "–" so an unset
+  /// field is never mistaken for a predicted 0 — the down arrow then commits an
+  /// explicit 0. The field stays editable but only accepts digits.
   Widget _scoreStepper(AppColors c, TextEditingController ctrl) {
-    final value = int.tryParse(ctrl.text.trim()) ?? 0;
+    // null while unset (shows the dash); the down arrow is enabled when unset
+    // (to commit 0) or when the value can still be decremented.
+    final parsed = int.tryParse(ctrl.text.trim());
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1069,14 +1136,14 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               fontSize: 18,
               color: c.text,
             ),
-            decoration: appInputDecoration(context, hint: '0'),
+            decoration: appInputDecoration(context, hint: '–'),
           ),
         ),
         const SizedBox(height: 6),
         _stepArrow(
           c,
           Icons.keyboard_arrow_down,
-          value > 0 ? () => _bump(ctrl, -1) : null,
+          (parsed == null || parsed > 0) ? () => _bump(ctrl, -1) : null,
         ),
       ],
     );
