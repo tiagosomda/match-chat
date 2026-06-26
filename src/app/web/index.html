@@ -22,12 +22,33 @@
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Match Chat">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <!-- Theme color matches the app background and adapts to the system theme -->
+  <meta name="theme-color" content="#06140D" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#E7F1E8" media="(prefers-color-scheme: light)">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <style>
+    /* Paint the safe-area / overscroll regions with the app background so the
+       installed (add-to-home-screen) app doesn't flash white bands above and
+       below the Flutter canvas. Mirrors AppColors.dark/light. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #06140D;
+      overscroll-behavior: none;
+    }
+    @media (prefers-color-scheme: light) {
+      html, body { background-color: #E7F1E8; }
+    }
+  </style>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
