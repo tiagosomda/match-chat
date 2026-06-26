@@ -144,6 +144,7 @@ class Teams {
     'Japan': 'JP',
     'Jordan': 'JO',
     'Kuwait': 'KW',
+    'Kyrgyzstan': 'KG',
     'Lebanon': 'LB',
     'Malaysia': 'MY',
     'Oman': 'OM',
@@ -154,6 +155,7 @@ class Teams {
     'South Korea': 'KR',
     'North Korea': 'KP',
     'Syria': 'SY',
+    'Tajikistan': 'TJ',
     'Thailand': 'TH',
     'Turkmenistan': 'TM',
     'United Arab Emirates': 'AE',
@@ -193,6 +195,7 @@ class Teams {
     'Türkiye': 'Turkey',
     'Turkiye': 'Turkey',
     'Cabo Verde': 'Cape Verde',
+    'Cape Verde Islands': 'Cape Verde',
     'Congo DR': 'DR Congo',
     'Congo-Kinshasa': 'DR Congo',
     'DR Congo (Kinshasa)': 'DR Congo',
@@ -202,6 +205,7 @@ class Teams {
     'Ireland': 'Republic of Ireland',
     'Trinidad And Tobago': 'Trinidad and Tobago',
     'Curacao': 'Curaçao',
+    'China PR': 'China',
   };
 
   static const String unknownFlag = '🏳️';

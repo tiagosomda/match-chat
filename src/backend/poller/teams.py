@@ -24,6 +24,8 @@ _ALIASES = {
     "Türkiye": "Turkey",
     "Turkiye": "Turkey",
     "Cabo Verde": "Cape Verde",
+    "Cape Verde Islands": "Cape Verde",
+    "China PR": "China",
     "Congo DR": "DR Congo",
     "Congo-Kinshasa": "DR Congo",
     "North Macedonia": "North Macedonia",
