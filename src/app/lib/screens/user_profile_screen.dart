@@ -12,9 +12,8 @@ import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
 import 'match_detail_screen.dart';
 
-/// Public profile of another user: their avatar, favorite team and the
-/// predictions they've made in this tournament. Per docs/friends-and-circles.md
-/// there is no "circle"/follow feature and no reveal indicators.
+/// Public profile of another user: their avatar, favorite team, a friend
+/// toggle, and the predictions they've made in this tournament.
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({
     super.key,
@@ -44,8 +43,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (user == null) {
       return _ProfileData(null, const []);
     }
-    final preds = await app.predictions
-        .fetchForUserAcross(widget.tournamentId, user.id);
+    final preds = await app.predictions.fetchForUserAcross(
+      widget.tournamentId,
+      user.id,
+    );
     final matches = await app.matches.watchAll(widget.tournamentId).first;
     final byId = {for (final m in matches) m.id: m};
     final rows = <_PredRow>[];
@@ -61,6 +62,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final app = context.watch<AppState>();
     return Scaffold(
       backgroundColor: c.bg2,
       body: SafeArea(
@@ -96,16 +98,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return Center(
-                        child: CircularProgressIndicator(color: c.accent));
+                      child: CircularProgressIndicator(color: c.accent),
+                    );
                   }
                   final data = snap.data;
                   if (data == null || data.user == null) {
                     return Center(
-                      child: Text('User not found.',
-                          style: TextStyle(color: c.muted)),
+                      child: Text(
+                        'User not found.',
+                        style: TextStyle(color: c.muted),
+                      ),
                     );
                   }
-                  return _body(c, data);
+                  return _body(c, data, app);
                 },
               ),
             ),
@@ -115,8 +120,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _body(AppColors c, _ProfileData data) {
+  Widget _body(AppColors c, _ProfileData data, AppState app) {
     final user = data.user!;
+    final isSelf = user.id == app.firebaseUser?.uid;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
@@ -131,17 +137,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 gradient: user.favoriteTeam == null,
               ),
               const SizedBox(height: 11),
-              Text(user.displayName,
-                  style: TextStyle(
-                      fontFamily: AppTheme.grotesk,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22,
-                      color: c.text)),
+              Text(
+                user.displayName,
+                style: TextStyle(
+                  fontFamily: AppTheme.grotesk,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  color: c.text,
+                ),
+              ),
+              if (!isSelf) ...[
+                const SizedBox(height: 13),
+                _friendButton(c, app, user),
+              ],
               if (user.favoriteTeam != null) ...[
                 const SizedBox(height: 11),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: c.surface2,
                     borderRadius: BorderRadius.circular(999),
@@ -150,17 +165,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(Teams.flagFor(user.favoriteTeam),
-                          style: const TextStyle(fontSize: 16)),
+                      Text(
+                        Teams.flagFor(user.favoriteTeam),
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(width: 7),
-                      Text('Supports',
-                          style: TextStyle(color: c.muted, fontSize: 12.5)),
+                      Text(
+                        'Supports',
+                        style: TextStyle(color: c.muted, fontSize: 12.5),
+                      ),
                       const SizedBox(width: 5),
-                      Text(user.favoriteTeam!,
-                          style: TextStyle(
-                              color: c.text,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600)),
+                      Text(
+                        user.favoriteTeam!,
+                        style: TextStyle(
+                          color: c.text,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -173,15 +195,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Predictions',
-                  style: TextStyle(
-                      color: c.text,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+              Text(
+                'Predictions',
+                style: TextStyle(
+                  color: c.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 13),
               if (data.predictions.isEmpty)
-                Text('No predictions yet.',
-                    style: TextStyle(color: c.muted, fontSize: 13))
+                Text(
+                  'No predictions yet.',
+                  style: TextStyle(color: c.muted, fontSize: 13),
+                )
               else
                 for (final row in data.predictions) ...[
                   _predRow(c, row),
@@ -194,31 +221,87 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  Widget _friendButton(AppColors c, AppState app, AppUser user) {
+    final isFriend = app.appUser?.isFriend(user.id) ?? false;
+    return InkWell(
+      onTap: () async {
+        final uid = app.firebaseUser!.uid;
+        if (isFriend) {
+          await app.users.removeFriend(uid, user.id);
+          if (mounted) showToast(context, 'Removed from friends');
+        } else {
+          await app.users.addFriend(uid, user.id);
+          if (mounted) showToast(context, 'Added to friends');
+        }
+      },
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          color: isFriend ? c.surface2 : c.accent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: isFriend ? c.line : c.accent),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isFriend
+                  ? Icons.how_to_reg_outlined
+                  : Icons.person_add_alt_1_outlined,
+              size: 16,
+              color: isFriend ? c.text : Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isFriend ? 'Friend · tap to remove' : 'Add friend',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: isFriend ? c.text : Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _predRow(AppColors c, _PredRow row) {
     final m = row.match;
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => MatchDetailScreen(
-            tournamentId: widget.tournamentId, matchId: m.id),
-      )),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MatchDetailScreen(
+            tournamentId: widget.tournamentId,
+            matchId: m.id,
+          ),
+        ),
+      ),
       child: Row(
         children: [
           Text('${m.flagA} ${m.flagB}', style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('${m.teamA} vs ${m.teamB}',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: c.text,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500)),
-          ),
-          Text(row.prediction.scoreText,
+            child: Text(
+              '${m.teamA} vs ${m.teamB}',
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: c.accent2)),
+                color: c.text,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            row.prediction.scoreText,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: c.accent2,
+            ),
+          ),
         ],
       ),
     );

@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
+import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
 import 'match_detail_screen.dart';
 
@@ -31,7 +32,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
   // flash the loading spinner and wipe the keystroke).
   Stream<List<MatchModel>>? _matchesStream;
   Stream<Map<String, UserMatchState>>? _revealsStream;
+  Stream<List<UserMatchState>>? _friendRevealsStream;
   String? _streamKey;
+  String? _friendsKey;
 
   @override
   void dispose() {
@@ -40,11 +43,17 @@ class _MatchesScreenState extends State<MatchesScreen> {
   }
 
   void _ensureStreams(AppState app) {
-    final key = '${app.tournamentId}_${app.firebaseUser!.uid}';
-    if (key != _streamKey) {
-      _streamKey = key;
+    final baseKey = '${app.tournamentId}_${app.firebaseUser!.uid}';
+    if (baseKey != _streamKey) {
+      _streamKey = baseKey;
       _matchesStream = app.matches.watchAll(app.tournamentId!);
       _revealsStream = app.reveals.watchAllForUser(app.firebaseUser!.uid);
+    }
+    final friendIds = app.appUser?.friends ?? const <String>[];
+    final friendsKey = friendIds.join(',');
+    if (friendsKey != _friendsKey) {
+      _friendsKey = friendsKey;
+      _friendRevealsStream = app.reveals.watchFriendsReveals(friendIds);
     }
   }
 
@@ -68,9 +77,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
           break;
       }
       if (q.isEmpty) return true;
-      return ('${m.teamA} ${m.teamB} ${m.description}')
-          .toLowerCase()
-          .contains(q);
+      return ('${m.teamA} ${m.teamB} ${m.description}').toLowerCase().contains(
+        q,
+      );
     }).toList();
   }
 
@@ -96,55 +105,76 @@ class _MatchesScreenState extends State<MatchesScreen> {
         return StreamBuilder<Map<String, UserMatchState>>(
           stream: _revealsStream,
           builder: (context, revealSnap) {
-            final reveals =
-                revealSnap.data ?? const <String, UserMatchState>{};
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            final reveals = revealSnap.data ?? const <String, UserMatchState>{};
+            final friendIds = app.appUser?.friends ?? const <String>[];
+            return StreamBuilder<List<UserMatchState>>(
+              stream: _friendRevealsStream,
+              builder: (context, friendSnap) {
+                final friendReveals =
+                    friendSnap.data ?? const <UserMatchState>[];
+                final revealedByMatch = <String, Set<String>>{};
+                for (final s in friendReveals) {
+                  if (s.scoreRevealed) {
+                    revealedByMatch
+                        .putIfAbsent(s.matchId, () => <String>{})
+                        .add(s.userId);
+                  }
+                }
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
                   children: [
-                    Text(
-                      app.tournament!.name,
-                      style: TextStyle(
-                        fontFamily: AppTheme.grotesk,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
-                        letterSpacing: -0.5,
-                        color: c.text,
-                      ),
-                    ),
-                    MonoLabel('${visible.length} SHOWN', fontSize: 11),
-                  ],
-                ),
-                const SizedBox(height: 13),
-                _searchField(c),
-                const SizedBox(height: 13),
-                _chips(c),
-                const SizedBox(height: 13),
-                if (visible.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Center(
-                      child: Text(
-                        'No matches match your search.',
-                        style: TextStyle(color: c.muted),
-                      ),
-                    ),
-                  )
-                else
-                  for (final m in visible) ...[
-                    _MatchCard(
-                      match: m,
-                      revealed: reveals[m.id]?.scoreRevealed ?? false,
-                      onOpen: () => _open(tid, m.id),
-                      onToggleScore: () => _toggleScore(
-                          app, m.id, reveals[m.id]?.scoreRevealed ?? false),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          app.tournament!.name,
+                          style: TextStyle(
+                            fontFamily: AppTheme.grotesk,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 24,
+                            letterSpacing: -0.5,
+                            color: c.text,
+                          ),
+                        ),
+                        MonoLabel('${visible.length} SHOWN', fontSize: 11),
+                      ],
                     ),
                     const SizedBox(height: 13),
+                    _searchField(c),
+                    const SizedBox(height: 13),
+                    _chips(c),
+                    const SizedBox(height: 13),
+                    if (visible.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: Text(
+                            'No matches match your search.',
+                            style: TextStyle(color: c.muted),
+                          ),
+                        ),
+                      )
+                    else
+                      for (final m in visible) ...[
+                        _MatchCard(
+                          match: m,
+                          revealed: reveals[m.id]?.scoreRevealed ?? false,
+                          friendIds: friendIds,
+                          revealedFriendIds:
+                              revealedByMatch[m.id] ?? const <String>{},
+                          onOpen: () => _open(tid, m.id),
+                          onToggleScore: () => _toggleScore(
+                            app,
+                            m.id,
+                            reveals[m.id]?.scoreRevealed ?? false,
+                          ),
+                        ),
+                        const SizedBox(height: 13),
+                      ],
                   ],
-              ],
+                );
+              },
             );
           },
         );
@@ -240,12 +270,16 @@ class _MatchCard extends StatelessWidget {
   const _MatchCard({
     required this.match,
     required this.revealed,
+    required this.friendIds,
+    required this.revealedFriendIds,
     required this.onOpen,
     required this.onToggleScore,
   });
 
   final MatchModel match;
   final bool revealed;
+  final List<String> friendIds;
+  final Set<String> revealedFriendIds;
   final VoidCallback onOpen;
   final VoidCallback onToggleScore;
 
@@ -281,19 +315,27 @@ class _MatchCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: MonoLabel(match.description.toUpperCase(),
-                        fontSize: 10, letterSpacing: 1.4),
+                    child: MonoLabel(
+                      match.description.toUpperCase(),
+                      fontSize: 10,
+                      letterSpacing: 1.4,
+                    ),
                   ),
                   if (match.isHidden) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: c.surface2,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: MonoLabel(match.archived ? 'ARCHIVED' : 'HIDDEN',
-                          fontSize: 9, fontWeight: FontWeight.w700),
+                      child: MonoLabel(
+                        match.archived ? 'ARCHIVED' : 'HIDDEN',
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -312,7 +354,9 @@ class _MatchCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: _teamSide(c, match.flagA, match.teamA, false)),
+                  Expanded(
+                    child: _teamSide(c, match.flagA, match.teamA, false),
+                  ),
                   _scoreBox(c, showScore),
                   Expanded(child: _teamSide(c, match.flagB, match.teamB, true)),
                 ],
@@ -320,42 +364,67 @@ class _MatchCard extends StatelessWidget {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.only(top: 11),
-                decoration:
-                    BoxDecoration(border: Border(top: BorderSide(color: c.line))),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: c.line)),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.chat_bubble_outline,
-                            size: 13, color: c.muted),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${match.commentCount}',
-                          style: TextStyle(color: c.muted, fontSize: 12),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.schedule, size: 13, color: c.muted),
-                        const SizedBox(width: 6),
-                        Text(
-                          Formatting.kickoff(match.scheduledAt),
-                          style: TextStyle(color: c.muted, fontSize: 12),
-                        ),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 13,
+                            color: c.muted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${match.commentCount}',
+                            style: TextStyle(color: c.muted, fontSize: 12),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(Icons.schedule, size: 13, color: c.muted),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              Formatting.kickoff(match.scheduledAt),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: c.muted, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    if (showScore)
+                    if (friendIds.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      FriendsRevealBadge(
+                        match: match,
+                        friendIds: friendIds,
+                        revealedFriendIds: revealedFriendIds,
+                      ),
+                    ],
+                    if (showScore) ...[
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: onToggleScore,
                         child: Row(
                           children: [
-                            Icon(Icons.visibility_off_outlined,
-                                size: 12, color: c.muted),
+                            Icon(
+                              Icons.visibility_off_outlined,
+                              size: 12,
+                              color: c.muted,
+                            ),
                             const SizedBox(width: 5),
-                            MonoLabel('HIDE',
-                                fontSize: 10, fontWeight: FontWeight.w700),
+                            MonoLabel(
+                              'HIDE',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ],
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -376,13 +445,17 @@ class _MatchCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: alignEnd ? TextAlign.right : TextAlign.left,
           style: TextStyle(
-              color: c.text, fontWeight: FontWeight.w600, fontSize: 15),
+            color: c.text,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
       ),
     ];
     return Row(
-      mainAxisAlignment:
-          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: alignEnd
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       children: alignEnd ? children.reversed.toList() : children,
     );
   }
@@ -448,13 +521,16 @@ class _ErrorState extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, color: c.accent, size: 36),
             const SizedBox(height: 12),
-            Text('Could not load matches.',
-                style: TextStyle(
-                    color: c.text, fontWeight: FontWeight.w600)),
+            Text(
+              'Could not load matches.',
+              style: TextStyle(color: c.text, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 6),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: c.muted, fontSize: 12)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.muted, fontSize: 12),
+            ),
           ],
         ),
       ),

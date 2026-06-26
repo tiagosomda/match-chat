@@ -118,9 +118,13 @@ service cloud.firestore {
       }
 
       // ---- per-user reveal state -------------------------------------
-      // Doc id is `{uid}_{matchId}`; a user may only read/write their own.
+      // Doc id is `{uid}_{matchId}`. Readable by any signed-in user so the
+      // friends feature can show which friends have revealed a score (the doc
+      // holds only reveal booleans, never the score itself). A user may only
+      // create/update/delete their own.
       match /userMatchStates/{stateId} {
-        allow read, delete: if isSignedIn()
+        allow read: if isSignedIn();
+        allow delete: if isSignedIn()
           && resource.data.userId == request.auth.uid;
         allow create, update: if isSignedIn()
           && request.resource.data.userId == request.auth.uid;

@@ -11,6 +11,7 @@ class AppUser {
     this.invitedBy,
     this.favoriteTeam,
     this.preferredTournamentId,
+    this.friends = const <String>[],
     this.createdAt,
   });
 
@@ -22,6 +23,9 @@ class AppUser {
   final String? invitedBy;
   final String? favoriteTeam;
   final String? preferredTournamentId;
+
+  /// UIDs the user has marked as friends.
+  final List<String> friends;
   final DateTime? createdAt;
 
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -35,20 +39,24 @@ class AppUser {
       invitedBy: d['invitedBy'] as String?,
       favoriteTeam: d['favoriteTeam'] as String?,
       preferredTournamentId: d['preferredTournamentId'] as String?,
+      friends: (d['friends'] as List?)?.cast<String>() ?? const <String>[],
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 
   Map<String, dynamic> toCreateMap() => <String, dynamic>{
-        'displayName': displayName,
-        'email': email,
-        'isParticipant': isParticipant,
-        'isAdmin': isAdmin,
-        'invitedBy': invitedBy,
-        'favoriteTeam': favoriteTeam,
-        'preferredTournamentId': preferredTournamentId,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+    'displayName': displayName,
+    'email': email,
+    'isParticipant': isParticipant,
+    'isAdmin': isAdmin,
+    'invitedBy': invitedBy,
+    'favoriteTeam': favoriteTeam,
+    'preferredTournamentId': preferredTournamentId,
+    'friends': friends,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
+
+  bool isFriend(String uid) => friends.contains(uid);
 
   AppUser copyWith({
     String? displayName,
@@ -56,6 +64,7 @@ class AppUser {
     String? favoriteTeam,
     bool clearFavoriteTeam = false,
     String? preferredTournamentId,
+    List<String>? friends,
   }) {
     return AppUser(
       id: id,
@@ -64,10 +73,12 @@ class AppUser {
       isParticipant: isParticipant ?? this.isParticipant,
       isAdmin: isAdmin,
       invitedBy: invitedBy,
-      favoriteTeam:
-          clearFavoriteTeam ? null : (favoriteTeam ?? this.favoriteTeam),
+      favoriteTeam: clearFavoriteTeam
+          ? null
+          : (favoriteTeam ?? this.favoriteTeam),
       preferredTournamentId:
           preferredTournamentId ?? this.preferredTournamentId,
+      friends: friends ?? this.friends,
       createdAt: createdAt,
     );
   }

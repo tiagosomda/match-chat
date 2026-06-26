@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/app_user.dart';
 import 'firestore_refs.dart';
 
@@ -9,9 +11,9 @@ class UserService {
   }
 
   Stream<AppUser?> watch(String uid) {
-    return Refs.user(uid).snapshots().map(
-          (doc) => doc.exists ? AppUser.fromDoc(doc) : null,
-        );
+    return Refs.user(
+      uid,
+    ).snapshots().map((doc) => doc.exists ? AppUser.fromDoc(doc) : null);
   }
 
   /// Creates the user document if it doesn't yet exist (first sign-in).
@@ -55,5 +57,33 @@ class UserService {
         .get();
     if (q.docs.isEmpty) return null;
     return AppUser.fromDoc(q.docs.first);
+  }
+
+  /// Marks [friendId] as a friend of [uid] (stored on the user's own doc).
+  Future<void> addFriend(String uid, String friendId) {
+    return Refs.user(uid).update({
+      'friends': FieldValue.arrayUnion(<String>[friendId]),
+    });
+  }
+
+  Future<void> removeFriend(String uid, String friendId) {
+    return Refs.user(uid).update({
+      'friends': FieldValue.arrayRemove(<String>[friendId]),
+    });
+  }
+
+  /// Fetches user docs by id (e.g. the current user's friends), in batches of
+  /// 10 to respect Firestore's whereIn limit.
+  Future<List<AppUser>> fetchByIds(List<String> ids) async {
+    final result = <AppUser>[];
+    for (var i = 0; i < ids.length; i += 10) {
+      final chunk = ids.sublist(i, (i + 10).clamp(0, ids.length));
+      if (chunk.isEmpty) continue;
+      final snap = await Refs.users
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      result.addAll(snap.docs.map(AppUser.fromDoc));
+    }
+    return result;
   }
 }

@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
 import '../utils/validation.dart';
 import '../widgets/avatar.dart';
+import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
 import 'admin_edit_match_sheet.dart';
 import 'user_profile_screen.dart';
@@ -37,6 +38,20 @@ enum _DetailTab { predictions, comments }
 class _MatchDetailScreenState extends State<MatchDetailScreen> {
   _DetailTab _tab = _DetailTab.predictions;
 
+  // Memoized so the hero counter doesn't re-subscribe on every rebuild.
+  Stream<List<UserMatchState>>? _friendRevealsStream;
+  String? _friendsKey;
+
+  Stream<List<UserMatchState>> _friendStream(AppState app) {
+    final friendIds = app.appUser?.friends ?? const <String>[];
+    final key = friendIds.join(',');
+    if (key != _friendsKey) {
+      _friendsKey = key;
+      _friendRevealsStream = app.reveals.watchFriendsReveals(friendIds);
+    }
+    return _friendRevealsStream!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -54,18 +69,21 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             }
             if (match == null) {
               return Center(
-                child: Text('Match not found.',
-                    style: TextStyle(color: c.muted)),
+                child: Text(
+                  'Match not found.',
+                  style: TextStyle(color: c.muted),
+                ),
               );
             }
             return StreamBuilder<UserMatchState>(
-              stream:
-                  app.reveals.watch(app.firebaseUser!.uid, widget.matchId),
+              stream: app.reveals.watch(app.firebaseUser!.uid, widget.matchId),
               builder: (context, revealSnap) {
-                final reveal = revealSnap.data ??
+                final reveal =
+                    revealSnap.data ??
                     UserMatchState(
-                        userId: app.firebaseUser!.uid,
-                        matchId: widget.matchId);
+                      userId: app.firebaseUser!.uid,
+                      matchId: widget.matchId,
+                    );
                 return Column(
                   children: [
                     _topBar(context, app, match),
@@ -112,8 +130,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           _iconBtn(c, Icons.arrow_back, () => Navigator.of(context).pop()),
           const SizedBox(width: 9),
           Expanded(
-            child: MonoLabel(match.description.toUpperCase(),
-                fontSize: 11, letterSpacing: 1.6),
+            child: MonoLabel(
+              match.description.toUpperCase(),
+              fontSize: 11,
+              letterSpacing: 1.6,
+            ),
           ),
           if (app.isAdmin) ...[
             _pillBtn(
@@ -123,9 +144,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               () => _toggleArchive(app, match),
             ),
             const SizedBox(width: 8),
-            _pillBtn(c, 'EDIT', Icons.edit_outlined,
-                () => _edit(context, app, match),
-                highlight: true),
+            _pillBtn(
+              c,
+              'EDIT',
+              Icons.edit_outlined,
+              () => _edit(context, app, match),
+              highlight: true,
+            ),
           ],
         ],
       ),
@@ -133,8 +158,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   }
 
   void _toggleArchive(AppState app, MatchModel match) {
-    app.matches
-        .setArchived(widget.tournamentId, match.id, !match.archived);
+    app.matches.setArchived(widget.tournamentId, match.id, !match.archived);
     showToast(context, match.archived ? 'Match restored' : 'Match archived');
   }
 
@@ -143,10 +167,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AdminEditMatchSheet(
-        tournamentId: widget.tournamentId,
-        match: match,
-      ),
+      builder: (_) =>
+          AdminEditMatchSheet(tournamentId: widget.tournamentId, match: match),
     );
   }
 
@@ -168,8 +190,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  Widget _pillBtn(AppColors c, String label, IconData icon, VoidCallback onTap,
-      {bool highlight = false}) {
+  Widget _pillBtn(
+    AppColors c,
+    String label,
+    IconData icon,
+    VoidCallback onTap, {
+    bool highlight = false,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -184,18 +211,24 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           children: [
             Icon(icon, size: 13, color: highlight ? c.text : c.muted),
             const SizedBox(width: 5),
-            MonoLabel(label,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: highlight ? c.text : c.muted),
+            MonoLabel(
+              label,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: highlight ? c.text : c.muted,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _hero(BuildContext context, AppState app, MatchModel match,
-      UserMatchState reveal) {
+  Widget _hero(
+    BuildContext context,
+    AppState app,
+    MatchModel match,
+    UserMatchState reveal,
+  ) {
     final c = context.colors;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -221,8 +254,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.only(top: 13),
-            decoration:
-                BoxDecoration(border: Border(top: BorderSide(color: c.line))),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: c.line)),
+            ),
             child: Column(
               children: [
                 Text(
@@ -234,13 +268,42 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                MonoLabel('YOUR LOCAL TIME (${Formatting.timezoneLabel()})',
-                    fontSize: 9, letterSpacing: 1.4),
+                MonoLabel(
+                  'YOUR LOCAL TIME (${Formatting.timezoneLabel()})',
+                  fontSize: 9,
+                  letterSpacing: 1.4,
+                ),
               ],
             ),
           ),
+          _friendsCounter(context, app, match),
         ],
       ),
+    );
+  }
+
+  /// A "friends revealed" counter shown in the hero. Renders nothing unless the
+  /// viewer has friends.
+  Widget _friendsCounter(BuildContext context, AppState app, MatchModel match) {
+    final friendIds = app.appUser?.friends ?? const <String>[];
+    if (friendIds.isEmpty) return const SizedBox.shrink();
+    return StreamBuilder<List<UserMatchState>>(
+      stream: _friendStream(app),
+      builder: (context, snap) {
+        final states = snap.data ?? const <UserMatchState>[];
+        final revealed = <String>{
+          for (final s in states)
+            if (s.matchId == match.id && s.scoreRevealed) s.userId,
+        };
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: FriendsRevealBadge(
+            match: match,
+            friendIds: friendIds,
+            revealedFriendIds: revealed,
+          ),
+        );
+      },
     );
   }
 
@@ -253,14 +316,21 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           name,
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: c.text, fontWeight: FontWeight.w600, fontSize: 14),
+            color: c.text,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ],
     );
   }
 
-  Widget _centerCell(BuildContext context, AppState app, MatchModel match,
-      UserMatchState reveal) {
+  Widget _centerCell(
+    BuildContext context,
+    AppState app,
+    MatchModel match,
+    UserMatchState reveal,
+  ) {
     final c = context.colors;
     if (!match.hasScore) {
       return Center(
@@ -292,8 +362,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           const SizedBox(height: 6),
           GestureDetector(
             onTap: () => app.reveals.setReveal(
-                app.firebaseUser!.uid, match.id,
-                score: false),
+              app.firebaseUser!.uid,
+              match.id,
+              score: false,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -311,8 +383,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         label: 'Reveal',
         icon: Icons.visibility_outlined,
         pill: true,
-        onPressed: () => app.reveals
-            .setReveal(app.firebaseUser!.uid, match.id, score: true),
+        onPressed: () =>
+            app.reveals.setReveal(app.firebaseUser!.uid, match.id, score: true),
       ),
     );
   }
@@ -328,10 +400,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       ),
       child: Row(
         children: [
-          _tabButton(c, 'Predictions', '${match.predictionCount}',
-              _DetailTab.predictions),
           _tabButton(
-              c, 'Comments', '${match.commentCount}', _DetailTab.comments),
+            c,
+            'Predictions',
+            '${match.predictionCount}',
+            _DetailTab.predictions,
+          ),
+          _tabButton(
+            c,
+            'Comments',
+            '${match.commentCount}',
+            _DetailTab.comments,
+          ),
         ],
       ),
     );
@@ -450,8 +530,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
       _b.clear();
       if (mounted) {
         setState(() => _editing = false);
-        showToast(context,
-            isUpdate ? 'Prediction updated ✅' : 'Prediction submitted ✅');
+        showToast(
+          context,
+          isUpdate ? 'Prediction updated ✅' : 'Prediction submitted ✅',
+        );
       }
     } catch (e) {
       if (mounted) showToast(context, 'Could not submit: $e');
@@ -517,8 +599,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 const SizedBox(height: 13),
               ],
               if (!app.isParticipant) ...[
-                _invitePrompt(context,
-                    'Get an invite code to add your prediction →'),
+                _invitePrompt(
+                  context,
+                  'Get an invite code to add your prediction →',
+                ),
                 const SizedBox(height: 13),
               ],
               _revealableBox(
@@ -528,8 +612,8 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 revealLabel: 'Reveal predictions',
                 revealColor: c.accent2,
                 revealFg: const Color(0xFF1A1200),
-                onReveal: () => app.reveals.setReveal(uid, match.id,
-                    predictions: true),
+                onReveal: () =>
+                    app.reveals.setReveal(uid, match.id, predictions: true),
                 child: _predList(c, preds),
               ),
             ],
@@ -554,17 +638,23 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           Row(
             children: [
               Expanded(
-                child: Text(isUpdate ? 'Update your prediction' : 'Your prediction',
-                    style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5)),
+                child: Text(
+                  isUpdate ? 'Update your prediction' : 'Your prediction',
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                  ),
+                ),
               ),
               if (isUpdate)
                 GestureDetector(
                   onTap: _busy ? null : _cancelEdit,
-                  child: MonoLabel('CANCEL',
-                      fontSize: 10.5, fontWeight: FontWeight.w700),
+                  child: MonoLabel(
+                    'CANCEL',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
             ],
           ),
@@ -576,9 +666,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               _scoreInput(c, _a),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(':',
-                    style: TextStyle(
-                        fontFamily: AppTheme.mono, color: c.muted)),
+                child: Text(
+                  ':',
+                  style: TextStyle(fontFamily: AppTheme.mono, color: c.muted),
+                ),
               ),
               _scoreInput(c, _b),
               const SizedBox(width: 8),
@@ -607,17 +698,22 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         style: TextStyle(
-            fontFamily: AppTheme.mono,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-            color: c.text),
+          fontFamily: AppTheme.mono,
+          fontWeight: FontWeight.w700,
+          fontSize: 16,
+          color: c.text,
+        ),
         decoration: appInputDecoration(context, hint: '0'),
       ),
     );
   }
 
   Widget _yourPredChip(
-      AppColors c, AppState app, Prediction mine, bool editable) {
+    AppColors c,
+    AppState app,
+    Prediction mine,
+    bool editable,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -632,29 +728,43 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               Icon(Icons.check, size: 16, color: c.accent2),
               const SizedBox(width: 9),
               Expanded(
-                child: Text('Your prediction is in',
-                    style: TextStyle(
-                        color: c.text,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
-              ),
-              Text(mine.scoreText,
+                child: Text(
+                  'Your prediction is in',
                   style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: c.accent2)),
+                    color: c.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                mine.scoreText,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: c.accent2,
+                ),
+              ),
             ],
           ),
           if (editable) ...[
             const SizedBox(height: 11),
             Row(
               children: [
-                _predAction(c, Icons.edit_outlined, 'Edit',
-                    _busy ? null : () => _startEdit(mine)),
+                _predAction(
+                  c,
+                  Icons.edit_outlined,
+                  'Edit',
+                  _busy ? null : () => _startEdit(mine),
+                ),
                 const SizedBox(width: 9),
-                _predAction(c, Icons.delete_outline, 'Delete',
-                    _busy ? null : () => _delete(app)),
+                _predAction(
+                  c,
+                  Icons.delete_outline,
+                  'Delete',
+                  _busy ? null : () => _delete(app),
+                ),
               ],
             ),
           ],
@@ -664,7 +774,11 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   }
 
   Widget _predAction(
-      AppColors c, IconData icon, String label, VoidCallback? onTap) {
+    AppColors c,
+    IconData icon,
+    String label,
+    VoidCallback? onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(9),
@@ -680,8 +794,11 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           children: [
             Icon(icon, size: 13, color: c.muted),
             const SizedBox(width: 5),
-            MonoLabel(label.toUpperCase(),
-                fontSize: 10, fontWeight: FontWeight.w700),
+            MonoLabel(
+              label.toUpperCase(),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
           ],
         ),
       ),
@@ -695,8 +812,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         MonoLabel("EVERYONE'S PREDICTIONS", fontSize: 9.5, letterSpacing: 1.4),
         const SizedBox(height: 11),
         if (preds.isEmpty)
-          Text('No predictions yet.',
-              style: TextStyle(color: c.muted, fontSize: 12.5))
+          Text(
+            'No predictions yet.',
+            style: TextStyle(color: c.muted, fontSize: 12.5),
+          )
         else
           for (final p in preds) ...[
             Row(
@@ -708,18 +827,24 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(p.displayName,
-                      style: TextStyle(
-                          color: c.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500)),
-                ),
-                Text(p.scoreText,
+                  child: Text(
+                    p.displayName,
                     style: TextStyle(
-                        fontFamily: AppTheme.mono,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: c.accent2)),
+                      color: c.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  p.scoreText,
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: c.accent2,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 11),
@@ -812,8 +937,10 @@ class _CommentsTabState extends State<_CommentsTab> {
                 revealColor: c.accent,
                 revealFg: Colors.white,
                 onReveal: () => app.reveals.setReveal(
-                    app.firebaseUser!.uid, widget.match.id,
-                    comments: true),
+                  app.firebaseUser!.uid,
+                  widget.match.id,
+                  comments: true,
+                ),
                 child: _thread(c, app, tree),
               ),
               const SizedBox(height: 13),
@@ -821,7 +948,9 @@ class _CommentsTabState extends State<_CommentsTab> {
                 _commentInput(c, app)
               else
                 _invitePrompt(
-                    context, 'Get an invite code to join the conversation →'),
+                  context,
+                  'Get an invite code to join the conversation →',
+                ),
             ],
           ),
         );
@@ -831,14 +960,14 @@ class _CommentsTabState extends State<_CommentsTab> {
 
   Widget _thread(AppColors c, AppState app, List<CommentNode> tree) {
     if (tree.isEmpty) {
-      return Text('No comments yet — be the first.',
-          style: TextStyle(color: c.muted, fontSize: 12.5));
+      return Text(
+        'No comments yet — be the first.',
+        style: TextStyle(color: c.muted, fontSize: 12.5),
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final node in tree) _commentRow(c, app, node),
-      ],
+      children: [for (final node in tree) _commentRow(c, app, node)],
     );
   }
 
@@ -851,7 +980,8 @@ class _CommentsTabState extends State<_CommentsTab> {
         padding: EdgeInsets.only(left: node.depth > 0 ? 11 : 0),
         decoration: node.depth > 0
             ? BoxDecoration(
-                border: Border(left: BorderSide(color: c.line, width: 2)))
+                border: Border(left: BorderSide(color: c.line, width: 2)),
+              )
             : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,26 +998,33 @@ class _CommentsTabState extends State<_CommentsTab> {
                 Flexible(
                   child: GestureDetector(
                     onTap: () => _openUser(context, comment.displayName),
-                    child: Text(comment.displayName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: c.text,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12.5)),
+                    child: Text(
+                      comment.displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 7),
-                Text(Formatting.ago(comment.createdAt),
-                    style: TextStyle(
-                        fontFamily: AppTheme.mono,
-                        fontSize: 11,
-                        color: c.muted)),
+                Text(
+                  Formatting.ago(comment.createdAt),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 11,
+                    color: c.muted,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 3),
-            Text(comment.body,
-                style: TextStyle(
-                    color: c.text, fontSize: 13.5, height: 1.45)),
+            Text(
+              comment.body,
+              style: TextStyle(color: c.text, fontSize: 13.5, height: 1.45),
+            ),
             if (app.isParticipant)
               GestureDetector(
                 onTap: () => setState(() {
@@ -896,8 +1033,11 @@ class _CommentsTabState extends State<_CommentsTab> {
                 }),
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: MonoLabel('↳ REPLY',
-                      fontSize: 10.5, fontWeight: FontWeight.w700),
+                  child: MonoLabel(
+                    '↳ REPLY',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             if (_replyTo == comment.id) _replyInput(c, app, comment.id),
@@ -949,10 +1089,14 @@ class _CommentsTabState extends State<_CommentsTab> {
   }
 
   void _openUser(BuildContext context, String name) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => UserProfileScreen(
-          tournamentId: widget.tournamentId, displayName: name),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UserProfileScreen(
+          tournamentId: widget.tournamentId,
+          displayName: name,
+        ),
+      ),
+    );
   }
 }
 
@@ -995,8 +1139,7 @@ Widget _revealableBox(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      MonoLabel(hiddenLabel,
-                          fontSize: 10.5, letterSpacing: 2),
+                      MonoLabel(hiddenLabel, fontSize: 10.5, letterSpacing: 2),
                       const SizedBox(height: 13),
                       AccentButton(
                         label: revealLabel,
@@ -1021,6 +1164,9 @@ Widget _invitePrompt(BuildContext context, String text) {
   return Text(
     text,
     style: TextStyle(
-        color: c.accent, fontWeight: FontWeight.w600, fontSize: 12.5),
+      color: c.accent,
+      fontWeight: FontWeight.w600,
+      fontSize: 12.5,
+    ),
   );
 }
