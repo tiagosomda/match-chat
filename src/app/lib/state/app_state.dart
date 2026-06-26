@@ -66,6 +66,9 @@ class AppState extends ChangeNotifier {
   bool get isLoadingUser => _loadingUser;
   bool get isParticipant => _appUser?.isParticipant ?? false;
   bool get isAdmin => _appUser?.isAdmin ?? false;
+
+  /// True when the session is an anonymous "browse as guest" session.
+  bool get isGuest => _firebaseUser?.isAnonymous ?? false;
   String get displayName => _appUser?.displayName ?? 'You';
 
   List<Tournament> get allTournaments => _allTournaments;
@@ -106,9 +109,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final fallbackName = user.displayName?.trim().isNotEmpty == true
-          ? user.displayName!.trim()
-          : (user.email?.split('@').first ?? 'Player');
+      final fallbackName = user.isAnonymous
+          ? 'Guest'
+          : (user.displayName?.trim().isNotEmpty == true
+              ? user.displayName!.trim()
+              : (user.email?.split('@').first ?? 'Player'));
       await users.ensureUser(
         uid: user.uid,
         email: user.email ?? '',

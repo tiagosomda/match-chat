@@ -76,7 +76,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 14),
         _favoriteCard(c, app),
         const SizedBox(height: 14),
-        if (!app.isParticipant) ...[
+        if (app.isGuest) ...[
+          _guestCard(c, app),
+          const SizedBox(height: 14),
+        ] else if (!app.isParticipant) ...[
           _redeemCard(c, app),
           const SizedBox(height: 14),
         ],
@@ -93,8 +96,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Center(
           child: TextButton.icon(
             onPressed: () => app.signOut(),
-            icon: Icon(Icons.logout, size: 18, color: c.muted),
-            label: Text('Sign out', style: TextStyle(color: c.muted)),
+            icon: Icon(app.isGuest ? Icons.login : Icons.logout,
+                size: 18, color: c.muted),
+            label: Text(app.isGuest ? 'Sign in / Create account' : 'Sign out',
+                style: TextStyle(color: c.muted)),
           ),
         ),
       ],
@@ -125,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
                         color: c.text)),
-                Text(user?.email ?? '',
+                Text(app.isGuest ? 'Guest session' : (user?.email ?? ''),
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: c.muted, fontSize: 12.5)),
                 const SizedBox(height: 7),
@@ -265,6 +270,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _guestCard(AppColors c, AppState app) {
+    return SurfaceCard(
+      borderColor: c.accent.withValues(alpha: 0.25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Browsing as guest',
+              style: TextStyle(
+                  color: c.text, fontWeight: FontWeight.w700, fontSize: 15)),
+          const SizedBox(height: 4),
+          Text(
+            'Create an account to comment, chat and make predictions. Your '
+            'guest reveals stay on this device only.',
+            style: TextStyle(color: c.muted, fontSize: 12.5, height: 1.45),
+          ),
+          const SizedBox(height: 13),
+          AccentButton(
+            label: 'Sign in / Create account',
+            icon: Icons.login,
+            expand: true,
+            onPressed: () => app.signOut(),
           ),
         ],
       ),

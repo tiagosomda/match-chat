@@ -25,6 +25,10 @@ class AuthService {
     return _auth.signInWithPopup(provider);
   }
 
+  /// Signs in anonymously so a guest can browse the schedule without an account.
+  /// Requires the Anonymous provider to be enabled in Firebase Auth.
+  Future<UserCredential> signInAnonymously() => _auth.signInAnonymously();
+
   Future<void> signOut() => _auth.signOut();
 
   /// Maps FirebaseAuthException codes to friendly messages.

@@ -21,6 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   bool _register = false;
   bool _busy = false;
+  bool _showForm = false;
   String? _error;
 
   @override
@@ -63,6 +64,11 @@ class _AuthScreenState extends State<AuthScreen> {
     _runAuth(() => app.auth.signInWithGoogle());
   }
 
+  void _browse() {
+    final app = context.read<AppState>();
+    _runAuth(() => app.auth.signInAnonymously());
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -100,90 +106,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const MonoLabel('WORLD CUP 2026 · SPOILER-FREE',
-                            letterSpacing: 3),
-                        const SizedBox(height: 18),
-                        _heading(c),
-                        const SizedBox(height: 20),
-                        _strength(
-                          c,
-                          Icons.event_available_outlined,
-                          'Spoiler-free schedule',
-                          'Scores, comments and predictions stay hidden until '
-                              'you choose to reveal them.',
-                        ),
-                        _strength(
-                          c,
-                          Icons.visibility_outlined,
-                          'See which friends have watched',
-                          'Know who has already seen a match — without giving '
-                              'the result away.',
-                        ),
-                        const SizedBox(height: 24),
-                        _googleButton(c),
-                        const SizedBox(height: 14),
-                        _orDivider(c),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          style: TextStyle(color: c.text),
-                          decoration:
-                              appInputDecoration(context, hint: 'Email'),
-                          onSubmitted: (_) => _submitEmail(),
-                        ),
-                        const SizedBox(height: 11),
-                        TextField(
-                          controller: _password,
-                          obscureText: true,
-                          style: TextStyle(color: c.text),
-                          decoration:
-                              appInputDecoration(context, hint: 'Password'),
-                          onSubmitted: (_) => _submitEmail(),
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(_error!,
-                              style: TextStyle(color: c.accent, fontSize: 13)),
-                        ],
-                        const SizedBox(height: 14),
-                        AccentButton(
-                          label: _register ? 'Create account' : 'Sign in',
-                          expand: true,
-                          busy: _busy,
-                          onPressed: _submitEmail,
-                        ),
-                        const SizedBox(height: 14),
-                        Center(
-                          child: GestureDetector(
-                            onTap: () => setState(() {
-                              _register = !_register;
-                              _error = null;
-                            }),
-                            child: RichText(
-                              text: TextSpan(
-                                style:
-                                    TextStyle(color: c.muted, fontSize: 13),
-                                children: [
-                                  TextSpan(
-                                      text: _register
-                                          ? 'Already have an account? '
-                                          : 'New here? '),
-                                  TextSpan(
-                                    text: _register
-                                        ? 'Sign in'
-                                        : 'Create an account',
-                                    style: TextStyle(
-                                        color: c.accent,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      children:
+                          _showForm ? _formChildren(c) : _landingChildren(c),
                     ),
                   ],
                 ),
@@ -193,6 +117,159 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
+  }
+
+  /// The default landing: pitch + strengths, a guest "Browse matches" button,
+  /// and a secondary path into the sign-in form.
+  List<Widget> _landingChildren(AppColors c) {
+    return [
+      const MonoLabel('WORLD CUP 2026 · SPOILER-FREE', letterSpacing: 3),
+      const SizedBox(height: 18),
+      _heading(c),
+      const SizedBox(height: 20),
+      _strength(
+        c,
+        Icons.event_available_outlined,
+        'Spoiler-free schedule',
+        'Scores, comments and predictions stay hidden until you choose to '
+            'reveal them.',
+      ),
+      _strength(
+        c,
+        Icons.visibility_outlined,
+        'See which friends have watched',
+        'Know who has already seen a match — without giving the result away.',
+      ),
+      const SizedBox(height: 24),
+      AccentButton(
+        label: 'Browse matches',
+        icon: Icons.sports_soccer,
+        expand: true,
+        busy: _busy,
+        onPressed: _browse,
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton(
+        onPressed: _busy
+            ? null
+            : () => setState(() {
+                  _showForm = true;
+                  _error = null;
+                }),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          side: BorderSide(color: c.lineStrong),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        ),
+        child: Text('Sign in or create account',
+            style: TextStyle(
+                color: c.text, fontWeight: FontWeight.w600, fontSize: 14.5)),
+      ),
+      if (_error != null) ...[
+        const SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: c.accent, fontSize: 13)),
+      ],
+      const SizedBox(height: 8),
+      Center(
+        child: Text(
+          'Browsing is read-only. An invite code unlocks chat & predictions.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
+        ),
+      ),
+    ];
+  }
+
+  /// The email / Google sign-in form, reached from the landing.
+  List<Widget> _formChildren(AppColors c) {
+    return [
+      Row(
+        children: [
+          InkWell(
+            onTap: () => setState(() {
+              _showForm = false;
+              _error = null;
+            }),
+            borderRadius: BorderRadius.circular(11),
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: c.line),
+              ),
+              child: Icon(Icons.arrow_back, size: 18, color: c.text),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(_register ? 'Create account' : 'Sign in',
+              style: TextStyle(
+                  fontFamily: AppTheme.grotesk,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  color: c.text)),
+        ],
+      ),
+      const SizedBox(height: 24),
+      _googleButton(c),
+      const SizedBox(height: 14),
+      _orDivider(c),
+      const SizedBox(height: 14),
+      TextField(
+        controller: _email,
+        keyboardType: TextInputType.emailAddress,
+        style: TextStyle(color: c.text),
+        decoration: appInputDecoration(context, hint: 'Email'),
+        onSubmitted: (_) => _submitEmail(),
+      ),
+      const SizedBox(height: 11),
+      TextField(
+        controller: _password,
+        obscureText: true,
+        style: TextStyle(color: c.text),
+        decoration: appInputDecoration(context, hint: 'Password'),
+        onSubmitted: (_) => _submitEmail(),
+      ),
+      if (_error != null) ...[
+        const SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: c.accent, fontSize: 13)),
+      ],
+      const SizedBox(height: 14),
+      AccentButton(
+        label: _register ? 'Create account' : 'Sign in',
+        expand: true,
+        busy: _busy,
+        onPressed: _submitEmail,
+      ),
+      const SizedBox(height: 14),
+      Center(
+        child: GestureDetector(
+          onTap: () => setState(() {
+            _register = !_register;
+            _error = null;
+          }),
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(color: c.muted, fontSize: 13),
+              children: [
+                TextSpan(
+                    text: _register
+                        ? 'Already have an account? '
+                        : 'New here? '),
+                TextSpan(
+                  text: _register ? 'Sign in' : 'Create an account',
+                  style: TextStyle(
+                      color: c.accent, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _strength(AppColors c, IconData icon, String title, String desc) {
