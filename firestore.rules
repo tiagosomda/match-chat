@@ -1,0 +1,144 @@
+rules_version = '2';
+
+// Security rules for the Match Chat app.
+//
+// IMPORTANT: The Firestore database is shared with other projects, so every
+// rule here is scoped under the top-level `match-chat` collection (see
+// docs/firebase.md). Anything outside `/match-chat/**` is left untouched by
+// these rules and governed by whatever other rules exist in the project.
+//
+// Data layout (see lib/services/firestore_refs.dart):
+//   match-chat/app
+//   match-chat/app/users/{uid}
+//   match-chat/app/tournaments/{tid}
+//   match-chat/app/tournaments/{tid}/matches/{mid}
+//   match-chat/app/tournaments/{tid}/matches/{mid}/comments/{cid}
+//   match-chat/app/tournaments/{tid}/matches/{mid}/predictions/{uid}
+//   match-chat/app/tournaments/{tid}/chat/{msgId}
+//   match-chat/app/userMatchStates/{uid}_{mid}
+//   match-chat/app/inviteCodes/{code}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers -------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/match-chat/app/users/$(uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/match-chat/app/users/$(request.auth.uid))
+        && userDoc(request.auth.uid).isAdmin == true;
+    }
+
+    function isParticipant() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/match-chat/app/users/$(request.auth.uid))
+        && userDoc(request.auth.uid).isParticipant == true;
+    }
+
+    function matchDoc(tid, mid) {
+      return get(/databases/$(database)/documents/match-chat/app/tournaments/$(tid)/matches/$(mid)).data;
+    }
+
+    // ---- app root ------------------------------------------------------
+    match /match-chat/app {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+
+      // ---- users -------------------------------------------------------
+      match /users/{uid} {
+        allow read: if isSignedIn();
+        // A user can create their own profile document on first sign-in.
+        allow create: if isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.isAdmin == false;
+        // A user may edit their own profile but can never grant themselves
+        // admin. (isParticipant flips to true during invite redemption — the
+        // redeem transaction also consumes a valid invite code.)
+        allow update: if isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.isAdmin == resource.data.isAdmin;
+        allow delete: if false;
+      }
+
+      // ---- tournaments & matches --------------------------------------
+      match /tournaments/{tid} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+
+        match /matches/{mid} {
+          allow read: if isSignedIn();
+          allow create, delete: if isAdmin();
+          // Admins can edit anything; participants may only bump the cached
+          // comment/prediction counters when they post.
+          allow update: if isAdmin()
+            || (isParticipant()
+                && request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['commentCount', 'predictionCount']));
+
+          // ---- comments ----------------------------------------------
+          match /comments/{cid} {
+            allow read: if isSignedIn();
+            allow create: if isParticipant()
+              && request.resource.data.userId == request.auth.uid;
+            allow update, delete: if isAdmin()
+              || (isSignedIn() && resource.data.userId == request.auth.uid);
+          }
+
+          // ---- predictions (doc id == userId) ------------------------
+          match /predictions/{uid} {
+            allow read: if isSignedIn();
+            // Participants submit their own prediction only before kickoff.
+            allow create, update: if isParticipant()
+              && request.auth.uid == uid
+              && request.resource.data.userId == request.auth.uid
+              && matchDoc(tid, mid).status == 'upcoming';
+            allow delete: if isAdmin();
+          }
+        }
+
+        // ---- chat -----------------------------------------------------
+        match /chat/{msgId} {
+          allow read: if isSignedIn();
+          allow create: if isParticipant()
+            && request.resource.data.userId == request.auth.uid;
+          allow update: if false;
+          allow delete: if isAdmin();
+        }
+      }
+
+      // ---- per-user reveal state -------------------------------------
+      // Doc id is `{uid}_{matchId}`; a user may only read/write their own.
+      match /userMatchStates/{stateId} {
+        allow read, delete: if isSignedIn()
+          && resource.data.userId == request.auth.uid;
+        allow create, update: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid;
+      }
+
+      // ---- invite codes ----------------------------------------------
+      match /inviteCodes/{code} {
+        // Readable so a redeemer can look one up.
+        allow read: if isSignedIn();
+        allow create: if isParticipant()
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.usedBy == null;
+        // Redemption: claim an unused code for yourself without changing owner.
+        allow update: if isSignedIn()
+          && resource.data.usedBy == null
+          && request.resource.data.usedBy == request.auth.uid
+          && request.resource.data.createdBy == resource.data.createdBy;
+        // Creators may revoke their own unused codes.
+        allow delete: if isSignedIn()
+          && resource.data.createdBy == request.auth.uid
+          && resource.data.usedBy == null;
+      }
+    }
+  }
+}

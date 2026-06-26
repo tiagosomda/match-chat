@@ -1,0 +1,438 @@
+import 'dart:ui' show ImageFilter;
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/match.dart';
+import '../models/user_match_state.dart';
+import '../state/app_state.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../utils/formatting.dart';
+import '../widgets/ui.dart';
+import 'match_detail_screen.dart';
+
+class MatchesScreen extends StatefulWidget {
+  const MatchesScreen({super.key});
+
+  @override
+  State<MatchesScreen> createState() => _MatchesScreenState();
+}
+
+enum _Filter { all, upcoming, live, finished, archived }
+
+class _MatchesScreenState extends State<MatchesScreen> {
+  String _query = '';
+  _Filter _filter = _Filter.all;
+
+  List<MatchModel> _apply(List<MatchModel> matches) {
+    final q = _query.toLowerCase().trim();
+    return matches.where((m) {
+      if (_filter == _Filter.archived) return m.archived;
+      if (m.archived) return false;
+      switch (_filter) {
+        case _Filter.upcoming:
+          if (m.status != MatchStatus.upcoming) return false;
+          break;
+        case _Filter.live:
+          if (m.status != MatchStatus.live) return false;
+          break;
+        case _Filter.finished:
+          if (m.status != MatchStatus.finished) return false;
+          break;
+        case _Filter.all:
+        case _Filter.archived:
+          break;
+      }
+      if (q.isEmpty) return true;
+      return ('${m.teamA} ${m.teamB} ${m.description}')
+          .toLowerCase()
+          .contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final tid = app.tournamentId!;
+    final c = context.colors;
+
+    return StreamBuilder<List<MatchModel>>(
+      stream: app.matches.watchAll(tid),
+      builder: (context, matchSnap) {
+        if (matchSnap.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: c.accent));
+        }
+        if (matchSnap.hasError) {
+          return _ErrorState(message: '${matchSnap.error}');
+        }
+        final all = matchSnap.data ?? const <MatchModel>[];
+        final visible = _apply(all);
+
+        return StreamBuilder<Map<String, UserMatchState>>(
+          stream: app.reveals.watchAllForUser(app.firebaseUser!.uid),
+          builder: (context, revealSnap) {
+            final reveals =
+                revealSnap.data ?? const <String, UserMatchState>{};
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      app.tournament!.name,
+                      style: TextStyle(
+                        fontFamily: AppTheme.grotesk,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
+                        letterSpacing: -0.5,
+                        color: c.text,
+                      ),
+                    ),
+                    MonoLabel('${visible.length} SHOWN', fontSize: 11),
+                  ],
+                ),
+                const SizedBox(height: 13),
+                _searchField(c),
+                const SizedBox(height: 13),
+                _chips(c),
+                const SizedBox(height: 13),
+                if (visible.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text(
+                        'No matches match your search.',
+                        style: TextStyle(color: c.muted),
+                      ),
+                    ),
+                  )
+                else
+                  for (final m in visible) ...[
+                    _MatchCard(
+                      match: m,
+                      revealed: reveals[m.id]?.scoreRevealed ?? false,
+                      onOpen: () => _open(tid, m.id),
+                      onToggleScore: () => _toggleScore(
+                          app, m.id, reveals[m.id]?.scoreRevealed ?? false),
+                    ),
+                    const SizedBox(height: 13),
+                  ],
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _open(String tid, String mid) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MatchDetailScreen(tournamentId: tid, matchId: mid),
+      ),
+    );
+  }
+
+  void _toggleScore(AppState app, String mid, bool current) {
+    app.reveals.setReveal(app.firebaseUser!.uid, mid, score: !current);
+  }
+
+  Widget _searchField(AppColors c) {
+    return TextField(
+      onChanged: (v) => setState(() => _query = v),
+      style: TextStyle(color: c.text, fontSize: 14),
+      decoration: appInputDecoration(
+        context,
+        hint: 'Search teams or stage…',
+        prefix: Icon(Icons.search, size: 18, color: c.muted),
+      ),
+    );
+  }
+
+  Widget _chips(AppColors c) {
+    const defs = <(_Filter, String)>[
+      (_Filter.all, 'All'),
+      (_Filter.upcoming, 'Upcoming'),
+      (_Filter.live, 'Live'),
+      (_Filter.finished, 'Finished'),
+      (_Filter.archived, 'Archived'),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final d in defs) ...[
+            _Chip(
+              label: d.$2,
+              active: _filter == d.$1,
+              onTap: () => setState(() => _filter = d.$1),
+            ),
+            const SizedBox(width: 7),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.active, required this.onTap});
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? c.accent : c.surface2,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: active ? c.accent : c.line),
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: active ? Colors.white : c.muted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MatchCard extends StatelessWidget {
+  const _MatchCard({
+    required this.match,
+    required this.revealed,
+    required this.onOpen,
+    required this.onToggleScore,
+  });
+
+  final MatchModel match;
+  final bool revealed;
+  final VoidCallback onOpen;
+  final VoidCallback onToggleScore;
+
+  Color _statusColor(AppColors c) {
+    switch (match.status) {
+      case MatchStatus.live:
+        return c.accent2;
+      case MatchStatus.finished:
+        return c.muted;
+      case MatchStatus.upcoming:
+        return c.accent;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final showScore = revealed && match.hasScore;
+    return GestureDetector(
+      onTap: onOpen,
+      child: Opacity(
+        opacity: match.archived ? 0.62 : 1,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: c.line),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: MonoLabel(match.description.toUpperCase(),
+                        fontSize: 10, letterSpacing: 1.4),
+                  ),
+                  if (match.archived) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: c.surface2,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: MonoLabel('ARCHIVED',
+                          fontSize: 9, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    match.status.label,
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.4,
+                      color: _statusColor(c),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _teamSide(c, match.flagA, match.teamA, false)),
+                  _scoreBox(c, showScore),
+                  Expanded(child: _teamSide(c, match.flagB, match.teamB, true)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.only(top: 11),
+                decoration:
+                    BoxDecoration(border: Border(top: BorderSide(color: c.line))),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline,
+                            size: 13, color: c.muted),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${match.commentCount}',
+                          style: TextStyle(color: c.muted, fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.schedule, size: 13, color: c.muted),
+                        const SizedBox(width: 6),
+                        Text(
+                          Formatting.kickoff(match.scheduledAt),
+                          style: TextStyle(color: c.muted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    if (showScore)
+                      GestureDetector(
+                        onTap: onToggleScore,
+                        child: Row(
+                          children: [
+                            Icon(Icons.visibility_off_outlined,
+                                size: 12, color: c.muted),
+                            const SizedBox(width: 5),
+                            MonoLabel('HIDE',
+                                fontSize: 10, fontWeight: FontWeight.w700),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _teamSide(AppColors c, String flag, String name, bool alignEnd) {
+    final children = [
+      Text(flag, style: const TextStyle(fontSize: 24)),
+      const SizedBox(width: 9),
+      Flexible(
+        child: Text(
+          name,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+          style: TextStyle(
+              color: c.text, fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+      ),
+    ];
+    return Row(
+      mainAxisAlignment:
+          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: alignEnd ? children.reversed.toList() : children,
+    );
+  }
+
+  Widget _scoreBox(AppColors c, bool showScore) {
+    return GestureDetector(
+      onTap: onToggleScore,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 62),
+        height: 34,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: c.line),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            _maybeBlur(
+              blur: !showScore,
+              child: Text(
+                match.scoreText,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  letterSpacing: 1,
+                  color: c.text,
+                ),
+              ),
+            ),
+            if (!showScore)
+              Icon(Icons.visibility_outlined, size: 15, color: c.accent),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Wraps [child] in a blur when [blur] is true; otherwise returns it as-is.
+Widget _maybeBlur({required bool blur, required Widget child}) {
+  if (!blur) return child;
+  return ImageFiltered(
+    imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+    child: child,
+  );
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message});
+  final String message;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: c.accent, size: 36),
+            const SizedBox(height: 12),
+            Text('Could not load matches.',
+                style: TextStyle(
+                    color: c.text, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: c.muted, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
