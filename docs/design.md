@@ -1,3 +1,7 @@
+this was the original brainstorm / app spec done with claude chat.
+there might be some outdated information. consider the other documents under docs as a more recent set of guidelines.
+
+
 # World Cup Spoiler-Free Forum — Product Specification
 
 ## Overview
