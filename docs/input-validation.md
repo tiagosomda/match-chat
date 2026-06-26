@@ -1,1 +1,0 @@
-use resonable input verification (i.e. no special characters in names, name length and so on. some of the input fields in my mind are chat and thread messages, no need to do input verification in the admin page tho)

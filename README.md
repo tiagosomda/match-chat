@@ -1,47 +1,30 @@
 # Match Chat
 
-A spoiler-free World Cup forum built with Flutter Web and Firebase.
+A spoiler-free World Cup companion, built with Flutter Web and Firebase.
 
-## Structure
+This was an experiment — a minimalist take on having a World Cup match schedule
+and scores in one place, and potentially chatting about the games with friends
+and family. Scores, comments and predictions stay hidden until you choose to
+reveal them, so you can catch up on your own clock.
+
+## Layout
 
 ```
-src/
-  app/              Flutter web app (see src/app/README.md for dev/build)
-  backend/          Firebase config & Firestore rules (src/backend/README.md)
-docs/
-  ui-design-guide/  Design assets and mockups
-  *.md              Product specs, architecture, data model, etc.
-firestore.rules     → moved to src/backend/firestore.rules
-firebase.json       → moved to src/backend/firebase.json
+src/app/        Flutter Web app (frontend)
+src/backend/    Firebase config, Firestore rules, and the results poller
+docs/           Architecture & concepts (below)
 ```
 
-## Quick Start
+## Docs
 
-**Build & serve locally:**
+- [Frontend architecture](docs/architecture-frontend.md)
+- [Backend architecture](docs/architecture-backend.md)
+- [Invite system & moderation](docs/invite-system.md)
+
+## Quick start
+
 ```bash
 cd src/app
-flutter build web
-flutter run -d chrome
+flutter run -d chrome     # run locally
+flutter build web         # production build
 ```
-
-**Deploy to Firebase:**
-```bash
-# Frontend (hosting)
-cd src/app
-flutter build web
-firebase deploy --only hosting
-
-# Firestore rules (from root or src/backend)
-firebase deploy --only firestore:rules
-```
-
-**Configure:**
-1. Enable Email/Password and Google Sign-In in Firebase Console (Authentication)
-2. Set `isAdmin: true` on your user doc at `match-chat/app/users/{uid}`
-3. Tap **Seed sample data** in the app to create World Cup 2026 tournament
-
-## Notes
-
-- See `docs/` for product design, data model, and feature specs
-- `example-projects/` is a symlink to your Firebase/GCP patterns repo
-- All Firestore rules are scoped under `/match-chat/**` (safe in shared database)
