@@ -19,6 +19,7 @@ import '../widgets/avatar.dart';
 import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
 import 'admin_edit_match_sheet.dart';
+import 'country_matches_screen.dart';
 import 'user_profile_screen.dart';
 
 class MatchDetailScreen extends StatefulWidget {
@@ -251,12 +252,16 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _teamColumn(c, match.flagA, match.teamA)),
+              Expanded(
+                child: _teamColumn(context, c, match.flagA, match.teamA),
+              ),
               SizedBox(
                 width: 100,
                 child: _centerCell(context, app, match, reveal),
               ),
-              Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
+              Expanded(
+                child: _teamColumn(context, c, match.flagB, match.teamB),
+              ),
             ],
           ),
           _goalsWidget(context, app, match, reveal),
@@ -543,21 +548,55 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     return list;
   }
 
-  Widget _teamColumn(AppColors c, String flag, String name) {
-    return Column(
-      children: [
-        Text(flag, style: const TextStyle(fontSize: 40)),
-        const SizedBox(height: 8),
-        Text(
-          name,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: c.text,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+  /// A tappable team column — opens that country's schedule & results (#7).
+  Widget _teamColumn(
+    BuildContext context,
+    AppColors c,
+    String flag,
+    String name,
+  ) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CountryMatchesScreen(
+            tournamentId: widget.tournamentId,
+            team: name,
           ),
         ),
-      ],
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 40)),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: c.text,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 11, color: c.accent),
+                const SizedBox(width: 3),
+                MonoLabel(
+                  context.l10n.t('viewMatchesUpper'),
+                  fontSize: 8,
+                  letterSpacing: 1,
+                  color: c.accent,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
