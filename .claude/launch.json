@@ -6,7 +6,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd src/build/web && exec python3 -m http.server 8099 --bind 127.0.0.1"
+        "cd src/app/build/web && exec python3 -m http.server 8099 --bind 127.0.0.1"
       ],
       "port": 8099
     }
