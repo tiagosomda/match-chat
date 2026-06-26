@@ -21,9 +21,12 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  AppTab _tab = AppTab.matches;
+  late AppTab _tab = context.read<AppState>().initialTab;
 
-  void _select(AppTab tab) => setState(() => _tab = tab);
+  void _select(AppTab tab) {
+    setState(() => _tab = tab);
+    context.read<AppState>().setLastTab(tab);
+  }
 
   @override
   Widget build(BuildContext context) {

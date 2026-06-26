@@ -63,6 +63,13 @@ class AppState extends ChangeNotifier {
   Locale? _locale;
   static const _localeKey = 'localeCode';
 
+  // Navigation persistence: the last tab the user was on, and whether to
+  // reopen there on launch (vs. always starting on Matches).
+  AppTab _lastTab = AppTab.matches;
+  bool _rememberLastTab = true;
+  static const _lastTabKey = 'lastTab';
+  static const _rememberLastTabKey = 'rememberLastTab';
+
   // Getters.
   fb.User? get firebaseUser => _firebaseUser;
   AppUser? get appUser => _appUser;
@@ -82,6 +89,15 @@ class AppState extends ChangeNotifier {
 
   AppThemeMode get themeMode => _themeMode;
 
+  /// The last tab the user opened (persisted across sessions).
+  AppTab get lastTab => _lastTab;
+
+  /// Whether the app reopens on the last tab (true) or always Matches (false).
+  bool get rememberLastTab => _rememberLastTab;
+
+  /// The tab the app should open on at launch.
+  AppTab get initialTab => _rememberLastTab ? _lastTab : AppTab.matches;
+
   /// The active locale override, or null to follow the device locale.
   Locale? get locale => _locale;
 
@@ -99,9 +115,33 @@ class AppState extends ChangeNotifier {
       );
     }
     _locale = AppLocalizations.localeFromCode(prefs.getString(_localeKey));
+
+    final tabName = prefs.getString(_lastTabKey);
+    _lastTab = AppTab.values.firstWhere(
+      (t) => t.name == tabName,
+      orElse: () => AppTab.matches,
+    );
+    _rememberLastTab = prefs.getBool(_rememberLastTabKey) ?? true;
+
     notifyListeners();
 
     _authSub = auth.authStateChanges().listen(_onAuthChanged);
+  }
+
+  /// Records the tab the user is on so the next launch can reopen there.
+  Future<void> setLastTab(AppTab tab) async {
+    if (_lastTab == tab) return;
+    _lastTab = tab;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastTabKey, tab.name);
+  }
+
+  /// Toggles whether the app reopens on the last tab or always on Matches.
+  Future<void> setRememberLastTab(bool value) async {
+    _rememberLastTab = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberLastTabKey, value);
   }
 
   /// Sets the app language. Pass null to follow the device locale.

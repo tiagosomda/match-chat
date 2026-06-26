@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/match.dart';
@@ -28,6 +29,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
   String _query = '';
   _Filter _filter = _Filter.all;
 
+  // The filter chip and search query are persisted across sessions (#1).
+  static const _filterKey = 'matchesFilter';
+  static const _queryKey = 'matchesSearch';
+
   // Streams are memoized so that rebuilds triggered by typing in the search
   // field don't recreate the underlying Firestore subscription (which would
   // flash the loading spinner and wipe the keystroke).
@@ -38,9 +43,36 @@ class _MatchesScreenState extends State<MatchesScreen> {
   String? _friendsKey;
 
   @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedFilter = prefs.getString(_filterKey);
+    final storedQuery = prefs.getString(_queryKey) ?? '';
+    if (!mounted) return;
+    setState(() {
+      _filter = _Filter.values.firstWhere(
+        (f) => f.name == storedFilter,
+        orElse: () => _Filter.all,
+      );
+      _query = storedQuery;
+      _search.text = storedQuery;
+    });
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_filterKey, _filter.name);
+    await prefs.setString(_queryKey, _query);
   }
 
   void _ensureStreams(AppState app) {
@@ -203,7 +235,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Widget _searchField(AppColors c) {
     return TextField(
       controller: _search,
-      onChanged: (v) => setState(() => _query = v),
+      onChanged: (v) {
+        setState(() => _query = v);
+        _persist();
+      },
       style: TextStyle(color: c.text, fontSize: 14),
       decoration: appInputDecoration(
         context,
@@ -230,7 +265,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
             _Chip(
               label: d.$2,
               active: _filter == d.$1,
-              onTap: () => setState(() => _filter = d.$1),
+              onTap: () {
+                setState(() => _filter = d.$1);
+                _persist();
+              },
             ),
             const SizedBox(width: 7),
           ],

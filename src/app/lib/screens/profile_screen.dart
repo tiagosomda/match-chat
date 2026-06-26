@@ -91,6 +91,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
         _appearanceCard(c, app),
         const SizedBox(height: 14),
+        _startupCard(c, app),
+        const SizedBox(height: 14),
         _languageCard(c, app),
         const SizedBox(height: 14),
         if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
@@ -457,6 +459,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Expanded(
       child: InkWell(
         onTap: () => app.setThemeMode(mode),
+        borderRadius: BorderRadius.circular(13),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            color: active
+                ? Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface2)
+                : c.surface2,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: active ? c.accent : c.line),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: active ? c.accent : c.text),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? c.accent : c.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Lets the user choose whether the app reopens on the last tab they used or
+  /// always on the Matches tab (#1).
+  Widget _startupCard(AppColors c, AppState app) {
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.t('openOnLaunch'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            context.l10n.t('openOnLaunchHint'),
+            style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
+          ),
+          const SizedBox(height: 13),
+          Row(
+            children: [
+              _startupOption(
+                c,
+                app,
+                true,
+                Icons.restore,
+                context.l10n.t('lastPage'),
+              ),
+              const SizedBox(width: 8),
+              _startupOption(
+                c,
+                app,
+                false,
+                Icons.sports_soccer_outlined,
+                context.l10n.t('navMatches'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _startupOption(
+    AppColors c,
+    AppState app,
+    bool value,
+    IconData icon,
+    String label,
+  ) {
+    final active = app.rememberLastTab == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () => app.setRememberLastTab(value),
         borderRadius: BorderRadius.circular(13),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 13),
