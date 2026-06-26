@@ -7,6 +7,7 @@ Target shape (see src/app/lib/models/match.dart):
     scoreA, scoreB     ints or None
     scheduledAt        datetime (UTC) -> Firestore Timestamp
     apiFixtureId       the source fixture id (also used as the doc id)
+    goals              list of {team, player, minute, extra, penalty, ownGoal}
 """
 
 from __future__ import annotations
@@ -66,6 +67,47 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
         "scoreB": goals.get("away"),
         "scheduledAt": scheduled_at,
     }
+
+
+# Goal events whose detail should not count as a goal on the board.
+_GOAL_DETAILS_SKIP = {"Missed Penalty"}
+
+
+def to_goals(events: list, home_id) -> list:
+    """Translate a fixture's events into the match doc's `goals` array.
+
+    Only "Goal" events are kept, ordered by time. `team` is the side the goal
+    counts *for* ('A' = home, 'B' = away); own goals are attributed to the
+    opponent. Penalty-shootout entries are dropped so the list matches the
+    on-pitch score.
+    """
+    goals = []
+    for e in events or []:
+        if (e.get("type") or "").lower() != "goal":
+            continue
+        detail = e.get("detail") or ""
+        if detail in _GOAL_DETAILS_SKIP:
+            continue
+        if (e.get("comments") or "") == "Penalty Shootout":
+            continue
+        team_id = (e.get("team") or {}).get("id")
+        scored_for_home = team_id == home_id
+        own_goal = detail == "Own Goal"
+        if own_goal:
+            scored_for_home = not scored_for_home
+        t = e.get("time") or {}
+        goals.append(
+            {
+                "team": "A" if scored_for_home else "B",
+                "player": (e.get("player") or {}).get("name") or "Unknown",
+                "minute": t.get("elapsed"),
+                "extra": t.get("extra"),
+                "penalty": detail == "Penalty",
+                "ownGoal": own_goal,
+            }
+        )
+    goals.sort(key=lambda g: (g["minute"] or 0) * 100 + (g["extra"] or 0))
+    return goals
 
 
 def build_group_map(standings_response: list) -> dict:

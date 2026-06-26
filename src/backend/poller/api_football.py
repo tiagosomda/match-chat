@@ -108,6 +108,13 @@ class ApiFootball:
             },
         )
 
+    def events(self, fixture_id) -> list:
+        """Goal/card/substitution events for a single fixture (one request).
+
+        Used to populate the scorer list when a score changes.
+        """
+        return self._get("fixtures/events", {"fixture": fixture_id})
+
     def fixtures_by_ids(self, ids: list) -> list:
         """Fetch specific fixtures by id (up to 20 per call, dash-separated).
 

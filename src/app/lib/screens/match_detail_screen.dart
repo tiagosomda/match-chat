@@ -38,6 +38,9 @@ enum _DetailTab { predictions, comments }
 class _MatchDetailScreenState extends State<MatchDetailScreen> {
   _DetailTab _tab = _DetailTab.predictions;
 
+  // Goal widget local toggle: false = show goal times, true = show scorers.
+  bool _showScorers = false;
+
   // Memoized so the hero counter doesn't re-subscribe on every rebuild.
   Stream<List<UserMatchState>>? _friendRevealsStream;
   String? _friendsKey;
@@ -251,6 +254,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
             ],
           ),
+          _goalsWidget(context, app, match, reveal),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.only(top: 13),
@@ -305,6 +309,172 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         );
       },
     );
+  }
+
+  /// The revealable goal-scorers widget shown under the score (item #11).
+  /// Renders nothing until the poller has recorded any goals.
+  Widget _goalsWidget(
+    BuildContext context,
+    AppState app,
+    MatchModel match,
+    UserMatchState reveal,
+  ) {
+    if (match.goals.isEmpty) return const SizedBox.shrink();
+    final c = context.colors;
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.only(top: 13),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: c.line)),
+      ),
+      child: reveal.goalsRevealed
+          ? GestureDetector(
+              onTap: () => setState(() => _showScorers = !_showScorers),
+              behavior: HitTestBehavior.opaque,
+              child: _showScorers
+                  ? _scorersView(c, match)
+                  : _goalTimesView(c, match),
+            )
+          : _goalsReveal(c, app, match),
+    );
+  }
+
+  Widget _goalsReveal(AppColors c, AppState app, MatchModel match) {
+    return Column(
+      children: [
+        MonoLabel('${match.goals.length} GOALS', fontSize: 9.5),
+        const SizedBox(height: 10),
+        AccentButton(
+          label: 'Reveal goals',
+          icon: Icons.sports_soccer,
+          pill: true,
+          onPressed: () => app.reveals.setReveal(
+            app.firebaseUser!.uid,
+            match.id,
+            goals: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _goalTimesView(AppColors c, MatchModel match) {
+    final sorted = _sortedGoals(match);
+    return Column(
+      children: [
+        MonoLabel(
+          'GOALS · TAP TO SEE SCORERS',
+          fontSize: 9,
+          letterSpacing: 1.4,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            for (final g in sorted)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.surface2,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: c.line),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('⚽', style: TextStyle(fontSize: 11)),
+                    const SizedBox(width: 5),
+                    Text(
+                      g.timeLabel,
+                      style: TextStyle(
+                        fontFamily: AppTheme.mono,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: c.text,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _scorersView(AppColors c, MatchModel match) {
+    return Column(
+      children: [
+        MonoLabel(
+          'SCORERS · TAP TO HIDE NAMES',
+          fontSize: 9,
+          letterSpacing: 1.4,
+        ),
+        const SizedBox(height: 12),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _teamScorers(c, match, 'A', match.flagA, match.teamA),
+              ),
+              Container(width: 1, color: c.line),
+              Expanded(
+                child: _teamScorers(c, match, 'B', match.flagB, match.teamB),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _teamScorers(
+    AppColors c,
+    MatchModel match,
+    String side,
+    String flag,
+    String name,
+  ) {
+    final goals = _sortedGoals(match).where((g) => g.team == side).toList();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(flag, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 6),
+          if (goals.isEmpty)
+            Text('—', style: TextStyle(color: c.muted, fontSize: 12.5))
+          else
+            for (final g in goals) ...[
+              Text(
+                '${g.player} ${g.timeLabel}'
+                '${g.penalty ? ' (P)' : ''}${g.ownGoal ? ' (OG)' : ''}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 5),
+            ],
+        ],
+      ),
+    );
+  }
+
+  List<GoalEvent> _sortedGoals(MatchModel match) {
+    final list = [...match.goals];
+    list.sort((a, b) {
+      final am = (a.minute ?? 0) * 100 + (a.extra ?? 0);
+      final bm = (b.minute ?? 0) * 100 + (b.extra ?? 0);
+      return am.compareTo(bm);
+    });
+    return list;
   }
 
   Widget _teamColumn(AppColors c, String flag, String name) {

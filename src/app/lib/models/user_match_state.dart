@@ -10,6 +10,7 @@ class UserMatchState {
     this.scoreRevealed = false,
     this.predictionsRevealed = false,
     this.commentsRevealed = false,
+    this.goalsRevealed = false,
   });
 
   final String userId;
@@ -17,6 +18,7 @@ class UserMatchState {
   final bool scoreRevealed;
   final bool predictionsRevealed;
   final bool commentsRevealed;
+  final bool goalsRevealed;
 
   static String docId(String userId, String matchId) => '${userId}_$matchId';
 
@@ -28,6 +30,7 @@ class UserMatchState {
       scoreRevealed: (d['scoreRevealed'] ?? false) as bool,
       predictionsRevealed: (d['predictionsRevealed'] ?? false) as bool,
       commentsRevealed: (d['commentsRevealed'] ?? false) as bool,
+      goalsRevealed: (d['goalsRevealed'] ?? false) as bool,
     );
   }
 }

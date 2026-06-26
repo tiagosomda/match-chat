@@ -49,11 +49,13 @@ class RevealService {
     bool? score,
     bool? predictions,
     bool? comments,
+    bool? goals,
   }) {
     final data = <String, dynamic>{'userId': uid, 'matchId': mid};
     if (score != null) data['scoreRevealed'] = score;
     if (predictions != null) data['predictionsRevealed'] = predictions;
     if (comments != null) data['commentsRevealed'] = comments;
+    if (goals != null) data['goalsRevealed'] = goals;
     return Refs.userMatchState(uid, mid).set(data, SetOptions(merge: true));
   }
 }

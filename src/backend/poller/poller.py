@@ -24,7 +24,7 @@ from api_football import ApiFootball, RequestBudget
 from cache import Cache
 from config import Config
 from firestore_sync import FirestoreSync
-from mapping import build_group_map, map_status, to_match_doc
+from mapping import build_group_map, map_status, to_goals, to_match_doc
 
 # How long after kickoff a match might still be in play (90' + half-time +
 # stoppage + extra time + penalties, with margin). Defines the polling window.
@@ -94,25 +94,36 @@ def _poll_interval(cfg: Config, budget: RequestBudget) -> int:
     return cfg.poll_interval
 
 
-def _write_live(fs: FirestoreSync, cache: Cache, fixture: dict) -> bool:
+def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict) -> bool:
     """Write a fixture's score/status if it changed. Returns True if written."""
     fx = fixture["fixture"]
     fid = fx["id"]
     short = fx.get("status", {}).get("short")
     new_status = map_status(short)
-    goals = fixture.get("goals", {})
-    score_a, score_b = goals.get("home"), goals.get("away")
+    score = fixture.get("goals", {})
+    score_a, score_b = score.get("home"), score.get("away")
 
     if not cache.changed(fid, new_status, score_a, score_b):
         return False
-    fs.update_score(
-        {
-            "apiFixtureId": fid,
-            "status": new_status,
-            "scoreA": score_a,
-            "scoreB": score_b,
-        }
-    )
+
+    doc = {
+        "apiFixtureId": fid,
+        "status": new_status,
+        "scoreA": score_a,
+        "scoreB": score_b,
+    }
+
+    # Refresh the scorer list whenever there are goals on the board. This costs
+    # one extra request, but only fires at scoring/status-change moments, so it
+    # stays well within the daily budget.
+    if (score_a or 0) + (score_b or 0) > 0 and not api.budget.exhausted:
+        try:
+            home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
+            doc["goals"] = to_goals(api.events(fid), home_id)
+        except Exception as e:  # events are best-effort; never block a score write
+            log.warning("events fetch failed for %s (%s)", fid, e)
+
+    fs.update_score(doc)
     cache.set(fid, new_status, score_a, score_b)
     log.info("Updated %s: %s %s-%s", fid, new_status, score_a, score_b)
     return True
@@ -133,14 +144,14 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
         wrote = 0
         for fixture in live:
             current_ids.add(fixture["fixture"]["id"])
-            if _write_live(fs, cache, fixture):
+            if _write_live(api, fs, cache, fixture):
                 wrote += 1
 
         # Matches that left the live set just finished — fetch their final score.
         finished = list(seen_live - current_ids)
         if finished:
             for fixture in api.fixtures_by_ids(finished):
-                _write_live(fs, cache, fixture)
+                _write_live(api, fs, cache, fixture)
         seen_live = current_ids
 
         if wrote or finished:
@@ -151,7 +162,7 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
     # Window closed; reconcile anything still marked live (edge case).
     if seen_live and not api.budget.exhausted:
         for fixture in api.fixtures_by_ids(list(seen_live)):
-            _write_live(fs, cache, fixture)
+            _write_live(api, fs, cache, fixture)
         cache.save()
 
 
