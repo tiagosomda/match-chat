@@ -876,14 +876,100 @@ class _CommentsTab extends StatefulWidget {
 class _CommentsTabState extends State<_CommentsTab> {
   final _comment = TextEditingController();
   final _reply = TextEditingController();
+  final _edit = TextEditingController();
   String? _replyTo;
+  String? _editingId;
   bool _busy = false;
 
   @override
   void dispose() {
     _comment.dispose();
     _reply.dispose();
+    _edit.dispose();
     super.dispose();
+  }
+
+  void _startEditComment(CommentModel comment) {
+    setState(() {
+      _editingId = comment.id;
+      _replyTo = null;
+      _edit.text = comment.body;
+    });
+  }
+
+  Future<void> _saveEdit(AppState app, String commentId) async {
+    final err = Validation.message(_edit.text, max: Validation.maxComment);
+    if (err != null) {
+      showToast(context, err);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await app.comments.edit(
+        tid: widget.tournamentId,
+        mid: widget.match.id,
+        commentId: commentId,
+        body: _edit.text.trim(),
+      );
+      if (mounted) setState(() => _editingId = null);
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not save: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _deleteComment(AppState app, CommentModel comment) async {
+    final byAdmin = comment.userId != app.firebaseUser!.uid;
+    final confirmed = await _confirmDelete(byAdmin);
+    if (!confirmed) return;
+    setState(() => _busy = true);
+    try {
+      await app.comments.softDelete(
+        tid: widget.tournamentId,
+        mid: widget.match.id,
+        commentId: comment.id,
+        byAdmin: byAdmin,
+      );
+      if (mounted && _editingId == comment.id) {
+        setState(() => _editingId = null);
+      }
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not delete: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<bool> _confirmDelete(bool byAdmin) async {
+    final c = context.colors;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text(
+          'Delete comment?',
+          style: TextStyle(color: c.text, fontSize: 17),
+        ),
+        content: Text(
+          byAdmin
+              ? 'This will replace it with “deleted by admin”. Replies stay.'
+              : 'This will replace it with “deleted by user”. Replies stay.',
+          style: TextStyle(color: c.muted, fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: TextStyle(color: c.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Delete', style: TextStyle(color: c.accent)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _post(AppState app, {String? parentId}) async {
@@ -1018,31 +1104,126 @@ class _CommentsTabState extends State<_CommentsTab> {
                     color: c.muted,
                   ),
                 ),
+                if (comment.edited && !comment.deleted) ...[
+                  const SizedBox(width: 6),
+                  MonoLabel('· EDITED', fontSize: 9.5, letterSpacing: 1),
+                ],
               ],
             ),
             const SizedBox(height: 3),
-            Text(
-              comment.body,
-              style: TextStyle(color: c.text, fontSize: 13.5, height: 1.45),
-            ),
-            if (app.isParticipant)
-              GestureDetector(
-                onTap: () => setState(() {
-                  _replyTo = _replyTo == comment.id ? null : comment.id;
-                  _reply.clear();
-                }),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: MonoLabel(
-                    '↳ REPLY',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+            if (comment.deleted)
+              _deletedPlaceholder(c, comment)
+            else if (_editingId == comment.id)
+              _editInput(c, app, comment.id)
+            else
+              Text(
+                comment.body,
+                style: TextStyle(color: c.text, fontSize: 13.5, height: 1.45),
               ),
+            if (!comment.deleted && _editingId != comment.id)
+              _commentActions(c, app, comment),
             if (_replyTo == comment.id) _replyInput(c, app, comment.id),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _deletedPlaceholder(AppColors c, CommentModel comment) {
+    final who = comment.deletedBy == 'admin' ? 'admin' : 'user';
+    return Row(
+      children: [
+        Icon(Icons.block, size: 13, color: c.muted),
+        const SizedBox(width: 6),
+        Text(
+          'Comment deleted by $who',
+          style: TextStyle(
+            color: c.muted,
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _editInput(AppColors c, AppState app, String commentId) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _edit,
+              autofocus: true,
+              style: TextStyle(color: c.text, fontSize: 13),
+              decoration: appInputDecoration(context, hint: 'Edit comment…'),
+              onSubmitted: (_) => _saveEdit(app, commentId),
+            ),
+          ),
+          const SizedBox(width: 6),
+          AccentButton(
+            label: 'Save',
+            busy: _busy,
+            onPressed: () => _saveEdit(app, commentId),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: _busy ? null : () => setState(() => _editingId = null),
+            child: MonoLabel(
+              'CANCEL',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _commentActions(AppColors c, AppState app, CommentModel comment) {
+    final isMine = comment.userId == app.firebaseUser!.uid;
+    final canDelete = isMine || app.isAdmin;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          if (app.isParticipant)
+            GestureDetector(
+              onTap: () => setState(() {
+                _replyTo = _replyTo == comment.id ? null : comment.id;
+                _editingId = null;
+                _reply.clear();
+              }),
+              child: MonoLabel(
+                '↳ REPLY',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          if (isMine) ...[
+            const SizedBox(width: 14),
+            GestureDetector(
+              onTap: () => _startEditComment(comment),
+              child: MonoLabel(
+                'EDIT',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (canDelete) ...[
+            const SizedBox(width: 14),
+            GestureDetector(
+              onTap: () => _deleteComment(app, comment),
+              child: MonoLabel(
+                'DELETE',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

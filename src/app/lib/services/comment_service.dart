@@ -41,6 +41,34 @@ class CommentService {
     await batch.commit();
   }
 
+  /// Edits a comment's body (owner only — enforced by rules). Stamps editedAt.
+  Future<void> edit({
+    required String tid,
+    required String mid,
+    required String commentId,
+    required String body,
+  }) {
+    return Refs.comments(tid, mid).doc(commentId).update(<String, dynamic>{
+      'body': body,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Soft-deletes a comment: keeps the doc (so replies stay anchored) but
+  /// clears the body and records who removed it ('user' or 'admin').
+  Future<void> softDelete({
+    required String tid,
+    required String mid,
+    required String commentId,
+    required bool byAdmin,
+  }) {
+    return Refs.comments(tid, mid).doc(commentId).update(<String, dynamic>{
+      'deleted': true,
+      'deletedBy': byAdmin ? 'admin' : 'user',
+      'body': '',
+    });
+  }
+
   /// Builds an ordered, indented tree from a flat comment list.
   static List<CommentNode> buildTree(List<CommentModel> comments) {
     final byParent = <String?, List<CommentModel>>{};
