@@ -50,6 +50,11 @@ class RequestBudget:
                 pass
 
     @property
+    def used(self) -> int:
+        self._roll_day_if_needed()
+        return self._used
+
+    @property
     def remaining(self) -> int:
         self._roll_day_if_needed()
         if self._remaining_header is not None:

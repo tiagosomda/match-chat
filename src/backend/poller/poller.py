@@ -15,6 +15,7 @@ Run:  python poller.py
 
 from __future__ import annotations
 
+import argparse
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -154,17 +155,29 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
         cache.save()
 
 
-def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    )
+def _setup():
+    """Build the shared config + service objects used by both run modes."""
     cfg = Config.load()
     budget = RequestBudget(cfg.daily_budget)
     api = ApiFootball(cfg, budget)
     fs = FirestoreSync(cfg)
     cache = Cache(cfg.cache_file)
     fs.ensure_tournament()
+    return cfg, budget, api, fs, cache
+
+
+def run_once() -> None:
+    """Do a single daily sync (upsert all fixtures) and exit. Useful for
+    verifying the Firestore connection and document shape without starting the
+    live loop."""
+    cfg, budget, api, fs, cache = _setup()
+    log.info("One-shot sync for %s (league=%s season=%s)", cfg.tournament_name, cfg.league_id, cfg.season)
+    daily_sync(api, fs, cache)
+    log.info("Done. %d API request(s) used; budget remaining: %d", budget.used, budget.remaining)
+
+
+def run_forever() -> None:
+    cfg, budget, api, fs, cache = _setup()
 
     last_sync_date = None
     schedule: list = []
@@ -183,6 +196,26 @@ def main() -> None:
             sleep_s = _seconds_until_next_window(schedule, now, cfg.prekickoff_wake)
             log.info("Idle; sleeping %ds (budget remaining: %d)", sleep_s, budget.remaining)
             time.sleep(sleep_s)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Match Chat results poller.")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run a single schedule sync (upsert all fixtures) and exit.",
+    )
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
+
+    if args.once:
+        run_once()
+    else:
+        run_forever()
 
 
 if __name__ == "__main__":

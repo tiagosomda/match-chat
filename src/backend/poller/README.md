@@ -47,7 +47,14 @@ can't blow past 100 requests.
    # edit .env: set API_FOOTBALL_KEY and GOOGLE_APPLICATION_CREDENTIALS
    ```
 
-5. **Run**:
+5. **Verify the connection (recommended first step)** — do a single schedule
+   sync and exit, which upserts all fixtures into Firestore without starting the
+   live loop:
+   ```bash
+   python poller.py --once
+   ```
+
+6. **Run for real**:
    ```bash
    python poller.py
    ```
