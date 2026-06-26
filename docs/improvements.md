@@ -1,5 +1,5 @@
 [x] 1) in the comments and chat, the user's bubble should be the flag of their team - if they have picked it. Also when a favorite team is picked, don't keep the circle background. Just the flag is fine.
-2) some teams don't have flags, we need to fix that
+[x] 2) some teams don't have flags, we need to fix that
 3) in the match, it says in your time zone. Let's put their time zone in parenthesis after that
 4) the search/filter field in the matches page is not working. when I click on it and I start typing the page just sorts of refreshes and clears the key I had pressed
 5) predictions - the feature is not currently finished. There doesn't seem to be a way to add/update/delete a prediction for a game
