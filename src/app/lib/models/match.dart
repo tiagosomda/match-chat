@@ -58,10 +58,22 @@ class MatchModel {
   final int predictionCount;
   final bool archived;
 
+  /// A match is auto-hidden once its scheduled time is at least 2 days in the
+  /// past, even if it was never explicitly archived.
+  static const Duration autoHideAfter = Duration(days: 2);
+
   String get flagA => Teams.flagFor(teamA);
   String get flagB => Teams.flagFor(teamB);
   bool get hasScore => scoreA != null && scoreB != null;
   bool get isLocked => status != MatchStatus.upcoming;
+
+  /// True when the match is old enough to be hidden automatically.
+  bool get isStale =>
+      scheduledAt != null &&
+      DateTime.now().difference(scheduledAt!) >= autoHideAfter;
+
+  /// Effective hidden state: explicitly archived, or auto-hidden by age.
+  bool get isHidden => archived || isStale;
   String get scoreText => hasScore ? '$scoreA : $scoreB' : '– : –';
   String get title => '$teamA vs $teamB';
 

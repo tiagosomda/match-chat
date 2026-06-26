@@ -28,8 +28,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
   List<MatchModel> _apply(List<MatchModel> matches) {
     final q = _query.toLowerCase().trim();
     return matches.where((m) {
-      if (_filter == _Filter.archived) return m.archived;
-      if (m.archived) return false;
+      if (_filter == _Filter.archived) return m.isHidden;
+      if (m.isHidden) return false;
       switch (_filter) {
         case _Filter.upcoming:
           if (m.status != MatchStatus.upcoming) return false;
@@ -242,7 +242,7 @@ class _MatchCard extends StatelessWidget {
     return GestureDetector(
       onTap: onOpen,
       child: Opacity(
-        opacity: match.archived ? 0.62 : 1,
+        opacity: match.isHidden ? 0.62 : 1,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
           decoration: BoxDecoration(
@@ -259,7 +259,7 @@ class _MatchCard extends StatelessWidget {
                     child: MonoLabel(match.description.toUpperCase(),
                         fontSize: 10, letterSpacing: 1.4),
                   ),
-                  if (match.archived) ...[
+                  if (match.isHidden) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
@@ -267,7 +267,7 @@ class _MatchCard extends StatelessWidget {
                         color: c.surface2,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: MonoLabel('ARCHIVED',
+                      child: MonoLabel(match.archived ? 'ARCHIVED' : 'HIDDEN',
                           fontSize: 9, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(width: 8),

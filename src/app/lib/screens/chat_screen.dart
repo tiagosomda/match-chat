@@ -152,7 +152,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _composer(AppColors c, AppState app, List<MatchModel> matches) {
-    final active = matches.where((m) => !m.archived).toList();
+    final active = matches.where((m) => !m.isHidden).toList();
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
