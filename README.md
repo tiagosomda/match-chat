@@ -1,2 +1,3 @@
-# match-chat
-a place to where friends can chat asynchronously about a match
+checkout the doc folder for instructions.
+- top of mind: UI has been design. it is undeer a folder under the docs folder
+- make sure to add the appropriated .gitignore files
