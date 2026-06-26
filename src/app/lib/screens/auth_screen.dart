@@ -105,14 +105,22 @@ class _AuthScreenState extends State<AuthScreen> {
                             letterSpacing: 3),
                         const SizedBox(height: 18),
                         _heading(c),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Watch on your own clock. Scores, comments and '
-                          'predictions stay hidden until you decide to reveal.',
-                          style: TextStyle(
-                              color: c.muted, fontSize: 15, height: 1.5),
+                        const SizedBox(height: 20),
+                        _strength(
+                          c,
+                          Icons.event_available_outlined,
+                          'Spoiler-free schedule',
+                          'Scores, comments and predictions stay hidden until '
+                              'you choose to reveal them.',
                         ),
-                        const SizedBox(height: 30),
+                        _strength(
+                          c,
+                          Icons.visibility_outlined,
+                          'See which friends have watched',
+                          'Know who has already seen a match — without giving '
+                              'the result away.',
+                        ),
+                        const SizedBox(height: 24),
                         _googleButton(c),
                         const SizedBox(height: 14),
                         _orDivider(c),
@@ -183,6 +191,45 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _strength(AppColors c, IconData icon, String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(
+                  c.accent.withValues(alpha: 0.16), c.surface),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, size: 19, color: c.accent),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15)),
+                const SizedBox(height: 2),
+                Text(desc,
+                    style: TextStyle(
+                        color: c.muted, fontSize: 13, height: 1.45)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
