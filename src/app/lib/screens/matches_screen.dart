@@ -322,13 +322,42 @@ class _MatchCard extends StatelessWidget {
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: MonoLabel(
-                      match.description.toUpperCase(),
-                      fontSize: 10,
-                      letterSpacing: 1.4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MonoLabel(
+                          match.description.toUpperCase(),
+                          fontSize: 10,
+                          letterSpacing: 1.4,
+                        ),
+                        if (match.shortLocation != null) ...[
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.place_outlined,
+                                size: 11,
+                                color: c.muted,
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  match.shortLocation!,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: c.muted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (match.isHidden) ...[

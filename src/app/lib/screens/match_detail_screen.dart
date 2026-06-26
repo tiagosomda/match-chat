@@ -284,11 +284,33 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   fontSize: 9,
                   letterSpacing: 1.4,
                 ),
+                if (match.hasLocation) _venueLine(c, match),
                 _kickoffCountdown(c, match),
               ],
             ),
           ),
           _friendsCounter(context, app, match),
+        ],
+      ),
+    );
+  }
+
+  /// The match venue ("Stadium · City") shown in the hero info block (#2).
+  Widget _venueLine(AppColors c, MatchModel match) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 9),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.place_outlined, size: 14, color: c.muted),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              match.locationText,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.muted, fontSize: 12),
+            ),
+          ),
         ],
       ),
     );

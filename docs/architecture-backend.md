@@ -27,7 +27,7 @@ match-chat/app
   │                                      friends[], invitedBy, preferredLanguage
   ├── tournaments/{tid}
   │     ├── matches/{mid}               teams, status, score, scheduledAt,
-  │     │     │                         goals[], cached comment/prediction counts
+  │     │     │                         venue/city, goals[], cached counts
   │     │     ├── comments/{cid}        threaded; soft-deletable
   │     │     └── predictions/{uid}     one per user per match
   │     └── chat/{msgId}                tournament-wide chat, optionally match-tagged

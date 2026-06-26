@@ -79,6 +79,8 @@ class MatchModel {
     this.scoreA,
     this.scoreB,
     this.scheduledAt,
+    this.venue,
+    this.city,
     this.commentCount = 0,
     this.predictionCount = 0,
     this.archived = false,
@@ -93,6 +95,12 @@ class MatchModel {
   final int? scoreA;
   final int? scoreB;
   final DateTime? scheduledAt;
+
+  /// Stadium / venue name, e.g. "MetLife Stadium". Set by the poller or admin.
+  final String? venue;
+
+  /// Host city, e.g. "East Rutherford". Set by the poller or admin.
+  final String? city;
   final int commentCount;
   final int predictionCount;
   final bool archived;
@@ -119,6 +127,24 @@ class MatchModel {
   String get scoreText => hasScore ? '$scoreA : $scoreB' : '– : –';
   String get title => '$teamA vs $teamB';
 
+  bool get hasVenue => venue?.trim().isNotEmpty == true;
+  bool get hasCity => city?.trim().isNotEmpty == true;
+  bool get hasLocation => hasVenue || hasCity;
+
+  /// Full location label: "Stadium · City", or whichever side is known.
+  String get locationText {
+    final parts = <String>[
+      if (hasVenue) venue!.trim(),
+      if (hasCity) city!.trim(),
+    ];
+    return parts.join(' · ');
+  }
+
+  /// Compact location for tight UI (the matches list): city if known, else the
+  /// venue name. Null when neither is set.
+  String? get shortLocation =>
+      hasCity ? city!.trim() : (hasVenue ? venue!.trim() : null);
+
   factory MatchModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? <String, dynamic>{};
     return MatchModel(
@@ -130,6 +156,8 @@ class MatchModel {
       scoreA: d['scoreA'] as int?,
       scoreB: d['scoreB'] as int?,
       scheduledAt: (d['scheduledAt'] as Timestamp?)?.toDate(),
+      venue: d['venue'] as String?,
+      city: d['city'] as String?,
       commentCount: (d['commentCount'] ?? 0) as int,
       predictionCount: (d['predictionCount'] ?? 0) as int,
       archived: (d['archived'] ?? false) as bool,
@@ -153,6 +181,8 @@ class MatchModel {
     'scheduledAt': scheduledAt == null
         ? null
         : Timestamp.fromDate(scheduledAt!),
+    'venue': venue,
+    'city': city,
     'archived': archived,
   };
 }

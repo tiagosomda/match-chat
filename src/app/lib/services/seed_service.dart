@@ -36,6 +36,8 @@ class SeedService {
         DateTime.utc(2026, 6, 24, 23, 0),
         a: 2,
         b: 1,
+        venue: 'MetLife Stadium',
+        city: 'East Rutherford',
       ),
       _m(
         'Portugal',
@@ -45,6 +47,8 @@ class SeedService {
         DateTime.utc(2026, 6, 23, 18, 0),
         a: 1,
         b: 0,
+        venue: 'AT&T Stadium',
+        city: 'Arlington',
       ),
       _m(
         'France',
@@ -54,6 +58,8 @@ class SeedService {
         DateTime.utc(2026, 6, 25, 18, 0),
         a: 3,
         b: 3,
+        venue: 'SoFi Stadium',
+        city: 'Inglewood',
       ),
       _m(
         'Belgium',
@@ -63,6 +69,8 @@ class SeedService {
         DateTime.utc(2026, 6, 25, 23, 0),
         a: 1,
         b: 1,
+        venue: 'Mercedes-Benz Stadium',
+        city: 'Atlanta',
       ),
       _m(
         'Spain',
@@ -70,6 +78,8 @@ class SeedService {
         'Group Stage · Group E',
         MatchStatus.upcoming,
         DateTime.utc(2026, 6, 26, 1, 0),
+        venue: 'Lincoln Financial Field',
+        city: 'Philadelphia',
       ),
       _m(
         'Netherlands',
@@ -77,6 +87,8 @@ class SeedService {
         'Group Stage · Group F',
         MatchStatus.upcoming,
         DateTime.utc(2026, 6, 28, 19, 0),
+        venue: 'Levi’s Stadium',
+        city: 'Santa Clara',
       ),
     ];
 
@@ -95,6 +107,8 @@ class SeedService {
     DateTime scheduledAt, {
     int? a,
     int? b,
+    String? venue,
+    String? city,
   }) {
     return <String, dynamic>{
       'teamA': teamA,
@@ -104,6 +118,8 @@ class SeedService {
       'scoreA': a,
       'scoreB': b,
       'scheduledAt': Timestamp.fromDate(scheduledAt),
+      'venue': venue,
+      'city': city,
       'commentCount': 0,
       'predictionCount': 0,
       'archived': false,

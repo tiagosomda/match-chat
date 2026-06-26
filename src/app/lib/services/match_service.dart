@@ -31,6 +31,8 @@ class MatchService {
     required String teamB,
     required String description,
     DateTime? scheduledAt,
+    String? venue,
+    String? city,
   }) async {
     final ref = await Refs.matches(tid).add(<String, dynamic>{
       'teamA': teamA,
@@ -42,6 +44,8 @@ class MatchService {
       'scheduledAt': scheduledAt == null
           ? null
           : Timestamp.fromDate(scheduledAt),
+      'venue': venue,
+      'city': city,
       'commentCount': 0,
       'predictionCount': 0,
       'archived': false,
@@ -60,6 +64,8 @@ class MatchService {
     DateTime? scheduledAt,
     int? scoreA,
     int? scoreB,
+    String? venue,
+    String? city,
   }) {
     return Refs.match(tid, mid).update(<String, dynamic>{
       'teamA': teamA,
@@ -71,6 +77,8 @@ class MatchService {
           : Timestamp.fromDate(scheduledAt),
       'scoreA': scoreA,
       'scoreB': scoreB,
+      'venue': venue,
+      'city': city,
     });
   }
 

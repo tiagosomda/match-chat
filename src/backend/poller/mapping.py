@@ -6,6 +6,7 @@ Target shape (see src/app/lib/models/match.dart):
     status             "upcoming" | "live" | "finished"
     scoreA, scoreB     ints or None
     scheduledAt        datetime (UTC) -> Firestore Timestamp
+    venue, city        stadium name and host city (strings or None)
     apiFixtureId       the source fixture id (also used as the doc id)
     goals              list of {team, player, minute, extra, penalty, ownGoal}
 """
@@ -57,6 +58,10 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
         # API dates look like "2026-06-11T19:00:00+00:00".
         scheduled_at = datetime.fromisoformat(raw_date)
 
+    venue = fx.get("venue") or {}
+    venue_name = (venue.get("name") or "").strip() or None
+    venue_city = (venue.get("city") or "").strip() or None
+
     return {
         "apiFixtureId": fx["id"],
         "teamA": normalize(teams["home"].get("name")),
@@ -66,6 +71,8 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
         "scoreA": goals.get("home"),
         "scoreB": goals.get("away"),
         "scheduledAt": scheduled_at,
+        "venue": venue_name,
+        "city": venue_city,
     }
 
 

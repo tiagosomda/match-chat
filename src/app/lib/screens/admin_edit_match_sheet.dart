@@ -33,6 +33,12 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   );
   late MatchStatus _status = widget.match.status;
   late DateTime? _kickoff = widget.match.scheduledAt?.toLocal();
+  late final TextEditingController _venue = TextEditingController(
+    text: widget.match.venue ?? '',
+  );
+  late final TextEditingController _city = TextEditingController(
+    text: widget.match.city ?? '',
+  );
   late final TextEditingController _scoreA = TextEditingController(
     text: widget.match.scoreA?.toString() ?? '',
   );
@@ -44,6 +50,8 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
   @override
   void dispose() {
     _desc.dispose();
+    _venue.dispose();
+    _city.dispose();
     _scoreA.dispose();
     _scoreB.dispose();
     super.dispose();
@@ -83,6 +91,11 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
     });
   }
 
+  static String? _trimToNull(String s) {
+    final v = s.trim();
+    return v.isEmpty ? null : v;
+  }
+
   Future<void> _save() async {
     final app = context.read<AppState>();
     if (_teamA.isEmpty || _teamB.isEmpty) {
@@ -105,6 +118,8 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
         scheduledAt: _kickoff?.toUtc(),
         scoreA: int.tryParse(_scoreA.text.trim()),
         scoreB: int.tryParse(_scoreB.text.trim()),
+        venue: _trimToNull(_venue.text),
+        city: _trimToNull(_city.text),
       );
       if (mounted) {
         Navigator.of(context).pop();
@@ -195,6 +210,26 @@ class _AdminEditMatchSheetState extends State<AdminEditMatchSheet> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 14),
+                    MonoLabel('LOCATION'),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: _venue,
+                      style: TextStyle(color: c.text),
+                      decoration: appInputDecoration(
+                        context,
+                        hint: 'Stadium · e.g. MetLife Stadium',
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    TextField(
+                      controller: _city,
+                      style: TextStyle(color: c.text),
+                      decoration: appInputDecoration(
+                        context,
+                        hint: 'City · e.g. East Rutherford',
+                      ),
                     ),
                     const SizedBox(height: 14),
                     MonoLabel('STATUS & SCORE'),
