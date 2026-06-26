@@ -1,0 +1,82 @@
+# Match Chat — Results Poller
+
+A small Python process that fetches World Cup scores from
+[API-Football](https://www.api-football.com) and writes them to Firestore. It is
+meant to run on a personal machine (laptop, home server, Raspberry Pi…) for the
+duration of the tournament.
+
+It is built to stay inside API-Football's **free plan (100 requests/day)**.
+
+## What it does
+
+1. **Daily sync** — once per day, pulls the full schedule (`/fixtures?league=1&season=2026`)
+   and upserts all ~104 match documents into Firestore, keyed by the API fixture
+   id. This also auto-populates the tournament, so no manual seeding is needed.
+2. **Sleep** — idles until the next kickoff. Zero API requests while idle.
+3. **Live polling** — while any match is in play, polls a single status-filtered
+   request that returns the score of *every* simultaneous match, and writes to
+   Firestore **only when a score or status actually changes** (diffed against a
+   local cache).
+4. **Finals** — when a match drops out of the live set, fetches its final score
+   promptly, then goes back to sleep.
+
+A budget guard widens the poll interval as the daily quota runs low (it reads
+`x-ratelimit-requests-remaining` from the API), so a heavily-staggered match day
+can't blow past 100 requests.
+
+## Setup
+
+1. **Create an API-Football account** and copy your key from the
+   [dashboard](https://dashboard.api-football.com).
+
+2. **Download a Firebase service-account key**: Firebase console → Project
+   settings → Service accounts → *Generate new private key*. Save the JSON into
+   this folder as `service-account.json` (it is gitignored).
+
+3. **Install dependencies** (a virtualenv is recommended):
+   ```bash
+   cd src/backend/poller
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+4. **Configure**:
+   ```bash
+   cp .env.example .env
+   # edit .env: set API_FOOTBALL_KEY and GOOGLE_APPLICATION_CREDENTIALS
+   ```
+
+5. **Run**:
+   ```bash
+   python poller.py
+   ```
+
+Leave it running. It logs each sync and each score update, and is safe to stop
+(Ctrl-C) and restart — the local cache prevents redundant writes.
+
+## Configuration (.env)
+
+| Variable | Default | Notes |
+|---|---|---|
+| `API_FOOTBALL_KEY` | — | Required. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | `./service-account.json` | Firebase Admin key. |
+| `LEAGUE_ID` / `SEASON` | `1` / `2026` | World Cup 2026 in API-Football. |
+| `TOURNAMENT_ID` | `world-cup-2026` | Firestore tournament doc id (matches the app). |
+| `POLL_INTERVAL_SECONDS` | `300` | Interval while matches are live. |
+| `MAX_POLL_INTERVAL_SECONDS` | `900` | Upper bound the budget guard widens toward. |
+| `PREKICKOFF_WAKE_SECONDS` | `120` | Start polling this long before kickoff. |
+| `DAILY_REQUEST_BUDGET` | `90` | Soft cap under the 100/day free limit. |
+| `CACHE_FILE` | `./.poller-cache.json` | Local change-detection cache. |
+
+## Notes
+
+- Writes go through the **Firebase Admin SDK**, which bypasses Firestore
+  security rules — that's why scores can be written even though the client rules
+  forbid it. Keep `service-account.json` private.
+- All writes are scoped under `match-chat/app/tournaments/{id}/matches/{fixtureId}`,
+  safe in the shared Firebase database.
+- Match docs are merge-written, so the app's own `commentCount` /
+  `predictionCount` counters are never overwritten.
+- Because the poller now owns match data, the app's in-app **Seed sample data**
+  button is only needed for local development without the poller running.

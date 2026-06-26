@@ -7,6 +7,9 @@ Firebase configuration and Firestore security rules for the Match Chat app.
 - **`firebase.json`** — Firebase hosting and Firestore indexes config
 - **`firestore.rules`** — Firestore security rules (scoped to `/match-chat/**`)
 - **`firestore.indexes.json`** — Composite indexes (currently empty)
+- **`poller/`** — Python results poller that fetches live scores from
+  API-Football and writes them to Firestore (runs on a personal machine; see
+  `poller/README.md`)
 
 ## Deployment
 

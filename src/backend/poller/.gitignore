@@ -1,0 +1,11 @@
+# Secrets & local state — never commit these
+.env
+service-account.json
+*.json.key
+.poller-cache.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
