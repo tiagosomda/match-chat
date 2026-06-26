@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -132,14 +133,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       child: Row(
         children: [
           _iconBtn(c, Icons.arrow_back, () => Navigator.of(context).pop()),
-          const SizedBox(width: 9),
-          Expanded(
-            child: MonoLabel(
-              match.description.toUpperCase(),
-              fontSize: 11,
-              letterSpacing: 1.6,
-            ),
-          ),
+          const Spacer(),
           if (app.isAdmin) ...[
             _pillBtn(
               c,
@@ -246,6 +240,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       ),
       child: Column(
         children: [
+          if (match.description.trim().isNotEmpty) ...[
+            MonoLabel(
+              match.description.toUpperCase(),
+              fontSize: 10.5,
+              letterSpacing: 1.6,
+            ),
+            const SizedBox(height: 16),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -804,9 +806,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           }
         }
         // Predictions can be created/edited/removed only while the match is
-        // still upcoming.
-        final editable =
-            app.isParticipant && match.status == MatchStatus.upcoming;
+        // still upcoming. Once it kicks off they are locked (item #5).
+        final predictionsOpen = match.status == MatchStatus.upcoming;
+        final editable = app.isParticipant && predictionsOpen;
         final showInput = editable && (mine == null || _editing);
 
         return Padding(
@@ -819,8 +821,11 @@ class _PredictionsTabState extends State<_PredictionsTab> {
               else if (mine != null) ...[
                 _yourPredChip(c, app, mine, editable),
                 const SizedBox(height: 13),
+              ] else if (!predictionsOpen) ...[
+                _predictionLocked(c, match),
+                const SizedBox(height: 13),
               ],
-              if (!app.isParticipant) ...[
+              if (predictionsOpen && !app.isParticipant) ...[
                 _invitePrompt(
                   context,
                   context.l10n.t('invitePredictionPrompt'),
@@ -844,6 +849,48 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           ),
         );
       },
+    );
+  }
+
+  /// Shown in place of the input once a match has kicked off or ended (#5):
+  /// predictions are locked rather than silently hidden.
+  Widget _predictionLocked(AppColors c, MatchModel match) {
+    final over = match.status == MatchStatus.finished;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.line),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline, size: 17, color: c.muted),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.t('predictionsLocked'),
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  over
+                      ? context.l10n.t('predictionsLockedOverDesc')
+                      : context.l10n.t('predictionsLockedLiveDesc'),
+                  style: TextStyle(color: c.muted, fontSize: 12, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -884,54 +931,115 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                 ),
             ],
           ),
-          const SizedBox(height: 11),
+          const SizedBox(height: 14),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(widget.match.flagA, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              _scoreInput(c, _a),
+              Text(widget.match.flagA, style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: 12),
+              _scoreStepper(c, _a),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   ':',
-                  style: TextStyle(fontFamily: AppTheme.mono, color: c.muted),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 18,
+                    color: c.muted,
+                  ),
                 ),
               ),
-              _scoreInput(c, _b),
-              const SizedBox(width: 8),
-              Text(widget.match.flagB, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: AccentButton(
-                  label: isUpdate
-                      ? context.l10n.t('update')
-                      : context.l10n.t('predict'),
-                  expand: true,
-                  busy: _busy,
-                  onPressed: () => _submit(app, isUpdate: isUpdate),
-                ),
-              ),
+              _scoreStepper(c, _b),
+              const SizedBox(width: 12),
+              Text(widget.match.flagB, style: const TextStyle(fontSize: 22)),
             ],
+          ),
+          const SizedBox(height: 14),
+          AccentButton(
+            label: isUpdate
+                ? context.l10n.t('update')
+                : context.l10n.t('predict'),
+            expand: true,
+            busy: _busy,
+            onPressed: () => _submit(app, isUpdate: isUpdate),
           ),
         ],
       ),
     );
   }
 
-  Widget _scoreInput(AppColors c, TextEditingController ctrl) {
-    return SizedBox(
-      width: 50,
-      child: TextField(
-        controller: ctrl,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: AppTheme.mono,
-          fontWeight: FontWeight.w700,
-          fontSize: 16,
-          color: c.text,
+  /// Clamp helper: bump a score field by [delta], keeping it within 0..99 so
+  /// negative scores can never be entered (#6).
+  void _bump(TextEditingController ctrl, int delta) {
+    final current = int.tryParse(ctrl.text.trim()) ?? 0;
+    final next = (current + delta).clamp(0, 99);
+    final s = '$next';
+    ctrl.value = TextEditingValue(
+      text: s,
+      selection: TextSelection.collapsed(offset: s.length),
+    );
+    setState(() {});
+  }
+
+  /// A vertical 0..99 score picker: up arrow, number field, down arrow (#6).
+  /// The field stays editable but only accepts digits, so the value is always a
+  /// valid non-negative integer.
+  Widget _scoreStepper(AppColors c, TextEditingController ctrl) {
+    final value = int.tryParse(ctrl.text.trim()) ?? 0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _stepArrow(c, Icons.keyboard_arrow_up, () => _bump(ctrl, 1)),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 52,
+          child: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(2),
+            ],
+            onChanged: (_) => setState(() {}),
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: c.text,
+            ),
+            decoration: appInputDecoration(context, hint: '0'),
+          ),
         ),
-        decoration: appInputDecoration(context, hint: '0'),
+        const SizedBox(height: 6),
+        _stepArrow(
+          c,
+          Icons.keyboard_arrow_down,
+          value > 0 ? () => _bump(ctrl, -1) : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _stepArrow(AppColors c, IconData icon, VoidCallback? onTap) {
+    final enabled = onTap != null;
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        width: 52,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: c.line),
+        ),
+        child: Icon(
+          icon,
+          size: 22,
+          color: enabled ? c.accent : c.muted.withValues(alpha: 0.4),
+        ),
       ),
     );
   }

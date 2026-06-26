@@ -186,6 +186,11 @@ const Map<String, String> _en = {
   'invitePredictionPrompt': 'Get an invite code to add your prediction →',
   'predictionsHidden': '{n} PREDICTIONS HIDDEN',
   'revealPredictions': 'Reveal predictions',
+  'predictionsLocked': 'Predictions locked',
+  'predictionsLockedLiveDesc':
+      'The match has kicked off — predictions are closed.',
+  'predictionsLockedOverDesc':
+      'This match is over — predictions are closed.',
   // comments
   'revealComments': 'Reveal comments',
   'commentsHidden': '{n} COMMENTS HIDDEN',
@@ -352,6 +357,11 @@ const Map<String, String> _es = {
       'Consigue un código de invitación para añadir tu pronóstico →',
   'predictionsHidden': '{n} PRONÓSTICOS OCULTOS',
   'revealPredictions': 'Mostrar pronósticos',
+  'predictionsLocked': 'Pronósticos bloqueados',
+  'predictionsLockedLiveDesc':
+      'El partido ya comenzó — los pronósticos están cerrados.',
+  'predictionsLockedOverDesc':
+      'Este partido terminó — los pronósticos están cerrados.',
   'revealComments': 'Mostrar comentarios',
   'commentsHidden': '{n} COMENTARIOS OCULTOS',
   'noCommentsYet': 'Aún no hay comentarios — sé el primero.',
@@ -515,6 +525,11 @@ const Map<String, String> _pt = {
       'Obtém um código de convite para adicionar o teu palpite →',
   'predictionsHidden': '{n} PALPITES OCULTOS',
   'revealPredictions': 'Revelar palpites',
+  'predictionsLocked': 'Palpites bloqueados',
+  'predictionsLockedLiveDesc':
+      'O jogo já começou — os palpites estão fechados.',
+  'predictionsLockedOverDesc':
+      'Este jogo terminou — os palpites estão fechados.',
   'revealComments': 'Revelar comentários',
   'commentsHidden': '{n} COMENTÁRIOS OCULTOS',
   'noCommentsYet': 'Ainda não há comentários — sê o primeiro.',
@@ -637,6 +652,10 @@ const Map<String, String> _ptBR = {
   'enterBothScores': 'Informe os dois placares',
   'invitePredictionPrompt':
       'Consiga um código de convite para adicionar seu palpite →',
+  'predictionsLockedLiveDesc':
+      'A partida já começou — os palpites estão fechados.',
+  'predictionsLockedOverDesc':
+      'Esta partida terminou — os palpites estão fechados.',
   'noCommentsYet': 'Ainda não há comentários — seja o primeiro.',
   'addComment': 'Adicione um comentário…',
   'editComment': 'Edite o comentário…',
