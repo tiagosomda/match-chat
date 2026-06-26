@@ -177,7 +177,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       border: Border.all(color: c.line),
                     ),
                     child: DropdownButton<String?>(
-                      value: _tag,
+                      // Guard against a tag pointing at a now-hidden match,
+                      // which would otherwise fail the dropdown's value assert.
+                      value: active.any((m) => m.id == _tag) ? _tag : null,
                       isExpanded: true,
                       underline: const SizedBox.shrink(),
                       dropdownColor: c.surface2,
@@ -190,6 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           DropdownMenuItem<String?>(
                             value: m.id,
                             child: Text(
+                                '${Formatting.shortKickoff(m.scheduledAt)} · '
                                 '${m.flagA} ${m.teamA} vs ${m.teamB} ${m.flagB}',
                                 overflow: TextOverflow.ellipsis),
                           ),

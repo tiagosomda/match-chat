@@ -23,6 +23,12 @@ class Formatting {
     return DateFormat('EEE, MMM d · h:mm a').format(local);
   }
 
+  /// Compact kickoff for tight UI like dropdowns, e.g. "Jun 25, 2:00 PM".
+  static String shortKickoff(DateTime? utc) {
+    if (utc == null) return 'TBD';
+    return DateFormat('MMM d, h:mm a').format(utc.toLocal());
+  }
+
   /// A short label for the viewer's local timezone, e.g. "EDT" or "GMT-4".
   /// Prefers the platform abbreviation when it's short; otherwise falls back to
   /// a GMT offset (Flutter web often returns a long/empty timeZoneName).
