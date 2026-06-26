@@ -22,8 +22,31 @@ class MatchesScreen extends StatefulWidget {
 enum _Filter { all, upcoming, live, finished, archived }
 
 class _MatchesScreenState extends State<MatchesScreen> {
+  final _search = TextEditingController();
   String _query = '';
   _Filter _filter = _Filter.all;
+
+  // Streams are memoized so that rebuilds triggered by typing in the search
+  // field don't recreate the underlying Firestore subscription (which would
+  // flash the loading spinner and wipe the keystroke).
+  Stream<List<MatchModel>>? _matchesStream;
+  Stream<Map<String, UserMatchState>>? _revealsStream;
+  String? _streamKey;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _ensureStreams(AppState app) {
+    final key = '${app.tournamentId}_${app.firebaseUser!.uid}';
+    if (key != _streamKey) {
+      _streamKey = key;
+      _matchesStream = app.matches.watchAll(app.tournamentId!);
+      _revealsStream = app.reveals.watchAllForUser(app.firebaseUser!.uid);
+    }
+  }
 
   List<MatchModel> _apply(List<MatchModel> matches) {
     final q = _query.toLowerCase().trim();
@@ -56,9 +79,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
     final app = context.watch<AppState>();
     final tid = app.tournamentId!;
     final c = context.colors;
+    _ensureStreams(app);
 
     return StreamBuilder<List<MatchModel>>(
-      stream: app.matches.watchAll(tid),
+      stream: _matchesStream,
       builder: (context, matchSnap) {
         if (matchSnap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: c.accent));
@@ -70,7 +94,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
         final visible = _apply(all);
 
         return StreamBuilder<Map<String, UserMatchState>>(
-          stream: app.reveals.watchAllForUser(app.firebaseUser!.uid),
+          stream: _revealsStream,
           builder: (context, revealSnap) {
             final reveals =
                 revealSnap.data ?? const <String, UserMatchState>{};
@@ -142,6 +166,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   Widget _searchField(AppColors c) {
     return TextField(
+      controller: _search,
       onChanged: (v) => setState(() => _query = v),
       style: TextStyle(color: c.text, fontSize: 14),
       decoration: appInputDecoration(

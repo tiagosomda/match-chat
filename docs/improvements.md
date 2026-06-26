@@ -1,7 +1,7 @@
 [x] 1) in the comments and chat, the user's bubble should be the flag of their team - if they have picked it. Also when a favorite team is picked, don't keep the circle background. Just the flag is fine.
 [x] 2) some teams don't have flags, we need to fix that
 [x] 3) in the match, it says in your time zone. Let's put their time zone in parenthesis after that
-4) the search/filter field in the matches page is not working. when I click on it and I start typing the page just sorts of refreshes and clears the key I had pressed
+[x] 4) the search/filter field in the matches page is not working. when I click on it and I start typing the page just sorts of refreshes and clears the key I had pressed
 5) predictions - the feature is not currently finished. There doesn't seem to be a way to add/update/delete a prediction for a game
 6) let's add the friends feature. As in, when going to someone's profile, we can mark them as friends or clear it. and then in the match list page, we should display the number of friends who have revealed the score. clicking that number should slide up a sheet with the list of friends who have revealed and those who have not. Similary in the match view itself, we should have that counter and tapping it should invoke the same slide in sheet.
 7) in the comments section, there should be a way to edit or delete the comment. (admins should be able to delete the comment). when a comment is deleted. it should replace the comment with a deleted by user or deleted by admin. In that way any replies to the comment can still stay where they were
