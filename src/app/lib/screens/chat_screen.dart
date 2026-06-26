@@ -13,6 +13,7 @@ import '../utils/formatting.dart';
 import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
+import 'match_detail_screen.dart';
 import 'user_profile_screen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -213,6 +214,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                _openMatchButton(c, app),
               ],
             ),
             const SizedBox(height: 8),
@@ -235,6 +238,37 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Opens the currently-selected match's detail screen. Disabled (dimmed)
+  /// while "General" is selected.
+  Widget _openMatchButton(AppColors c, AppState app) {
+    final enabled = _tag != null;
+    return InkWell(
+      onTap: enabled
+          ? () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => MatchDetailScreen(
+                  tournamentId: app.tournamentId!,
+                  matchId: _tag!,
+                ),
+              ))
+          : null,
+      borderRadius: BorderRadius.circular(11),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.4,
+        child: Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: c.surface2,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: c.line),
+          ),
+          child: Icon(Icons.open_in_new, size: 18, color: c.accent),
         ),
       ),
     );
