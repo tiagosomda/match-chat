@@ -20,6 +20,11 @@ matches are live but stays defensive about the daily quota.
    changes** (diffed against a local cache).
 4. **Finals** — when a match drops out of the live set, fetches its final score
    promptly, then goes back to sleep.
+5. **Scorers** — whenever a match has goals on the board, fetches the scorer list
+   (`/fixtures/events`) and writes it to the match's `goals` array. This is
+   backfilled on the next wake-up for matches whose score was recorded without it
+   (e.g. by the daily sync, or while the poller was down), so the "who scored"
+   panel fills in even if the poller started after kickoff.
 
 ### Quota safety
 

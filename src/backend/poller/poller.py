@@ -103,7 +103,9 @@ def _poll_interval(cfg: Config, budget: RequestBudget) -> int:
 
 
 def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict) -> bool:
-    """Write a fixture's score/status if it changed. Returns True if written."""
+    """Write a fixture's score/status if it changed, and (back)fill its scorer
+    list when goals are on the board but none have been recorded yet. Returns
+    True if anything was written."""
     fx = fixture["fixture"]
     fid = fx["id"]
     short = fx.get("status", {}).get("short")
@@ -111,7 +113,35 @@ def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict
     score = fixture.get("goals", {})
     score_a, score_b = score.get("home"), score.get("away")
 
-    if not cache.changed(fid, new_status, score_a, score_b):
+    score_changed = cache.changed(fid, new_status, score_a, score_b)
+    has_goals = (score_a or 0) + (score_b or 0) > 0
+    # Fetch the scorer list when the score just changed, or when there are goals
+    # on the board we've never recorded — e.g. the score was first written by the
+    # daily sync, which writes scores but not scorers, so change-detection alone
+    # would never trigger the fetch.
+    need_goals = has_goals and (score_changed or not cache.goals_recorded(fid))
+
+    if not score_changed and not need_goals:
+        return False
+
+    goals_recorded = cache.goals_recorded(fid)
+    fetched_goals = None
+    # Refreshing the scorers costs one extra request, but only fires at scoring /
+    # status-change moments (or once, to backfill), so it stays well within the
+    # daily budget.
+    if need_goals and not api.budget.exhausted:
+        try:
+            home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
+            fetched = to_goals(api.events(fid), home_id)
+            if fetched:  # events can lag the score; retry next poll if empty
+                fetched_goals = fetched
+                goals_recorded = True
+        except Exception as e:  # events are best-effort; never block a score write
+            log.warning("events fetch failed for %s (%s)", fid, e)
+
+    # Nothing new to persist if the score is unchanged and scorers still aren't
+    # available — avoid a redundant write and log line every poll.
+    if not score_changed and fetched_goals is None:
         return False
 
     doc = {
@@ -120,19 +150,11 @@ def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict
         "scoreA": score_a,
         "scoreB": score_b,
     }
-
-    # Refresh the scorer list whenever there are goals on the board. This costs
-    # one extra request, but only fires at scoring/status-change moments, so it
-    # stays well within the daily budget.
-    if (score_a or 0) + (score_b or 0) > 0 and not api.budget.exhausted:
-        try:
-            home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
-            doc["goals"] = to_goals(api.events(fid), home_id)
-        except Exception as e:  # events are best-effort; never block a score write
-            log.warning("events fetch failed for %s (%s)", fid, e)
+    if fetched_goals is not None:
+        doc["goals"] = fetched_goals
 
     fs.update_score(doc)
-    cache.set(fid, new_status, score_a, score_b)
+    cache.set(fid, new_status, score_a, score_b, goals_recorded=goals_recorded)
     log.info("Updated %s: %s %s-%s", fid, new_status, score_a, score_b)
     return True
 
@@ -181,13 +203,15 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
             log.warning("Final reconcile failed (%s); will retry next window", e)
 
 
-def _overdue_unfinished(schedule: list, cache: Cache, now: datetime) -> list:
-    """Fixture ids whose live window has fully elapsed but which the cache does
-    not yet record as finished.
+def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
+    """Fixture ids in the recent lookback that still need a (re)write: either
+    their live window elapsed without the cache recording them as finished, or
+    there are goals on the board whose scorers we never fetched (e.g. the score
+    came from the daily sync, which writes scores but not scorers).
 
-    These are matches the live loop never saw end — typically because the poller
-    wasn't running during their window. Bounded to a recent lookback so we don't
-    keep chasing long-past fixtures (e.g. a postponed game that never resolves).
+    These are matches the live loop never fully handled — typically because the
+    poller wasn't running during their window. Bounded to a recent lookback so we
+    don't keep chasing long-past fixtures (which the app auto-hides anyway).
     """
     ids = []
     for fx in schedule:
@@ -196,20 +220,27 @@ def _overdue_unfinished(schedule: list, cache: Cache, now: datetime) -> list:
             continue
         if not (ko + LIVE_WINDOW < now < ko + LIVE_WINDOW + RECONCILE_LOOKBACK):
             continue
-        if cache.status_of(fixture_id(fx)) != "finished":
-            ids.append(fixture_id(fx))
+        fid = fixture_id(fx)
+        unfinished = cache.status_of(fid) != "finished"
+        g = fx.get("goals") or {}
+        has_goals = (g.get("home") or 0) + (g.get("away") or 0) > 0
+        missing_goals = has_goals and not cache.goals_recorded(fid)
+        if unfinished or missing_goals:
+            ids.append(fid)
     return ids
 
 
-def reconcile_overdue(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: list) -> None:
-    """Mark as finished any match whose window elapsed while we weren't watching.
+def reconcile(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: list) -> None:
+    """Catch up recent fixtures the live loop didn't fully handle: finalize any
+    match whose window elapsed while we weren't watching, and backfill scorers
+    for matches whose score was recorded without them.
 
-    Runs on idle wake-ups, so a match that ended while the poller was down is
-    completed within the hour instead of waiting for the next daily sync. Once a
-    fixture is written finished it drops out of the overdue set, so this settles
-    to zero API calls when everything is up to date.
+    Runs on every wake-up, so a match that ended (or scored) while the poller was
+    down is completed within the hour instead of waiting for the next daily sync.
+    Once a fixture is written finished with its scorers it drops out of the set,
+    so this settles to zero API calls when everything is up to date.
     """
-    ids = _overdue_unfinished(schedule, cache, _utcnow())
+    ids = _needs_reconcile(schedule, cache, _utcnow())
     if not ids or api.budget.exhausted:
         return
 
@@ -222,12 +253,12 @@ def reconcile_overdue(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedul
                 if _write_live(api, fs, cache, fixture):
                     wrote += 1
         except Exception as e:  # best-effort; the daily sync remains the backstop
-            log.warning("Overdue reconcile failed (%s); will retry next idle", e)
+            log.warning("Reconcile failed (%s); will retry next wake-up", e)
             break
 
     if wrote:
         cache.save()
-        log.info("Reconciled %d overdue fixture(s) to their final state", wrote)
+        log.info("Reconciled %d fixture(s) (final status / scorers)", wrote)
 
 
 def _setup():
@@ -269,12 +300,14 @@ def run_forever() -> None:
                 last_sync_date = today
 
             now = _utcnow()
+            # Backfill scorers and finalize any match we missed (e.g. while the
+            # poller was down) before deciding what to do next. Settles to zero
+            # API calls once everything is caught up.
+            reconcile(api, fs, cache, schedule)
+
             if _in_any_window(schedule, now, cfg.prekickoff_wake):
                 run_live_loop(api, fs, cache, schedule, cfg)
             else:
-                # Catch any match that finished while we weren't watching before
-                # going back to sleep.
-                reconcile_overdue(api, fs, cache, schedule)
                 sleep_s = _seconds_until_next_window(schedule, now, cfg.prekickoff_wake)
                 log.info("Idle; sleeping %ds (budget remaining: %d)", sleep_s, budget.remaining)
                 time.sleep(sleep_s)

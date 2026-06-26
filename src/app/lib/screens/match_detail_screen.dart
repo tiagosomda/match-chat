@@ -451,21 +451,51 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   ) {
     if (match.goals.isEmpty) return const SizedBox.shrink();
     final c = context.colors;
+
+    // The three mutually exclusive states of this panel. Each carries a stable
+    // key so the AnimatedSwitcher cross-fades — and AnimatedSize grows/shrinks —
+    // between them instead of snapping when the viewer toggles scorers.
+    final Widget content;
+    if (!reveal.goalsRevealed) {
+      content = KeyedSubtree(
+        key: const ValueKey('goals-reveal'),
+        child: _goalsReveal(c, app, match),
+      );
+    } else if (_showScorers) {
+      content = KeyedSubtree(
+        key: const ValueKey('goals-scorers'),
+        child: _scorersView(c, match),
+      );
+    } else {
+      content = KeyedSubtree(
+        key: const ValueKey('goals-times'),
+        child: _goalTimesView(c, match),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(top: 14),
       padding: const EdgeInsets.only(top: 13),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.line)),
       ),
-      child: reveal.goalsRevealed
-          ? GestureDetector(
-              onTap: () => setState(() => _showScorers = !_showScorers),
-              behavior: HitTestBehavior.opaque,
-              child: _showScorers
-                  ? _scorersView(c, match)
-                  : _goalTimesView(c, match),
-            )
-          : _goalsReveal(c, app, match),
+      child: GestureDetector(
+        onTap: reveal.goalsRevealed
+            ? () => setState(() => _showScorers = !_showScorers)
+            : null,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: content,
+          ),
+        ),
+      ),
     );
   }
 
