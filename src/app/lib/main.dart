@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -15,6 +16,18 @@ import 'widgets/pitch_background.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Enable Firestore's offline cache. On web this is opt-in (IndexedDB), so
+  // without it every cold start re-fetches everything over the network and
+  // screens block on a spinner until the first response lands. With it,
+  // previously-seen data (finished match results, predictions, standings, chat)
+  // is served instantly from local cache and reconciled with the server in the
+  // background. Must be set before any Firestore access.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   runApp(const MatchChatApp());
 }
 
