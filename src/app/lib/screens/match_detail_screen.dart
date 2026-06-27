@@ -1447,7 +1447,7 @@ class _CommentsTabState extends State<_CommentsTab> {
         mid: widget.match.id,
         commentId: comment.id,
         chatMsgId: comment.chatMsgId,
-        body: _edit.text.trim(),
+        body: Validation.cleanMessage(_edit.text),
       );
       if (mounted) setState(() => _editingId = null);
     } catch (e) {
@@ -1536,7 +1536,7 @@ class _CommentsTabState extends State<_CommentsTab> {
         userId: app.firebaseUser!.uid,
         displayName: app.displayName,
         favoriteTeam: app.appUser?.favoriteTeam,
-        body: ctrl.text.trim(),
+        body: Validation.cleanMessage(ctrl.text),
         parentId: parentId,
       );
       ctrl.clear();

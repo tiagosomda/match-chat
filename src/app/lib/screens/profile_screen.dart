@@ -47,7 +47,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       showToast(context, err);
       return;
     }
-    await app.users.updateDisplayName(app.firebaseUser!.uid, _name.text.trim());
+    await app.users.updateDisplayName(
+      app.firebaseUser!.uid,
+      Validation.cleanName(_name.text),
+    );
     if (mounted) showToast(context, context.l10n.t('nameUpdated'));
   }
 
