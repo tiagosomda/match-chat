@@ -214,6 +214,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forces a fresh server read of the signed-in user's document. Used by the
+  /// profile's pull-to-refresh so changes like a newly-claimed invite code show
+  /// up immediately (#5). The live watch usually covers this, but a manual pull
+  /// gives the user an explicit way to re-sync.
+  Future<void> reloadUser() async {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return;
+    final u = await users.fetch(uid);
+    if (u != null) {
+      _appUser = u;
+      notifyListeners();
+    }
+  }
+
   /// Re-reads tournaments (e.g. after seeding) and picks the active one.
   Future<void> refreshTournaments() async {
     final uid = _firebaseUser?.uid;

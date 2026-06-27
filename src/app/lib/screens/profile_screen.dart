@@ -111,52 +111,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _list(AppColors c, AppState app) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      children: [
-        _hero(c, app),
-        const SizedBox(height: 14),
-        _nameCard(c, app),
-        const SizedBox(height: 14),
-        _favoriteCard(c, app),
-        const SizedBox(height: 14),
-        if (app.isGuest) ...[
-          _guestCard(c, app),
+    return RefreshIndicator(
+      color: c.accent,
+      onRefresh: app.reloadUser,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          _hero(c, app),
           const SizedBox(height: 14),
-        ] else if (!app.isParticipant) ...[
-          _redeemCard(c, app),
+          _nameCard(c, app),
           const SizedBox(height: 14),
-        ],
-        if (app.isParticipant) ...[
-          _InviteCodesCard(),
+          _favoriteCard(c, app),
           const SizedBox(height: 14),
-        ],
-        _appearanceCard(c, app),
-        const SizedBox(height: 14),
-        _startupCard(c, app),
-        const SizedBox(height: 14),
-        _languageCard(c, app),
-        const SizedBox(height: 14),
-        if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
-        _aboutCard(c),
-        const SizedBox(height: 14),
-        Center(
-          child: TextButton.icon(
-            onPressed: () => app.signOut(),
-            icon: Icon(
-              app.isGuest ? Icons.login : Icons.logout,
-              size: 18,
-              color: c.muted,
-            ),
-            label: Text(
-              app.isGuest
-                  ? context.l10n.t('signInCreateAccount')
-                  : context.l10n.t('signOut'),
-              style: TextStyle(color: c.muted),
+          if (app.isGuest) ...[
+            _guestCard(c, app),
+            const SizedBox(height: 14),
+          ] else if (!app.isParticipant) ...[
+            _redeemCard(c, app),
+            const SizedBox(height: 14),
+          ],
+          if (app.isParticipant) ...[
+            _InviteCodesCard(),
+            const SizedBox(height: 14),
+          ],
+          _appearanceCard(c, app),
+          const SizedBox(height: 14),
+          _startupCard(c, app),
+          const SizedBox(height: 14),
+          _languageCard(c, app),
+          const SizedBox(height: 14),
+          if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
+          _aboutCard(c),
+          const SizedBox(height: 14),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => app.signOut(),
+              icon: Icon(
+                app.isGuest ? Icons.login : Icons.logout,
+                size: 18,
+                color: c.muted,
+              ),
+              label: Text(
+                app.isGuest
+                    ? context.l10n.t('signInCreateAccount')
+                    : context.l10n.t('signOut'),
+                style: TextStyle(color: c.muted),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
