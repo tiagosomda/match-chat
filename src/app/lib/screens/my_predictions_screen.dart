@@ -13,6 +13,8 @@ import '../utils/scoring.dart';
 import '../widgets/ui.dart';
 import 'match_detail_screen.dart';
 
+enum _Section { live, upcoming, finished }
+
 /// A screen listing every tournament match alongside the current user's
 /// prediction, with inline editable steppers for upcoming matches and a
 /// save button that lights up when there are unsaved changes.
@@ -133,112 +135,205 @@ class _MyPredictionsScreenState extends State<MyPredictionsScreen> {
     return Scaffold(
       backgroundColor: c.bg2,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(11),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: c.surface,
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(color: c.line),
-                      ),
-                      child: Icon(Icons.arrow_back, size: 18, color: c.text),
-                    ),
-                  ),
-                  const SizedBox(width: 11),
-                  MonoLabel(
-                    context.l10n.t('myPredictions').toUpperCase(),
-                    fontSize: 11,
-                    letterSpacing: 1.6,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<List<MatchModel>>(
-                stream: _matchStream,
-                builder: (context, matchSnap) {
-                  if (matchSnap.connectionState == ConnectionState.waiting) {
-                    return Center(
-                      child: CircularProgressIndicator(color: c.accent),
-                    );
-                  }
-                  final matches = matchSnap.data ?? const <MatchModel>[];
-                  final visible =
-                      matches.where((m) => !m.isStale).toList()
-                        ..sort(_matchOrder);
+        child: StreamBuilder<List<MatchModel>>(
+          stream: _matchStream,
+          builder: (context, matchSnap) {
+            final matches = matchSnap.data ?? const <MatchModel>[];
+            final visible = matches.where((m) => !m.isStale).toList();
 
-                  return StreamBuilder<Map<String, Prediction>>(
-                    stream: _predStream,
-                    builder: (context, predSnap) {
-                      final preds =
-                          predSnap.data ?? const <String, Prediction>{};
-                      // Seed controllers from saved predictions.
-                      for (final m in visible) {
-                        _seedIfNeeded(m.id, preds[m.id]);
-                      }
-                      return ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        itemCount: visible.length,
-                        itemBuilder: (context, i) {
-                          final match = visible[i];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _MatchRow(
-                              match: match,
-                              prediction: preds[match.id],
-                              ctrlA: _ca(match.id),
-                              ctrlB: _cb(match.id),
-                              dirty: _isDirty(match.id, preds[match.id]),
-                              saving: _saving.contains(match.id),
-                              editable: app.isParticipant &&
-                                  match.displayStatus == MatchStatus.upcoming,
-                              onBump: (ctrl, d) => _bump(ctrl, d),
-                              onSave: () =>
-                                  _save(app, match, preds[match.id]),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => MatchDetailScreen(
-                                    tournamentId: widget.tournamentId,
-                                    matchId: match.id,
-                                  ),
+            return StreamBuilder<Map<String, Prediction>>(
+              stream: _predStream,
+              builder: (context, predSnap) {
+                final preds = predSnap.data ?? const <String, Prediction>{};
+                for (final m in visible) {
+                  _seedIfNeeded(m.id, preds[m.id]);
+                }
+                final predictedCount =
+                    visible.where((m) => preds.containsKey(m.id)).length;
+                final items = _buildItems(visible);
+
+                return Column(
+                  children: [
+                    // ── Header ──────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: () => Navigator.of(context).pop(),
+                            borderRadius: BorderRadius.circular(11),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: c.surface,
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(color: c.line),
+                              ),
+                              child: Icon(
+                                Icons.arrow_back,
+                                size: 18,
+                                color: c.text,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 11),
+                          MonoLabel(
+                            context.l10n.t('myPredictions').toUpperCase(),
+                            fontSize: 11,
+                            letterSpacing: 1.6,
+                          ),
+                          const Spacer(),
+                          if (visible.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: c.surface,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: c.line),
+                              ),
+                              child: Text(
+                                '$predictedCount / ${visible.length}',
+                                style: TextStyle(
+                                  fontFamily: AppTheme.mono,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: predictedCount == visible.length
+                                      ? c.accent2
+                                      : c.muted,
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                        ],
+                      ),
+                    ),
+                    // ── List ─────────────────────────────────────────────
+                    if (matchSnap.connectionState ==
+                            ConnectionState.waiting &&
+                        visible.isEmpty)
+                      Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(color: c.accent),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: ListView.builder(
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                          itemCount: items.length,
+                          itemBuilder: (context, i) {
+                            final item = items[i];
+                            if (item is _Section) {
+                              return _sectionHeader(c, context, item);
+                            }
+                            final match = item as MatchModel;
+                            final pred = preds[match.id];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _MatchRow(
+                                match: match,
+                                prediction: pred,
+                                ctrlA: _ca(match.id),
+                                ctrlB: _cb(match.id),
+                                dirty: _isDirty(match.id, pred),
+                                saving: _saving.contains(match.id),
+                                editable: app.isParticipant &&
+                                    match.displayStatus ==
+                                        MatchStatus.upcoming,
+                                onBump: (ctrl, d) => _bump(ctrl, d),
+                                onSave: () => _save(app, match, pred),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MatchDetailScreen(
+                                      tournamentId: widget.tournamentId,
+                                      matchId: match.id,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 
-  static int _matchOrder(MatchModel a, MatchModel b) {
-    final af = a.displayStatus == MatchStatus.finished;
-    final bf = b.displayStatus == MatchStatus.finished;
-    if (af != bf) return af ? 1 : -1;
+  Widget _sectionHeader(
+    AppColors c,
+    BuildContext context,
+    _Section section,
+  ) {
+    final label = switch (section) {
+      _Section.live => context.l10n.t('statusLive'),
+      _Section.upcoming =>
+        context.l10n.t('filterUpcoming').toUpperCase(),
+      _Section.finished =>
+        context.l10n.t('filterFinished').toUpperCase(),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 6),
+      child: MonoLabel(label, fontSize: 9.5, letterSpacing: 1.6),
+    );
+  }
+
+  List<Object> _buildItems(List<MatchModel> visible) {
+    final live = <MatchModel>[];
+    final upcoming = <MatchModel>[];
+    final finished = <MatchModel>[];
+
+    for (final m in visible) {
+      switch (m.displayStatus) {
+        case MatchStatus.live:
+          live.add(m);
+        case MatchStatus.upcoming:
+          upcoming.add(m);
+        case MatchStatus.finished:
+          finished.add(m);
+      }
+    }
+
+    live.sort(_schedAsc);
+    upcoming.sort(_schedAsc);
+    finished.sort(_schedDesc);
+
+    final items = <Object>[];
+    if (live.isNotEmpty) {
+      items.add(_Section.live);
+      items.addAll(live);
+    }
+    if (upcoming.isNotEmpty) {
+      items.add(_Section.upcoming);
+      items.addAll(upcoming);
+    }
+    if (finished.isNotEmpty) {
+      items.add(_Section.finished);
+      items.addAll(finished);
+    }
+    return items;
+  }
+
+  static int _schedAsc(MatchModel a, MatchModel b) {
     final at = a.scheduledAt;
     final bt = b.scheduledAt;
     if (at == null && bt == null) return 0;
     if (at == null) return 1;
     if (bt == null) return -1;
-    return af ? bt.compareTo(at) : at.compareTo(bt);
+    return at.compareTo(bt);
   }
+
+  static int _schedDesc(MatchModel a, MatchModel b) => _schedAsc(b, a);
 }
 
 // ---------------------------------------------------------------------------
@@ -291,17 +386,21 @@ class _MatchRow extends StatelessWidget {
           children: [
             _header(c, context),
             const SizedBox(height: 10),
+            _teamRow(c),
+            const SizedBox(height: 10),
             if (editable) ...[
               _stepperRow(c, context),
               const SizedBox(height: 12),
               _saveButton(c, context),
             ] else
-              _lockedRow(c, context),
+              _lockedPrediction(c, context),
           ],
         ),
       ),
     );
   }
+
+  // ── Shared: description + status ──────────────────────────────────────────
 
   Widget _header(AppColors c, BuildContext context) {
     Color statusColor;
@@ -347,12 +446,56 @@ class _MatchRow extends StatelessWidget {
     );
   }
 
+  // ── Shared: flagA teamA  vs  teamB flagB ─────────────────────────────────
+
+  Widget _teamRow(AppColors c) {
+    return Row(
+      children: [
+        Text(match.flagA, style: const TextStyle(fontSize: 17)),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            match.teamA,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: c.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Text(
+          'vs',
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            fontSize: 10,
+            color: c.muted,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            match.teamB,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: c.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 7),
+        Text(match.flagB, style: const TextStyle(fontSize: 17)),
+      ],
+    );
+  }
+
+  // ── Editable: steppers + save button ─────────────────────────────────────
+
   Widget _stepperRow(AppColors c, BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _teamLabel(c, match.flagA, match.teamA, false),
-        const SizedBox(width: 10),
         _stepper(c, ctrlA, context),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -366,32 +509,7 @@ class _MatchRow extends StatelessWidget {
           ),
         ),
         _stepper(c, ctrlB, context),
-        const SizedBox(width: 10),
-        _teamLabel(c, match.flagB, match.teamB, true),
       ],
-    );
-  }
-
-  Widget _teamLabel(AppColors c, String flag, String name, bool right) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment:
-            right ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Text(flag, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 2),
-          Text(
-            name,
-            overflow: TextOverflow.ellipsis,
-            textAlign: right ? TextAlign.end : TextAlign.start,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -471,7 +589,9 @@ class _MatchRow extends StatelessWidget {
     );
   }
 
-  Widget _lockedRow(AppColors c, BuildContext context) {
+  // ── Locked: centered prediction chip ─────────────────────────────────────
+
+  Widget _lockedPrediction(AppColors c, BuildContext context) {
     final pred = prediction;
     final isFinished = match.status == MatchStatus.finished;
     int? pts;
@@ -484,87 +604,90 @@ class _MatchRow extends StatelessWidget {
       );
     }
 
-    return Row(
-      children: [
-        Text(match.flagA, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            match.teamA,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+    if (pred == null) {
+      return Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 12, color: c.muted),
+            const SizedBox(width: 5),
+            Text(
+              context.l10n.t('noPrediction'),
+              style: TextStyle(color: c.muted, fontSize: 12),
             ),
-          ),
+          ],
         ),
-        if (pred != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Color.alphaBlend(
-                c.accent2.withValues(alpha: 0.12),
-                c.surface,
+      );
+    }
+
+    final Color chipBg, chipBorder, scoreColor;
+    if (pts != null) {
+      if (pts == Scoring.exactPoints) {
+        chipBg = Color.alphaBlend(c.accent2.withValues(alpha: 0.14), c.surface);
+        chipBorder = c.accent2.withValues(alpha: 0.32);
+        scoreColor = c.accent2;
+      } else if (pts > 0) {
+        chipBg = Color.alphaBlend(c.accent.withValues(alpha: 0.11), c.surface);
+        chipBorder = c.accent.withValues(alpha: 0.28);
+        scoreColor = c.accent;
+      } else {
+        chipBg = c.surface2;
+        chipBorder = c.line;
+        scoreColor = c.muted;
+      }
+    } else {
+      chipBg = Color.alphaBlend(c.accent2.withValues(alpha: 0.12), c.surface);
+      chipBorder = c.accent2.withValues(alpha: 0.25);
+      scoreColor = c.accent2;
+    }
+
+    final ptsLabel = pts != null
+        ? pts == Scoring.exactPoints
+            ? '${context.l10n.tp('pointsEarned', {'n': '$pts'})} ✓'
+            : context.l10n.tp('pointsEarned', {'n': '$pts'})
+        : '';
+
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: chipBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: chipBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(match.flagA, style: const TextStyle(fontSize: 13)),
+            const SizedBox(width: 7),
+            Text(
+              pred.scoreText,
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: scoreColor,
               ),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: c.accent2.withValues(alpha: 0.25)),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  pred.scoreText,
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: c.accent2,
-                  ),
+            const SizedBox(width: 7),
+            Text(match.flagB, style: const TextStyle(fontSize: 13)),
+            if (pts != null) ...[
+              const SizedBox(width: 9),
+              Container(width: 1, height: 13, color: chipBorder),
+              const SizedBox(width: 9),
+              Text(
+                ptsLabel,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: scoreColor,
                 ),
-                if (pts != null) ...[
-                  const SizedBox(width: 7),
-                  Container(
-                    width: 1,
-                    height: 12,
-                    color: c.accent2.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    context.l10n.tp('pointsEarned', {'n': '$pts'}),
-                    style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: pts > 0 ? c.accent2 : c.muted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ] else ...[
-          Text(
-            context.l10n.t('noPrediction'),
-            style: TextStyle(color: c.muted, fontSize: 12),
-          ),
-        ],
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            match.teamB,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(width: 6),
-        Text(match.flagB, style: const TextStyle(fontSize: 18)),
-      ],
+      ),
     );
   }
 }

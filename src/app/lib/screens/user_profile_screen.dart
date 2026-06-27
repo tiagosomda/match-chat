@@ -548,7 +548,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     fontFamily: AppTheme.mono,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: c.accent2,
+                    color: ptsFg ?? c.accent2,
                   ),
                 ),
                 Padding(
@@ -568,7 +568,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     fontFamily: AppTheme.mono,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: c.accent2,
+                    color: ptsFg ?? c.accent2,
                   ),
                 ),
                 const SizedBox(width: 6),

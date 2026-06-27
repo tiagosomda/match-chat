@@ -1123,11 +1123,19 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         children: [
           Row(
             children: [
+              if (!dirty && mine != null) ...[
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 14,
+                  color: c.accent2,
+                ),
+                const SizedBox(width: 6),
+              ],
               Expanded(
                 child: Text(
                   context.l10n.t('yourPrediction'),
                   style: TextStyle(
-                    color: c.text,
+                    color: !dirty && mine != null ? c.accent2 : c.text,
                     fontWeight: FontWeight.w700,
                     fontSize: 13.5,
                   ),
