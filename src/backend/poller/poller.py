@@ -216,6 +216,14 @@ def _recompute_standings(fs: FirestoreSync) -> None:
         log.warning("Standings recompute failed (%s)", e)
 
 
+def _backfill_renames(fs: FirestoreSync) -> None:
+    """Best-effort display-name backfill; never let it disrupt the poll loop."""
+    try:
+        fs.backfill_renames()
+    except Exception as e:
+        log.warning("Rename backfill failed (%s)", e)
+
+
 def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
     """Fixture ids in the recent lookback that still need a (re)write: either
     their live window elapsed without the cache recording them as finished, or
@@ -320,6 +328,10 @@ def run_forever() -> None:
             # poller was down) before deciding what to do next. Settles to zero
             # API calls once everything is caught up.
             reconcile(api, fs, cache, schedule)
+
+            # Trickle display-name changes onto a few users' old messages (#14).
+            # Firestore-only work, no API quota cost.
+            _backfill_renames(fs)
 
             if _in_any_window(schedule, now, cfg.prekickoff_wake):
                 run_live_loop(api, fs, cache, schedule, cfg)

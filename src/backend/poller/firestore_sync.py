@@ -73,6 +73,60 @@ class FirestoreSync:
         ref = self._matches_col().document(str(doc["apiFixtureId"]))
         ref.set(doc, merge=True)
 
+    def _users_col(self):
+        return (
+            self.db.collection("match-chat").document("app").collection("users")
+        )
+
+    def backfill_renames(self, limit: int = 5) -> int:
+        """Propagate recent display-name changes onto a user's existing messages
+        (#14). The app flags a renamed user with `nameSyncPending: true`; this
+        rewrites the cached `displayName` on their chat, comment and prediction
+        docs, then clears the flag. Bounded to a few users per call so it trickles
+        through over time without ever blocking the poll loop.
+
+        Returns the number of users processed.
+        """
+        processed = 0
+        for udoc in self._users_col().stream():
+            if processed >= limit:
+                break
+            d = udoc.to_dict() or {}
+            if not d.get("nameSyncPending"):
+                continue
+            uid = udoc.id
+            name = d.get("displayName", "")
+            n = self._rename_user_messages(uid, name)
+            self._users_col().document(uid).set(
+                {"nameSyncPending": False}, merge=True
+            )
+            processed += 1
+            log.info("Backfilled %d message(s) for renamed user %s", n, uid)
+        return processed
+
+    def _rename_user_messages(self, uid: str, name: str) -> int:
+        """Rewrite the denormalized displayName on every doc authored by [uid]
+        across the chat, comments and predictions collection groups."""
+        count = 0
+        for group in ("chat", "comments", "predictions"):
+            try:
+                query = self.db.collection_group(group).where("userId", "==", uid)
+                batch = self.db.batch()
+                pending = 0
+                for doc in query.stream():
+                    batch.update(doc.reference, {"displayName": name})
+                    pending += 1
+                    count += 1
+                    if pending >= 400:  # Firestore batch limit is 500
+                        batch.commit()
+                        batch = self.db.batch()
+                        pending = 0
+                if pending:
+                    batch.commit()
+            except Exception as e:  # one group failing shouldn't abort the rest
+                log.warning("rename pass for '%s' (user %s) failed (%s)", group, uid, e)
+        return count
+
     def recompute_standings(self) -> int:
         """Recompute the prediction leaderboard from finished matches and their
         predictions, and write it to tournaments/{tid}/standings/current so the

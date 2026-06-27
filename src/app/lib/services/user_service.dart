@@ -39,8 +39,15 @@ class UserService {
     return user;
   }
 
+  /// Updates the display name, stamps when it changed (for the cooldown) and
+  /// flags the doc so the backend backfills the name onto the user's existing
+  /// chat/comment/prediction messages over time (#14).
   Future<void> updateDisplayName(String uid, String name) {
-    return Refs.user(uid).update({'displayName': name});
+    return Refs.user(uid).update({
+      'displayName': name,
+      'nameChangedAt': FieldValue.serverTimestamp(),
+      'nameSyncPending': true,
+    });
   }
 
   Future<void> updateFavoriteTeam(String uid, String? team) {

@@ -13,7 +13,13 @@ class AppUser {
     this.preferredTournamentId,
     this.friends = const <String>[],
     this.createdAt,
+    this.nameChangedAt,
   });
+
+  /// A user may change their display name at most once per this window (#14).
+  /// Renaming is rate-limited because each change has to be backfilled across
+  /// their existing chat/comment/prediction messages.
+  static const Duration nameChangeCooldown = Duration(days: 3);
 
   final String id;
   final String displayName;
@@ -28,6 +34,19 @@ class AppUser {
   final List<String> friends;
   final DateTime? createdAt;
 
+  /// When the display name was last changed, used to enforce [nameChangeCooldown].
+  final DateTime? nameChangedAt;
+
+  /// The earliest moment the name may be changed again, or null if never changed.
+  DateTime? get nameChangeAvailableAt =>
+      nameChangedAt?.add(nameChangeCooldown);
+
+  /// Whether the name can be changed right now (cooldown elapsed or first change).
+  bool get canChangeName {
+    final at = nameChangeAvailableAt;
+    return at == null || !DateTime.now().isBefore(at);
+  }
+
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? <String, dynamic>{};
     return AppUser(
@@ -41,6 +60,7 @@ class AppUser {
       preferredTournamentId: d['preferredTournamentId'] as String?,
       friends: (d['friends'] as List?)?.cast<String>() ?? const <String>[],
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      nameChangedAt: (d['nameChangedAt'] as Timestamp?)?.toDate(),
     );
   }
 

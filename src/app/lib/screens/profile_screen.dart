@@ -47,11 +47,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
       showToast(context, err);
       return;
     }
-    await app.users.updateDisplayName(
-      app.firebaseUser!.uid,
-      Validation.cleanName(_name.text),
-    );
+    final cleaned = Validation.cleanName(_name.text);
+    final user = app.appUser;
+    // No-op if the name is unchanged — don't burn the cooldown.
+    if (user != null && cleaned == user.displayName) return;
+
+    // Enforce the once-every-3-days cooldown (#14).
+    if (user != null && !user.canChangeName) {
+      final at = user.nameChangeAvailableAt!;
+      final days = at.difference(DateTime.now()).inHours ~/ 24 + 1;
+      showToast(context, context.l10n.tp('nameChangeCooldown', {'days': '$days'}));
+      return;
+    }
+
+    final confirmed = await _confirmNameChange();
+    if (!confirmed) return;
+
+    await app.users.updateDisplayName(app.firebaseUser!.uid, cleaned);
     if (mounted) showToast(context, context.l10n.t('nameUpdated'));
+  }
+
+  Future<bool> _confirmNameChange() async {
+    final c = context.colors;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text(
+          context.l10n.t('nameChangeTitle'),
+          style: TextStyle(color: c.text, fontSize: 17),
+        ),
+        content: Text(
+          context.l10n.t('nameChangeBody'),
+          style: TextStyle(color: c.muted, fontSize: 13.5, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              context.l10n.t('cancel'),
+              style: TextStyle(color: c.muted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              context.l10n.t('nameChangeConfirm'),
+              style: TextStyle(color: c.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _redeem(AppState app) async {

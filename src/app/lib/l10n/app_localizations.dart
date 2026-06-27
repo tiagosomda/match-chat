@@ -240,6 +240,12 @@ const Map<String, String> _en = {
   'yourName': 'Your name',
   'displayNameHint': 'How you appear in chat, comments and predictions.',
   'nameUpdated': 'Name updated',
+  'nameChangeTitle': 'Change your name?',
+  'nameChangeBody':
+      'Your name on existing chat and comments won\'t update right away — it '
+      'catches up over time. You can only change your name once every 3 days.',
+  'nameChangeConfirm': 'Change name',
+  'nameChangeCooldown': 'You can change your name again in {days} day(s).',
   'favoriteTeam': 'Favorite team',
   'favoriteTeamHint': 'Your flag becomes your avatar across the app.',
   'noFavoriteTeam': 'No favorite team',
@@ -457,6 +463,13 @@ const Map<String, String> _es = {
   'yourName': 'Tu nombre',
   'displayNameHint': 'Cómo apareces en el chat, comentarios y pronósticos.',
   'nameUpdated': 'Nombre actualizado',
+  'nameChangeTitle': '¿Cambiar tu nombre?',
+  'nameChangeBody':
+      'Tu nombre en los chats y comentarios existentes no se actualizará de '
+      'inmediato — se pone al día con el tiempo. Solo puedes cambiar tu nombre '
+      'una vez cada 3 días.',
+  'nameChangeConfirm': 'Cambiar nombre',
+  'nameChangeCooldown': 'Podrás cambiar tu nombre de nuevo en {days} día(s).',
   'favoriteTeam': 'Equipo favorito',
   'favoriteTeamHint': 'Tu bandera será tu avatar en toda la app.',
   'noFavoriteTeam': 'Sin equipo favorito',
@@ -671,6 +684,13 @@ const Map<String, String> _pt = {
   'yourName': 'O teu nome',
   'displayNameHint': 'Como apareces no chat, comentários e palpites.',
   'nameUpdated': 'Nome atualizado',
+  'nameChangeTitle': 'Mudar o teu nome?',
+  'nameChangeBody':
+      'O teu nome nos chats e comentários existentes não será atualizado de '
+      'imediato — acerta-se com o tempo. Só podes mudar o teu nome uma vez a '
+      'cada 3 dias.',
+  'nameChangeConfirm': 'Mudar nome',
+  'nameChangeCooldown': 'Podes mudar o teu nome novamente em {days} dia(s).',
   'favoriteTeam': 'Equipa favorita',
   'favoriteTeamHint': 'A tua bandeira passa a ser o teu avatar na app.',
   'noFavoriteTeam': 'Sem equipa favorita',
@@ -825,6 +845,12 @@ const Map<String, String> _ptBR = {
   'noMessagesYet': 'Nada por aqui ainda — abra uma partida para começar o chat.',
   'revealMatchToRead': 'Revele a partida para ler',
   'displayNameHint': 'Como você aparece no chat, comentários e palpites.',
+  'nameChangeTitle': 'Mudar seu nome?',
+  'nameChangeBody':
+      'Seu nome nos chats e comentários existentes não será atualizado na hora '
+      '— ele se ajusta com o tempo. Você só pode mudar seu nome uma vez a cada '
+      '3 dias.',
+  'nameChangeCooldown': 'Você poderá mudar seu nome novamente em {days} dia(s).',
   'favoriteTeam': 'Time favorito',
   'favoriteTeamHint': 'Sua bandeira vira seu avatar no app.',
   'noFavoriteTeam': 'Sem time favorito',
