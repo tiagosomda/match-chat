@@ -250,51 +250,57 @@ class _ChatRow extends StatelessWidget {
     );
     if (revealed) return text;
 
-    // Blur the body and overlay a "reveal" affordance for tagged, unrevealed
-    // matches.
-    return Stack(
-      children: [
-        ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-          child: text,
-        ),
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: onReveal,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Color.alphaBlend(
-                    c.accent.withValues(alpha: 0.16),
-                    c.surface,
+    // Blur the body and float a "reveal" affordance over it. The block is forced
+    // to full width so the pill centers across the whole row (not just the width
+    // of a short message), and Clip.none lets the pill keep its natural size
+    // instead of being cropped to a one-line message's height.
+    return GestureDetector(
+      onTap: onReveal,
+      child: SizedBox(
+        width: double.infinity,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: text,
+            ),
+            Positioned.fill(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
                   ),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: c.accent.withValues(alpha: 0.35)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.visibility_outlined, size: 12, color: c.accent),
-                    const SizedBox(width: 6),
-                    Text(
-                      context.l10n.t('revealMatchToRead'),
-                      style: TextStyle(
-                        color: c.accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                      c.accent.withValues(alpha: 0.16),
+                      c.surface,
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: c.accent.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.visibility_outlined, size: 12, color: c.accent),
+                      const SizedBox(width: 6),
+                      Text(
+                        context.l10n.t('revealMatchToRead'),
+                        style: TextStyle(
+                          color: c.accent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
