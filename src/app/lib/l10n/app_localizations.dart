@@ -125,11 +125,20 @@ const Map<String, String> _en = {
   'strengthFriendsTitle': 'See which friends have watched',
   'strengthFriendsDesc':
       'Know who has already seen a match — without giving the result away.',
+  'strengthInviteOnlyTitle': 'Invite-only community',
+  'strengthInviteOnlyDesc':
+      'Only members invited by existing participants can post. This keeps conversations genuine and spam-free.',
   'browseMatches': 'Browse matches',
   'signInOrCreate': 'Sign in or create account',
   'browseReadOnly':
       'Browsing is read-only. An invite code unlocks chat & predictions.',
   'continueWithGoogle': 'Continue with Google',
+  'inviteCodeLabel': 'Invite code (optional)',
+  'inviteCodeRegisterTitle': 'Got an invite code?',
+  'inviteCodeRegisterDesc':
+      'Match Chat is invite-only for participation — chat, predictions and comments require a code from an existing member. Without one you can still browse everything as a viewer.',
+  'inviteCodeRegisterContactPrefix': 'No code? Contact me at ',
+  'inviteCodeRegisterContactSuffix': ' to request one.',
   'orLabel': 'OR',
   'alreadyHaveAccount': 'Already have an account? ',
   'newHere': 'New here? ',
@@ -365,6 +374,9 @@ const Map<String, String> _es = {
   'strengthFriendsTitle': 'Mira qué amigos ya lo vieron',
   'strengthFriendsDesc':
       'Descubre quién ya vio un partido, sin revelar el resultado.',
+  'strengthInviteOnlyTitle': 'Comunidad solo por invitación',
+  'strengthInviteOnlyDesc':
+      'Solo los miembros invitados por participantes existentes pueden publicar. Esto mantiene las conversaciones genuinas y sin spam.',
   'browseMatches': 'Ver partidos',
   'signInOrCreate': 'Inicia sesión o crea una cuenta',
   'browseReadOnly':
@@ -590,6 +602,9 @@ const Map<String, String> _pt = {
       'Os resultados, comentários e palpites ficam ocultos até decidires revelá-los.',
   'strengthFriendsTitle': 'Vê que amigos já viram',
   'strengthFriendsDesc': 'Sabe quem já viu um jogo — sem revelar o resultado.',
+  'strengthInviteOnlyTitle': 'Comunidade só por convite',
+  'strengthInviteOnlyDesc':
+      'Apenas membros convidados por participantes existentes podem publicar. Isto mantém as conversas genuínas e sem spam.',
   'browseMatches': 'Ver jogos',
   'signInOrCreate': 'Inicia sessão ou cria conta',
   'browseReadOnly':
@@ -811,6 +826,9 @@ const Map<String, String> _ptBR = {
   'strengthFriendsTitle': 'Veja quais amigos já assistiram',
   'strengthFriendsDesc':
       'Saiba quem já viu uma partida — sem revelar o resultado.',
+  'strengthInviteOnlyTitle': 'Comunidade apenas por convite',
+  'strengthInviteOnlyDesc':
+      'Apenas membros convidados por participantes existentes podem postar. Isso mantém as conversas genuínas e sem spam.',
   'browseMatches': 'Ver partidas',
   'signInOrCreate': 'Entre ou crie uma conta',
   'browseReadOnly':

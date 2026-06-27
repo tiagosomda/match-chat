@@ -203,7 +203,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 14),
           Center(
             child: TextButton.icon(
-              onPressed: () => app.signOut(),
+              onPressed: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                app.signOut();
+              },
               icon: Icon(
                 app.isGuest ? Icons.login : Icons.logout,
                 size: 18,
@@ -492,7 +495,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: context.l10n.t('signInCreateAccount'),
             icon: Icons.login,
             expand: true,
-            onPressed: () => app.signOut(),
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              app.signOut();
+            },
           ),
         ],
       ),

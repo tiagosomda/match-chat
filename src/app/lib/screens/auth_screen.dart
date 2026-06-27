@@ -7,6 +7,8 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/validation.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../widgets/pitch_background.dart';
 import '../widgets/ui.dart';
 
@@ -20,6 +22,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _inviteCode = TextEditingController();
   bool _register = false;
   bool _busy = false;
   bool _showForm = false;
@@ -29,6 +32,7 @@ class _AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _inviteCode.dispose();
     super.dispose();
   }
 
@@ -55,11 +59,32 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
     final app = context.read<AppState>();
-    _runAuth(
-      () => _register
-          ? app.auth.registerWithEmail(_email.text, _password.text)
-          : app.auth.signInWithEmail(_email.text, _password.text),
-    );
+    if (_register) {
+      final rawCode = _inviteCode.text.trim();
+      _runAuth(() async {
+        final cred = await app.auth.registerWithEmail(_email.text, _password.text);
+        if (rawCode.isEmpty) return;
+        final user = cred.user!;
+        final displayName = user.displayName?.trim().isNotEmpty == true
+            ? user.displayName!.trim()
+            : (user.email?.split('@').first ?? 'Player');
+        await app.users.ensureUser(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: displayName,
+        );
+        final result = await app.invites.redeem(
+          rawCode: rawCode,
+          uid: user.uid,
+          displayName: displayName,
+        );
+        if (mounted && !result.ok) {
+          showToast(context, result.message);
+        }
+      });
+    } else {
+      _runAuth(() => app.auth.signInWithEmail(_email.text, _password.text));
+    }
   }
 
   void _google() {
@@ -247,6 +272,10 @@ class _AuthScreenState extends State<AuthScreen> {
         decoration: appInputDecoration(context, hint: l.t('password')),
         onSubmitted: (_) => _submitEmail(),
       ),
+      if (_register) ...[
+        const SizedBox(height: 20),
+        _inviteSection(c),
+      ],
       if (_error != null) ...[
         const SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: c.accent, fontSize: 13)),
@@ -285,6 +314,87 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     ];
+  }
+
+  Widget _inviteSection(AppColors c) {
+    final l = context.l10n;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.06), c.surface),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: c.accent.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.key_outlined, size: 15, color: c.accent),
+              const SizedBox(width: 6),
+              Text(
+                l.t('inviteCodeRegisterTitle'),
+                style: TextStyle(
+                  color: c.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l.t('inviteCodeRegisterDesc'),
+            style: TextStyle(color: c.muted, fontSize: 12, height: 1.45),
+          ),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: () => launchUrl(
+              Uri.parse('https://links.tiago.dev'),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 11.5, color: c.muted, height: 1.4),
+                children: [
+                  TextSpan(text: l.t('inviteCodeRegisterContactPrefix')),
+                  TextSpan(
+                    text: 'links.tiago.dev',
+                    style: TextStyle(
+                      color: c.accent,
+                      fontFamily: AppTheme.mono,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11.5,
+                      decoration: TextDecoration.underline,
+                      decorationColor: c.accent,
+                    ),
+                  ),
+                  TextSpan(text: l.t('inviteCodeRegisterContactSuffix')),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _inviteCode,
+            textCapitalization: TextCapitalization.characters,
+            style: TextStyle(
+              color: c.text,
+              fontFamily: AppTheme.mono,
+              letterSpacing: 1.2,
+              fontSize: 15,
+            ),
+            decoration: appInputDecoration(
+              context,
+              hint: l.t('inviteCodeLabel'),
+            ),
+            onSubmitted: (_) => _submitEmail(),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _strength(AppColors c, IconData icon, String title, String desc) {

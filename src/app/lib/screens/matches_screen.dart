@@ -258,6 +258,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     const SizedBox(height: 13),
                     _chips(c),
                     const SizedBox(height: 13),
+                    _InviteOnlyCard(c: c),
+                    const SizedBox(height: 13),
                     if (visible.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -763,6 +765,58 @@ Widget _maybeBlur({required bool blur, required Widget child}) {
     imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
     child: child,
   );
+}
+
+class _InviteOnlyCard extends StatelessWidget {
+  const _InviteOnlyCard({required this.c});
+  final AppColors c;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 18,
+            color: c.accent,
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.t('strengthInviteOnlyTitle'),
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.l10n.t('strengthInviteOnlyDesc'),
+                  style: TextStyle(
+                    color: c.muted,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ErrorState extends StatelessWidget {
