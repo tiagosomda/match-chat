@@ -124,7 +124,7 @@ const Map<String, String> _en = {
       'Scores, comments and predictions stay hidden until you choose to reveal them.',
   'strengthPredictionsTitle': 'Predict & compete with the community',
   'strengthPredictionsDesc':
-      'Make predictions on every match, track your score on the leaderboard, and chat live during games.',
+      'Make predictions on every match, track your score on the leaderboard, and chat live during and after games.',
   'strengthInviteOnlyTitle': 'Invite-only community',
   'strengthInviteOnlyDesc':
       'Only members invited by existing participants can post. This keeps conversations genuine and spam-free.',
@@ -350,7 +350,7 @@ const Map<String, String> _en = {
   'viewPublicProfile': 'Public profile',
   'noFriendsYet': 'No friends yet.',
   // buzz screen
-  'buzzInfoBanner': 'Pure chaos of match chats — live feed.\nTap a badge to focus on one conversation.',
+  'buzzInfoBanner': 'Pure chaos of match chats — live feed.\nTap a game badge to focus on one conversation.',
 };
 
 // ---------------------------------------------------------------------------
@@ -373,7 +373,7 @@ const Map<String, String> _es = {
       'Los resultados, comentarios y pronósticos quedan ocultos hasta que decidas mostrarlos.',
   'strengthPredictionsTitle': 'Pronostica y compite con la comunidad',
   'strengthPredictionsDesc':
-      'Haz pronósticos en cada partido, sigue tu puntuación en el ranking y chatea en directo durante los juegos.',
+      'Haz pronósticos en cada partido, sigue tu puntuación en el ranking y chatea en directo durante y después de los juegos.',
   'strengthInviteOnlyTitle': 'Comunidad solo por invitación',
   'strengthInviteOnlyDesc':
       'Solo los miembros invitados por participantes existentes pueden publicar. Esto mantiene las conversaciones genuinas y sin spam.',
@@ -602,7 +602,7 @@ const Map<String, String> _pt = {
       'Os resultados, comentários e palpites ficam ocultos até decidires revelá-los.',
   'strengthPredictionsTitle': 'Palpita e compete com a comunidade',
   'strengthPredictionsDesc':
-      'Faz palpites em cada jogo, acompanha a tua pontuação na classificação e conversa em direto durante os jogos.',
+      'Faz palpites em cada jogo, acompanha a tua pontuação na classificação e conversa em direto durante e depois dos jogos.',
   'strengthInviteOnlyTitle': 'Comunidade só por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem publicar. Isto mantém as conversas genuínas e sem spam.',
@@ -826,7 +826,7 @@ const Map<String, String> _ptBR = {
       'Os placares, comentários e palpites ficam ocultos até você decidir revelá-los.',
   'strengthPredictionsTitle': 'Palpite e compete com a comunidade',
   'strengthPredictionsDesc':
-      'Faça palpites em cada partida, acompanhe sua pontuação no ranking e converse ao vivo durante os jogos.',
+      'Faça palpites em cada partida, acompanhe sua pontuação no ranking e converse ao vivo durante e depois dos jogos.',
   'strengthInviteOnlyTitle': 'Comunidade apenas por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem postar. Isso mantém as conversas genuínas e sem spam.',
