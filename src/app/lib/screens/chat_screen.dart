@@ -11,55 +11,18 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
-import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
 import 'match_detail_screen.dart';
 import 'user_profile_screen.dart';
 
-class ChatScreen extends StatefulWidget {
+/// The "Buzz" tab: a read-only activity stream of everything people are posting
+/// across the tournament's matches. Each row is a mirror of a match comment
+/// (see [CommentService.post]) — there is no composer here. Tapping a match
+/// badge deep-links to that match's chat tab, which is where you actually join
+/// the conversation.
+class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final _text = TextEditingController();
-  String? _tag; // matchId or null = general
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send(AppState app) async {
-    final err = Validation.message(_text.text, max: Validation.maxMessage);
-    if (err != null) {
-      showToast(context, err);
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      await app.chat.send(
-        tid: app.tournamentId!,
-        userId: app.firebaseUser!.uid,
-        displayName: app.displayName,
-        favoriteTeam: app.appUser?.favoriteTeam,
-        body: _text.text.trim(),
-        matchId: _tag,
-      );
-      _text.clear();
-    } catch (e) {
-      if (mounted) {
-        showToast(context, context.l10n.tp('couldNotSend', {'e': '$e'}));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,69 +40,58 @@ class _ChatScreenState extends State<ChatScreen> {
           stream: app.reveals.watchAllForUser(app.firebaseUser!.uid),
           builder: (context, revealSnap) {
             final reveals = revealSnap.data ?? const <String, UserMatchState>{};
-            return Column(
-              children: [
-                Expanded(
-                  child: StreamBuilder<List<ChatMessage>>(
-                    stream: app.chat.watch(tid),
-                    builder: (context, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return Center(
-                          child: CircularProgressIndicator(color: c.accent),
-                        );
-                      }
-                      final messages = snap.data ?? const <ChatMessage>[];
-                      return ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          Center(
-                            child: MonoLabel(
-                              context.l10n.t('globalChatLive'),
-                              fontSize: 10.5,
-                              letterSpacing: 1.6,
-                            ),
+            return StreamBuilder<List<ChatMessage>>(
+              stream: app.chat.watch(tid),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(color: c.accent),
+                  );
+                }
+                final messages = snap.data ?? const <ChatMessage>[];
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Center(
+                      child: MonoLabel(
+                        context.l10n.t('globalChatLive'),
+                        fontSize: 10.5,
+                        letterSpacing: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (messages.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Center(
+                          child: Text(
+                            context.l10n.t('noMessagesYet'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: c.muted),
                           ),
-                          const SizedBox(height: 16),
-                          if (messages.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 40),
-                              child: Center(
-                                child: Text(
-                                  context.l10n.t('noMessagesYet'),
-                                  style: TextStyle(color: c.muted),
-                                ),
-                              ),
-                            ),
-                          for (final m in messages) ...[
-                            () {
-                              final tagged = m.matchId == null
-                                  ? null
-                                  : matchById[m.matchId];
-                              return _ChatRow(
-                                message: m,
-                                taggedMatch: tagged,
-                                revealed: _isRevealed(m, reveals),
-                                onReveal: () => _revealMatch(app, m.matchId),
-                                onUser: () =>
-                                    _openUser(context, tid, m.displayName),
-                                onTagTap: tagged == null
-                                    ? null
-                                    : () => _selectChannel(tagged),
-                                isMe: m.userId == app.firebaseUser!.uid,
-                              );
-                            }(),
-                            const SizedBox(height: 16),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                if (app.isParticipant)
-                  _composer(c, app, matches)
-                else
-                  _viewerPrompt(c),
-              ],
+                        ),
+                      ),
+                    for (final m in messages) ...[
+                      () {
+                        final tagged = m.matchId == null
+                            ? null
+                            : matchById[m.matchId];
+                        return _ChatRow(
+                          message: m,
+                          taggedMatch: tagged,
+                          revealed: _isRevealed(m, reveals),
+                          onReveal: () => _revealMatch(app, m.matchId),
+                          onUser: () => _openUser(context, tid, m.displayName),
+                          onTagTap: tagged == null
+                              ? null
+                              : () => _openMatchChat(context, tid, m.matchId!),
+                        );
+                      }(),
+                      const SizedBox(height: 16),
+                    ],
+                  ],
+                );
+              },
             );
           },
         );
@@ -159,17 +111,6 @@ class _ChatScreenState extends State<ChatScreen> {
     app.reveals.setReveal(app.firebaseUser!.uid, matchId, score: true);
   }
 
-  /// Switches the composer's channel to a tagged match (item #9).
-  void _selectChannel(MatchModel match) {
-    setState(() => _tag = match.id);
-    showToast(
-      context,
-      context.l10n.tp('postingTo', {
-        'match': '${match.teamA} vs ${match.teamB}',
-      }),
-    );
-  }
-
   void _openUser(BuildContext context, String tid, String name) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -178,146 +119,15 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _composer(AppColors c, AppState app, List<MatchModel> matches) {
-    final active = matches.where((m) => !m.isHidden).toList();
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.bg2,
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                MonoLabel(
-                  context.l10n.t('postTo'),
-                  fontSize: 9.5,
-                  letterSpacing: 1.2,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: c.surface2,
-                      borderRadius: BorderRadius.circular(11),
-                      border: Border.all(color: c.line),
-                    ),
-                    child: DropdownButton<String?>(
-                      // Guard against a tag pointing at a now-hidden match,
-                      // which would otherwise fail the dropdown's value assert.
-                      value: active.any((m) => m.id == _tag) ? _tag : null,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      dropdownColor: c.surface2,
-                      style: TextStyle(color: c.text, fontSize: 13),
-                      items: [
-                        DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text(context.l10n.t('generalEveryone')),
-                        ),
-                        for (final m in active)
-                          DropdownMenuItem<String?>(
-                            value: m.id,
-                            child: Text(
-                              '${Formatting.shortKickoff(m.scheduledAt)} · '
-                              '${m.flagA} ${m.teamA} vs ${m.teamB} ${m.flagB}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _tag = v),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _openMatchButton(c, app),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _text,
-                    style: TextStyle(color: c.text, fontSize: 14),
-                    decoration: appInputDecoration(
-                      context,
-                      hint: _tag == null
-                          ? context.l10n.t('messageEveryone')
-                          : context.l10n.t('messageAboutMatch'),
-                    ),
-                    onSubmitted: (_) => _send(app),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AccentButton(
-                  label: context.l10n.t('send'),
-                  busy: _busy,
-                  onPressed: () => _send(app),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Opens the currently-selected match's detail screen. Disabled (dimmed)
-  /// while "General" is selected.
-  Widget _openMatchButton(AppColors c, AppState app) {
-    final enabled = _tag != null;
-    return InkWell(
-      onTap: enabled
-          ? () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MatchDetailScreen(
-                  tournamentId: app.tournamentId!,
-                  matchId: _tag!,
-                ),
-              ),
-            )
-          : null,
-      borderRadius: BorderRadius.circular(11),
-      child: Opacity(
-        opacity: enabled ? 1 : 0.4,
-        child: Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: c.surface2,
-            borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: c.line),
-          ),
-          child: Icon(Icons.open_in_new, size: 18, color: c.accent),
-        ),
-      ),
-    );
-  }
-
-  Widget _viewerPrompt(AppColors c) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: c.bg2,
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Text(
-          context.l10n.t('inviteChatPrompt'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: c.accent,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
+  /// Deep-links to a match's chat tab so the reader can join in — the Buzz
+  /// stream itself is read-only.
+  void _openMatchChat(BuildContext context, String tid, String matchId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MatchDetailScreen(
+          tournamentId: tid,
+          matchId: matchId,
+          openComments: true,
         ),
       ),
     );
@@ -332,7 +142,6 @@ class _ChatRow extends StatelessWidget {
     required this.onReveal,
     required this.onUser,
     required this.onTagTap,
-    required this.isMe,
   });
 
   final ChatMessage message;
@@ -341,7 +150,6 @@ class _ChatRow extends StatelessWidget {
   final VoidCallback onReveal;
   final VoidCallback onUser;
   final VoidCallback? onTagTap;
-  final bool isMe;
 
   @override
   Widget build(BuildContext context) {

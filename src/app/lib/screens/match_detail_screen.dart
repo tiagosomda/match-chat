@@ -27,10 +27,15 @@ class MatchDetailScreen extends StatefulWidget {
     super.key,
     required this.tournamentId,
     required this.matchId,
+    this.openComments = false,
   });
 
   final String tournamentId;
   final String matchId;
+
+  /// When true, the screen opens on the chat (comments) tab — used by the Buzz
+  /// feed's "jump to this match" deep link.
+  final bool openComments;
 
   @override
   State<MatchDetailScreen> createState() => _MatchDetailScreenState();
@@ -39,7 +44,9 @@ class MatchDetailScreen extends StatefulWidget {
 enum _DetailTab { predictions, comments }
 
 class _MatchDetailScreenState extends State<MatchDetailScreen> {
-  _DetailTab _tab = _DetailTab.predictions;
+  late _DetailTab _tab = widget.openComments
+      ? _DetailTab.comments
+      : _DetailTab.predictions;
 
   // Goal widget local toggle: false = show goal times, true = show scorers.
   bool _showScorers = false;
@@ -1395,7 +1402,7 @@ class _CommentsTabState extends State<_CommentsTab> {
     });
   }
 
-  Future<void> _saveEdit(AppState app, String commentId) async {
+  Future<void> _saveEdit(AppState app, CommentModel comment) async {
     final err = Validation.message(_edit.text, max: Validation.maxComment);
     if (err != null) {
       showToast(context, err);
@@ -1406,7 +1413,8 @@ class _CommentsTabState extends State<_CommentsTab> {
       await app.comments.edit(
         tid: widget.tournamentId,
         mid: widget.match.id,
-        commentId: commentId,
+        commentId: comment.id,
+        chatMsgId: comment.chatMsgId,
         body: _edit.text.trim(),
       );
       if (mounted) setState(() => _editingId = null);
@@ -1429,6 +1437,7 @@ class _CommentsTabState extends State<_CommentsTab> {
         tid: widget.tournamentId,
         mid: widget.match.id,
         commentId: comment.id,
+        chatMsgId: comment.chatMsgId,
         byAdmin: byAdmin,
       );
       if (mounted && _editingId == comment.id) {
@@ -1627,7 +1636,7 @@ class _CommentsTabState extends State<_CommentsTab> {
             if (comment.deleted)
               _deletedPlaceholder(c, comment)
             else if (_editingId == comment.id)
-              _editInput(c, app, comment.id)
+              _editInput(c, app, comment)
             else
               Text(
                 comment.body,
@@ -1661,7 +1670,7 @@ class _CommentsTabState extends State<_CommentsTab> {
     );
   }
 
-  Widget _editInput(AppColors c, AppState app, String commentId) {
+  Widget _editInput(AppColors c, AppState app, CommentModel comment) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
@@ -1675,14 +1684,14 @@ class _CommentsTabState extends State<_CommentsTab> {
                 context,
                 hint: context.l10n.t('editComment'),
               ),
-              onSubmitted: (_) => _saveEdit(app, commentId),
+              onSubmitted: (_) => _saveEdit(app, comment),
             ),
           ),
           const SizedBox(width: 6),
           AccentButton(
             label: context.l10n.t('save'),
             busy: _busy,
-            onPressed: () => _saveEdit(app, commentId),
+            onPressed: () => _saveEdit(app, comment),
           ),
           const SizedBox(width: 6),
           GestureDetector(
