@@ -73,6 +73,13 @@ class AppState extends ChangeNotifier {
   static const _lastTabKey = 'lastTab';
   static const _rememberLastTabKey = 'rememberLastTab';
 
+  // Content preferences (#18): players who don't care about predictions or the
+  // chat/comments can hide those features app-wide.
+  bool _showPredictions = true;
+  bool _showChat = true;
+  static const _showPredictionsKey = 'showPredictions';
+  static const _showChatKey = 'showChat';
+
   // Getters.
   fb.User? get firebaseUser => _firebaseUser;
   AppUser? get appUser => _appUser;
@@ -98,8 +105,19 @@ class AppState extends ChangeNotifier {
   /// Whether the app reopens on the last tab (true) or always Matches (false).
   bool get rememberLastTab => _rememberLastTab;
 
-  /// The tab the app should open on at launch.
-  AppTab get initialTab => _rememberLastTab ? _lastTab : AppTab.matches;
+  /// The tab the app should open on at launch. Skips the Buzz tab when the user
+  /// has hidden chat/comments.
+  AppTab get initialTab {
+    final tab = _rememberLastTab ? _lastTab : AppTab.matches;
+    if (tab == AppTab.chat && !_showChat) return AppTab.matches;
+    return tab;
+  }
+
+  /// Whether prediction features are shown across the app (#18).
+  bool get showPredictions => _showPredictions;
+
+  /// Whether the chat/comments features (incl. the Buzz tab) are shown (#18).
+  bool get showChat => _showChat;
 
   /// The active locale override, or null to follow the device locale.
   Locale? get locale => _locale;
@@ -125,6 +143,8 @@ class AppState extends ChangeNotifier {
       orElse: () => AppTab.matches,
     );
     _rememberLastTab = prefs.getBool(_rememberLastTabKey) ?? true;
+    _showPredictions = prefs.getBool(_showPredictionsKey) ?? true;
+    _showChat = prefs.getBool(_showChatKey) ?? true;
 
     notifyListeners();
 
@@ -145,6 +165,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_rememberLastTabKey, value);
+  }
+
+  /// Toggles whether prediction features are shown across the app (#18).
+  Future<void> setShowPredictions(bool value) async {
+    _showPredictions = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showPredictionsKey, value);
+  }
+
+  /// Toggles whether chat/comments (and the Buzz tab) are shown (#18).
+  Future<void> setShowChat(bool value) async {
+    _showChat = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showChatKey, value);
   }
 
   /// Sets the app language. Pass null to follow the device locale.

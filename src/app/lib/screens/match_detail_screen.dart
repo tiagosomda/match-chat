@@ -108,20 +108,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                           const SizedBox(height: 14),
                           _hero(context, app, match, reveal),
                           const SizedBox(height: 14),
-                          _tabs(c, match),
-                          const SizedBox(height: 8),
-                          if (_tab == _DetailTab.predictions)
-                            _PredictionsTab(
-                              tournamentId: widget.tournamentId,
-                              match: match,
-                              revealed: reveal.predictionsRevealed,
-                            )
-                          else
-                            _CommentsTab(
-                              tournamentId: widget.tournamentId,
-                              match: match,
-                              revealed: reveal.commentsRevealed,
-                            ),
+                          ..._tabSection(context, app, match, reveal),
                         ],
                       ),
                     ),
@@ -768,7 +755,62 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  Widget _tabs(AppColors c, MatchModel match) {
+  /// Builds the tab bar + active tab content, honouring the user's content
+  /// preferences (#18). Hidden features simply drop out; the tab bar only shows
+  /// when both are available.
+  List<Widget> _tabSection(
+    BuildContext context,
+    AppState app,
+    MatchModel match,
+    UserMatchState reveal,
+  ) {
+    final c = context.colors;
+    final showPred = app.showPredictions;
+    final showComm = app.showChat;
+
+    // Resolve the active tab against what's visible.
+    var tab = _tab;
+    if (tab == _DetailTab.predictions && !showPred && showComm) {
+      tab = _DetailTab.comments;
+    } else if (tab == _DetailTab.comments && !showComm && showPred) {
+      tab = _DetailTab.predictions;
+    }
+
+    Widget content;
+    if (tab == _DetailTab.comments && showComm) {
+      content = _CommentsTab(
+        tournamentId: widget.tournamentId,
+        match: match,
+        revealed: reveal.commentsRevealed,
+      );
+    } else if (showPred) {
+      content = _PredictionsTab(
+        tournamentId: widget.tournamentId,
+        match: match,
+        revealed: reveal.predictionsRevealed,
+      );
+    } else if (showComm) {
+      content = _CommentsTab(
+        tournamentId: widget.tournamentId,
+        match: match,
+        revealed: reveal.commentsRevealed,
+      );
+    } else {
+      // Both hidden — nothing to show beyond the hero.
+      return const [];
+    }
+
+    return [
+      if (showPred && showComm) ...[
+        _tabs(c, match, tab),
+        const SizedBox(height: 8),
+      ] else
+        const SizedBox(height: 8),
+      content,
+    ];
+  }
+
+  Widget _tabs(AppColors c, MatchModel match, _DetailTab active) {
     return Container(
       decoration: BoxDecoration(
         color: c.bg2,
@@ -784,20 +826,28 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             context.l10n.t('predictions'),
             '${match.predictionCount}',
             _DetailTab.predictions,
+            active,
           ),
           _tabButton(
             c,
             context.l10n.t('comments'),
             '${match.commentCount}',
             _DetailTab.comments,
+            active,
           ),
         ],
       ),
     );
   }
 
-  Widget _tabButton(AppColors c, String label, String count, _DetailTab tab) {
-    final selected = _tab == tab;
+  Widget _tabButton(
+    AppColors c,
+    String label,
+    String count,
+    _DetailTab tab,
+    _DetailTab active,
+  ) {
+    final selected = active == tab;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _tab = tab),

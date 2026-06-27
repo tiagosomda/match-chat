@@ -59,7 +59,12 @@ class _HomeShellState extends State<HomeShell> {
       return const NoTournamentScreen();
     }
 
-    final body = switch (_tab) {
+    // The Buzz tab disappears when the user has hidden chat/comments (#18); fall
+    // back to Matches if it was the active tab.
+    var tab = _tab;
+    if (tab == AppTab.chat && !app.showChat) tab = AppTab.matches;
+
+    final body = switch (tab) {
       AppTab.matches => const MatchesScreen(),
       AppTab.leaderboard => const LeaderboardScreen(),
       AppTab.chat => const ChatScreen(),
@@ -76,7 +81,11 @@ class _HomeShellState extends State<HomeShell> {
           ],
         ),
       ),
-      bottomNavigationBar: _BottomNav(active: _tab, onSelect: _select),
+      bottomNavigationBar: _BottomNav(
+        active: tab,
+        onSelect: _select,
+        showChat: app.showChat,
+      ),
     );
   }
 }
@@ -139,9 +148,14 @@ class _Header extends StatelessWidget {
 }
 
 class _BottomNav extends StatelessWidget {
-  const _BottomNav({required this.active, required this.onSelect});
+  const _BottomNav({
+    required this.active,
+    required this.onSelect,
+    required this.showChat,
+  });
   final AppTab active;
   final ValueChanged<AppTab> onSelect;
+  final bool showChat;
 
   @override
   Widget build(BuildContext context) {
@@ -164,12 +178,13 @@ class _BottomNav extends StatelessWidget {
               context.l10n.t('navMatches').toUpperCase(),
               AppTab.matches,
             ),
-            _navItem(
-              c,
-              Icons.chat_bubble_outline,
-              context.l10n.t('navChat').toUpperCase(),
-              AppTab.chat,
-            ),
+            if (showChat)
+              _navItem(
+                c,
+                Icons.chat_bubble_outline,
+                context.l10n.t('navChat').toUpperCase(),
+                AppTab.chat,
+              ),
             _navItem(
               c,
               Icons.emoji_events_outlined,

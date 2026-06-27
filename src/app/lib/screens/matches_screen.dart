@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/match.dart';
+import '../models/prediction.dart';
 import '../models/user_match_state.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
@@ -43,6 +44,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Stream<List<MatchModel>>? _matchesStream;
   Stream<Map<String, UserMatchState>>? _revealsStream;
   Stream<List<UserMatchState>>? _friendRevealsStream;
+  Stream<Map<String, Prediction>>? _myPredsStream;
   String? _streamKey;
   String? _friendsKey;
 
@@ -85,6 +87,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       _streamKey = baseKey;
       _matchesStream = app.matches.watchAll(app.tournamentId!);
       _revealsStream = app.reveals.watchAllForUser(app.firebaseUser!.uid);
+      _myPredsStream = app.predictions.watchMine(app.firebaseUser!.uid);
     }
     final friendIds = app.appUser?.friends ?? const <String>[];
     final friendsKey = friendIds.join(',');
@@ -186,7 +189,46 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         .add(s.userId);
                   }
                 }
-                return ListView(
+                return StreamBuilder<Map<String, Prediction>>(
+                  stream: app.showPredictions ? _myPredsStream : null,
+                  builder: (context, predSnap) {
+                    final myPreds =
+                        predSnap.data ?? const <String, Prediction>{};
+                    return _list(
+                      context,
+                      app,
+                      c,
+                      tid,
+                      visible: visible,
+                      reveals: reveals,
+                      friendIds: friendIds,
+                      revealedByMatch: revealedByMatch,
+                      all: all,
+                      myPreds: myPreds,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _list(
+    BuildContext context,
+    AppState app,
+    AppColors c,
+    String tid, {
+    required List<MatchModel> visible,
+    required Map<String, UserMatchState> reveals,
+    required List<String> friendIds,
+    required Map<String, Set<String>> revealedByMatch,
+    required List<MatchModel> all,
+    required Map<String, Prediction> myPreds,
+  }) {
+    return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
                   children: [
                     Row(
@@ -234,6 +276,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                           friendIds: friendIds,
                           revealedFriendIds:
                               revealedByMatch[m.id] ?? const <String>{},
+                          myPrediction: myPreds[m.id],
                           onOpen: () => _open(tid, m.id),
                           onToggleScore: () => _toggleScore(
                             app,
@@ -246,12 +289,6 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     if (_hasArchived(all)) _archivedToggle(c),
                   ],
                 );
-              },
-            );
-          },
-        );
-      },
-    );
   }
 
   void _open(String tid, String mid) {
@@ -370,6 +407,7 @@ class _MatchCard extends StatelessWidget {
     required this.revealed,
     required this.friendIds,
     required this.revealedFriendIds,
+    required this.myPrediction,
     required this.onOpen,
     required this.onToggleScore,
   });
@@ -378,6 +416,10 @@ class _MatchCard extends StatelessWidget {
   final bool revealed;
   final List<String> friendIds;
   final Set<String> revealedFriendIds;
+
+  /// The viewer's own prediction for this match, if any (#18). Not a spoiler —
+  /// it's the user's own pick — so it shows even when the score is hidden.
+  final Prediction? myPrediction;
   final VoidCallback onOpen;
   final VoidCallback onToggleScore;
 
@@ -534,6 +576,10 @@ class _MatchCard extends StatelessWidget {
                   Expanded(child: _teamSide(c, match.flagB, match.teamB, true)),
                 ],
               ),
+              if (myPrediction != null) ...[
+                const SizedBox(height: 10),
+                _yourPick(context, c),
+              ],
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.only(top: 11),
@@ -604,6 +650,45 @@ class _MatchCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// A compact "your pick" chip showing the viewer's prediction with flags so
+  /// it's clear which number is which side (#18).
+  Widget _yourPick(BuildContext context, AppColors c) {
+    final p = myPrediction!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.12), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MonoLabel(
+            context.l10n.t('yourPickUpper'),
+            fontSize: 8.5,
+            letterSpacing: 1,
+            fontWeight: FontWeight.w700,
+          ),
+          const SizedBox(width: 8),
+          Text(match.flagA, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            p.scoreText,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+              color: c.accent2,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(match.flagB, style: const TextStyle(fontSize: 12)),
+        ],
       ),
     );
   }

@@ -144,6 +144,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 14),
           _languageCard(c, app),
           const SizedBox(height: 14),
+          _contentCard(c, app),
+          const SizedBox(height: 14),
           if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
           _aboutCard(c),
           const SizedBox(height: 14),
@@ -668,6 +670,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Content preferences (#18): hide predictions and/or chat & comments for
+  /// players who only care about following the scores.
+  Widget _contentCard(AppColors c, AppState app) {
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.t('contentPrefs'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            context.l10n.t('contentPrefsHint'),
+            style: TextStyle(color: c.muted, fontSize: 11.5, height: 1.4),
+          ),
+          const SizedBox(height: 6),
+          _toggleRow(
+            c,
+            label: context.l10n.t('showPredictionsLabel'),
+            value: app.showPredictions,
+            onChanged: app.setShowPredictions,
+          ),
+          _toggleRow(
+            c,
+            label: context.l10n.t('showChatLabel'),
+            value: app.showChat,
+            onChanged: app.setShowChat,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggleRow(
+    AppColors c, {
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: c.text, fontSize: 13.5),
+          ),
+        ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeTrackColor: c.accent,
+        ),
+      ],
     );
   }
 

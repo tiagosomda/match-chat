@@ -11,6 +11,25 @@ class PredictionService {
         .map((snap) => snap.docs.map(Prediction.fromDoc).toList());
   }
 
+  /// Streams the current user's predictions across every match, keyed by match
+  /// id, so the matches list can show "your pick" on each card (#18). Uses a
+  /// collection-group query (match ids are globally unique, so the tournament
+  /// doesn't need to be part of the key).
+  Stream<Map<String, Prediction>> watchMine(String uid) {
+    return Refs.db
+        .collectionGroup('predictions')
+        .where('userId', isEqualTo: uid)
+        .snapshots()
+        .map((snap) {
+          final map = <String, Prediction>{};
+          for (final d in snap.docs) {
+            final matchId = d.reference.parent.parent?.id;
+            if (matchId != null) map[matchId] = Prediction.fromDoc(d);
+          }
+          return map;
+        });
+  }
+
   Future<Prediction?> fetchForUser(String tid, String mid, String uid) async {
     final doc = await Refs.predictions(tid, mid).doc(uid).get();
     if (!doc.exists) return null;
