@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/chat_message.dart';
@@ -21,8 +22,36 @@ import 'user_profile_screen.dart';
 /// (see [CommentService.post]) — there is no composer here. Tapping a match
 /// badge deep-links to that match's chat tab, which is where you actually join
 /// the conversation.
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  bool _infoBannerDismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerDismissalState();
+  }
+
+  Future<void> _loadBannerDismissalState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _infoBannerDismissed = prefs.getBool('buzzInfoDismissed') ?? false;
+    });
+  }
+
+  Future<void> _dismissBanner() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('buzzInfoDismissed', true);
+    setState(() {
+      _infoBannerDismissed = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +89,11 @@ class ChatScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    if (!_infoBannerDismissed)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _BuzzInfoBanner(onDismiss: _dismissBanner),
+                      ),
                     if (messages.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
@@ -129,6 +163,52 @@ class ChatScreen extends StatelessWidget {
           matchId: matchId,
           openComments: true,
         ),
+      ),
+    );
+  }
+}
+
+class _BuzzInfoBanner extends StatelessWidget {
+  const _BuzzInfoBanner({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: c.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: c.accent.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              context.l10n.t('buzzInfoBanner'),
+              style: TextStyle(
+                color: c.text,
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(
+              Icons.close,
+              size: 18,
+              color: c.muted,
+            ),
+          ),
+        ],
       ),
     );
   }

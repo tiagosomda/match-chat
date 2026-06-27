@@ -340,6 +340,8 @@ const Map<String, String> _en = {
   // public profile
   'viewPublicProfile': 'Public profile',
   'noFriendsYet': 'No friends yet.',
+  // buzz screen
+  'buzzInfoBanner': 'Pure chaos of match chats — live feed.\nTap a badge to focus on one conversation.',
 };
 
 // ---------------------------------------------------------------------------
