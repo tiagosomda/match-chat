@@ -4,6 +4,11 @@ import '../utils/teams.dart';
 
 enum MatchStatus { upcoming, live, finished }
 
+/// A finer-grained, clock-aware view of a match's status used by the UI to pad
+/// the "live" window on either side (#13): a match reads as "live soon" shortly
+/// before kickoff and "just finished" shortly after it ends.
+enum MatchPhase { upcoming, liveSoon, live, justFinished, finished }
+
 MatchStatus matchStatusFromString(String? s) {
   switch (s) {
     case 'live':
@@ -134,6 +139,48 @@ class MatchModel {
   }
 
   bool get isLocked => displayStatus != MatchStatus.upcoming;
+
+  /// How long before kickoff a match starts reading as "live soon".
+  static const Duration liveSoonLead = Duration(minutes: 15);
+
+  /// How long after kickoff a finished match still reads as "just finished".
+  static const Duration justFinishedWindow = Duration(hours: 3);
+
+  /// The clock-aware phase, padding the live window before and after the match
+  /// (#13). The poller's finished status is authoritative for the result; this
+  /// only changes how recently-finished and about-to-start matches are labelled.
+  MatchPhase get displayPhase {
+    final now = DateTime.now();
+    final at = scheduledAt;
+    if (status == MatchStatus.finished) {
+      if (at != null && now.difference(at) <= justFinishedWindow) {
+        return MatchPhase.justFinished;
+      }
+      return MatchPhase.finished;
+    }
+    if (status == MatchStatus.live || hasKickedOff) return MatchPhase.live;
+    if (at != null) {
+      final until = at.difference(now);
+      if (!until.isNegative && until <= liveSoonLead) return MatchPhase.liveSoon;
+    }
+    return MatchPhase.upcoming;
+  }
+
+  static bool _sameLocalDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// True when this match kicks off later today (viewer's local date).
+  bool get isToday {
+    final at = scheduledAt?.toLocal();
+    return at != null && _sameLocalDay(at, DateTime.now());
+  }
+
+  /// True when this match kicks off tomorrow (viewer's local date).
+  bool get isTomorrow {
+    final at = scheduledAt?.toLocal();
+    if (at == null) return false;
+    return _sameLocalDay(at, DateTime.now().add(const Duration(days: 1)));
+  }
 
   /// True when the match is old enough to be hidden automatically.
   bool get isStale =>

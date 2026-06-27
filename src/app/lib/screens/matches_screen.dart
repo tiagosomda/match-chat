@@ -22,12 +22,16 @@ class MatchesScreen extends StatefulWidget {
   State<MatchesScreen> createState() => _MatchesScreenState();
 }
 
-enum _Filter { all, upcoming, live, finished, archived }
+enum _Filter { all, upcoming, live, finished }
 
 class _MatchesScreenState extends State<MatchesScreen> {
   final _search = TextEditingController();
   String _query = '';
   _Filter _filter = _Filter.all;
+
+  // Archived matches are hidden by default; a toggle at the end of the list
+  // reveals them rather than a dedicated filter chip (#12).
+  bool _showArchived = false;
 
   // The filter chip and search query are persisted across sessions (#1).
   static const _filterKey = 'matchesFilter';
@@ -90,30 +94,59 @@ class _MatchesScreenState extends State<MatchesScreen> {
     }
   }
 
+  /// True when any non-archived match matched the current search/filter would
+  /// also match if archived matches were shown — used to decide whether to offer
+  /// the show/hide-archived toggle.
+  bool _hasArchived(List<MatchModel> matches) => matches.any((m) => m.isHidden);
+
   List<MatchModel> _apply(List<MatchModel> matches) {
     final q = _query.toLowerCase().trim();
-    return matches.where((m) {
-      if (_filter == _Filter.archived) return m.isHidden;
-      if (m.isHidden) return false;
-      switch (_filter) {
-        case _Filter.upcoming:
-          if (m.displayStatus != MatchStatus.upcoming) return false;
-          break;
-        case _Filter.live:
-          if (m.displayStatus != MatchStatus.live) return false;
-          break;
-        case _Filter.finished:
-          if (m.displayStatus != MatchStatus.finished) return false;
-          break;
-        case _Filter.all:
-        case _Filter.archived:
-          break;
-      }
-      if (q.isEmpty) return true;
-      return ('${m.teamA} ${m.teamB} ${m.description}').toLowerCase().contains(
-        q,
-      );
-    }).toList();
+    final list =
+        matches.where((m) {
+          // Archived/auto-hidden matches only appear when the toggle is on (#12).
+          if (m.isHidden && !_showArchived) return false;
+          switch (_filter) {
+            case _Filter.upcoming:
+              if (m.displayStatus != MatchStatus.upcoming) return false;
+              break;
+            case _Filter.live:
+              // The live filter is padded to include matches about to start and
+              // those that just finished (#13).
+              const liveish = {
+                MatchPhase.liveSoon,
+                MatchPhase.live,
+                MatchPhase.justFinished,
+              };
+              if (!liveish.contains(m.displayPhase)) return false;
+              break;
+            case _Filter.finished:
+              if (m.displayStatus != MatchStatus.finished) return false;
+              break;
+            case _Filter.all:
+              break;
+          }
+          if (q.isEmpty) return true;
+          return ('${m.teamA} ${m.teamB} ${m.description}')
+              .toLowerCase()
+              .contains(q);
+        }).toList()
+        ..sort(_displayOrder);
+    return list;
+  }
+
+  /// Orders the visible list so upcoming/live matches come first nearest-first,
+  /// and finished matches follow most-recent-first (#4).
+  static int _displayOrder(MatchModel a, MatchModel b) {
+    final af = a.displayStatus == MatchStatus.finished;
+    final bf = b.displayStatus == MatchStatus.finished;
+    if (af != bf) return af ? 1 : -1;
+    final at = a.scheduledAt;
+    final bt = b.scheduledAt;
+    if (at == null && bt == null) return 0;
+    if (at == null) return 1;
+    if (bt == null) return -1;
+    // Finished: most-recent first (descending). Otherwise: nearest first (asc).
+    return af ? bt.compareTo(at) : at.compareTo(bt);
   }
 
   @override
@@ -210,6 +243,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                         ),
                         const SizedBox(height: 13),
                       ],
+                    if (_hasArchived(all)) _archivedToggle(c),
                   ],
                 );
               },
@@ -255,7 +289,6 @@ class _MatchesScreenState extends State<MatchesScreen> {
       (_Filter.upcoming, l.t('filterUpcoming')),
       (_Filter.live, l.t('filterLive')),
       (_Filter.finished, l.t('filterFinished')),
-      (_Filter.archived, l.t('filterArchived')),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -273,6 +306,26 @@ class _MatchesScreenState extends State<MatchesScreen> {
             const SizedBox(width: 7),
           ],
         ],
+      ),
+    );
+  }
+
+  /// A subtle show/hide toggle at the end of the list for archived matches (#12).
+  Widget _archivedToggle(AppColors c) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => setState(() => _showArchived = !_showArchived),
+        icon: Icon(
+          _showArchived ? Icons.visibility_off_outlined : Icons.inventory_2_outlined,
+          size: 16,
+          color: c.muted,
+        ),
+        label: Text(
+          _showArchived
+              ? context.l10n.t('hideArchived')
+              : context.l10n.t('showArchived'),
+          style: TextStyle(color: c.muted, fontSize: 13),
+        ),
       ),
     );
   }
@@ -328,14 +381,40 @@ class _MatchCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onToggleScore;
 
+  // Distinct tints for matches happening today / tomorrow (#15).
+  static const Color _todayColor = Color(0xFFFB923C); // orange
+  static const Color _tomorrowColor = Color(0xFF38BDF8); // sky blue
+
   Color _statusColor(AppColors c) {
-    switch (match.displayStatus) {
-      case MatchStatus.live:
+    switch (match.displayPhase) {
+      case MatchPhase.live:
+      case MatchPhase.liveSoon:
         return c.accent2;
-      case MatchStatus.finished:
+      case MatchPhase.justFinished:
+      case MatchPhase.finished:
         return c.muted;
-      case MatchStatus.upcoming:
+      case MatchPhase.upcoming:
+        if (match.isToday) return _todayColor;
+        if (match.isTomorrow) return _tomorrowColor;
         return c.accent;
+    }
+  }
+
+  String _phaseLabel(BuildContext context) {
+    final l = context.l10n;
+    switch (match.displayPhase) {
+      case MatchPhase.live:
+        return l.t('statusLive');
+      case MatchPhase.liveSoon:
+        return l.t('statusLiveSoon');
+      case MatchPhase.justFinished:
+        return l.t('statusJustFinished');
+      case MatchPhase.finished:
+        return l.t('statusFullTime');
+      case MatchPhase.upcoming:
+        if (match.isToday) return l.t('statusToday');
+        if (match.isTomorrow) return l.t('statusTomorrow');
+        return l.t('statusUpcoming');
     }
   }
 
@@ -434,7 +513,7 @@ class _MatchCard extends StatelessWidget {
                     const SizedBox(width: 10),
                   ],
                   Text(
-                    _statusLabel(context, match.displayStatus),
+                    _phaseLabel(context),
                     style: TextStyle(
                       fontFamily: AppTheme.mono,
                       fontSize: 10,
@@ -589,18 +668,6 @@ class _MatchCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Localized status label (UPCOMING / ● LIVE / FULL TIME).
-String _statusLabel(BuildContext context, MatchStatus status) {
-  switch (status) {
-    case MatchStatus.live:
-      return context.l10n.t('statusLive');
-    case MatchStatus.finished:
-      return context.l10n.t('statusFullTime');
-    case MatchStatus.upcoming:
-      return context.l10n.t('statusUpcoming');
   }
 }
 

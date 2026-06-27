@@ -49,4 +49,56 @@ void main() {
     expect(m.hasKickedOff, isFalse);
     expect(m.displayStatus, MatchStatus.upcoming);
   });
+
+  group('displayPhase pads the live window', () {
+    test('upcoming far out is plain upcoming', () {
+      final m = _match(status: MatchStatus.upcoming, scheduledAt: future);
+      expect(m.displayPhase, MatchPhase.upcoming);
+    });
+
+    test('within the lead window reads as live soon', () {
+      final soon = DateTime.now().add(const Duration(minutes: 10));
+      final m = _match(status: MatchStatus.upcoming, scheduledAt: soon);
+      expect(m.displayPhase, MatchPhase.liveSoon);
+    });
+
+    test('kicked-off upcoming reads as live', () {
+      final m = _match(status: MatchStatus.upcoming, scheduledAt: past);
+      expect(m.displayPhase, MatchPhase.live);
+    });
+
+    test('recently finished reads as just finished', () {
+      final recent = DateTime.now().subtract(const Duration(hours: 1));
+      final m = _match(status: MatchStatus.finished, scheduledAt: recent);
+      expect(m.displayPhase, MatchPhase.justFinished);
+    });
+
+    test('long-finished reads as finished', () {
+      final old = DateTime.now().subtract(const Duration(hours: 6));
+      final m = _match(status: MatchStatus.finished, scheduledAt: old);
+      expect(m.displayPhase, MatchPhase.finished);
+    });
+  });
+
+  group('isToday / isTomorrow', () {
+    test('a match later today is today, not tomorrow', () {
+      final later = DateTime.now().add(const Duration(minutes: 90));
+      final m = _match(status: MatchStatus.upcoming, scheduledAt: later);
+      // Skip near midnight where +90m could roll into tomorrow.
+      if (later.day == DateTime.now().day) {
+        expect(m.isToday, isTrue);
+        expect(m.isTomorrow, isFalse);
+      }
+    });
+
+    test('a match ~24h out is tomorrow', () {
+      final tomorrow = DateTime.now().add(const Duration(hours: 24));
+      final m = _match(status: MatchStatus.upcoming, scheduledAt: tomorrow);
+      // Only assert when the wall-clock rollover lands on the next calendar day.
+      if (tomorrow.day == DateTime.now().add(const Duration(days: 1)).day) {
+        expect(m.isTomorrow, isTrue);
+        expect(m.isToday, isFalse);
+      }
+    });
+  });
 }
