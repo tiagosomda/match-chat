@@ -60,9 +60,11 @@ class _HomeShellState extends State<HomeShell> {
     }
 
     // The Buzz tab disappears when the user has hidden chat/comments (#18); fall
-    // back to Matches if it was the active tab.
+    // back to Matches if it was the active tab. Similarly, the Ranks tab
+    // disappears when the user has hidden predictions & ranking.
     var tab = _tab;
     if (tab == AppTab.chat && !app.showChat) tab = AppTab.matches;
+    if (tab == AppTab.leaderboard && !app.showPredictions) tab = AppTab.matches;
 
     final body = switch (tab) {
       AppTab.matches => const MatchesScreen(),
@@ -85,6 +87,7 @@ class _HomeShellState extends State<HomeShell> {
         active: tab,
         onSelect: _select,
         showChat: app.showChat,
+        showRanking: app.showPredictions,
       ),
     );
   }
@@ -152,10 +155,12 @@ class _BottomNav extends StatelessWidget {
     required this.active,
     required this.onSelect,
     required this.showChat,
+    required this.showRanking,
   });
   final AppTab active;
   final ValueChanged<AppTab> onSelect;
   final bool showChat;
+  final bool showRanking;
 
   @override
   Widget build(BuildContext context) {
@@ -185,12 +190,13 @@ class _BottomNav extends StatelessWidget {
                 context.l10n.t('navChat').toUpperCase(),
                 AppTab.chat,
               ),
-            _navItem(
-              c,
-              Icons.emoji_events_outlined,
-              context.l10n.t('navRanks').toUpperCase(),
-              AppTab.leaderboard,
-            ),
+            if (showRanking)
+              _navItem(
+                c,
+                Icons.emoji_events_outlined,
+                context.l10n.t('navRanks').toUpperCase(),
+                AppTab.leaderboard,
+              ),
           ],
         ),
       ),

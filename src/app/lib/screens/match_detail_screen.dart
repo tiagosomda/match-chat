@@ -912,7 +912,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   final _a = TextEditingController();
   final _b = TextEditingController();
   bool _busy = false;
-  bool _editing = false;
+  // Tracks whether we've seeded the controllers from the saved prediction.
+  // Reset to false after a delete so the next stream event re-seeds to empty.
+  bool _seeded = false;
 
   @override
   void dispose() {
@@ -921,23 +923,16 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     super.dispose();
   }
 
-  void _startEdit(Prediction mine) {
-    setState(() {
-      _editing = true;
-      _a.text = '${mine.scoreA}';
-      _b.text = '${mine.scoreB}';
-    });
+  // Returns true when the current controller values differ from the saved
+  // prediction (i.e. the user has unsaved changes worth saving).
+  bool _isDirty(Prediction? mine) {
+    final a = int.tryParse(_a.text.trim());
+    final b = int.tryParse(_b.text.trim());
+    if (mine != null) return a != mine.scoreA || b != mine.scoreB;
+    return a != null && b != null;
   }
 
-  void _cancelEdit() {
-    setState(() {
-      _editing = false;
-      _a.clear();
-      _b.clear();
-    });
-  }
-
-  Future<void> _submit(AppState app, {required bool isUpdate}) async {
+  Future<void> _submit(AppState app, Prediction? mine) async {
     final a = int.tryParse(_a.text.trim());
     final b = int.tryParse(_b.text.trim());
     if (a == null || b == null || a < 0 || b < 0) {
@@ -955,13 +950,10 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         scoreA: a,
         scoreB: b,
       );
-      _a.clear();
-      _b.clear();
       if (mounted) {
-        setState(() => _editing = false);
         showToast(
           context,
-          isUpdate
+          mine != null
               ? context.l10n.t('predictionUpdated')
               : context.l10n.t('predictionSubmitted'),
         );
@@ -983,18 +975,20 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         mid: widget.match.id,
         userId: app.firebaseUser!.uid,
       );
-      _a.clear();
-      _b.clear();
       if (mounted) {
-        setState(() => _editing = false);
+        setState(() {
+          _busy = false;
+          _seeded = false;
+          _a.clear();
+          _b.clear();
+        });
         showToast(context, context.l10n.t('predictionRemoved'));
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _busy = false);
         showToast(context, context.l10n.tp('couldNotRemove', {'e': '$e'}));
       }
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -1016,22 +1010,30 @@ class _PredictionsTabState extends State<_PredictionsTab> {
             break;
           }
         }
+
+        // Seed controllers from the saved prediction the first time it arrives.
+        if (!_seeded && mine != null) {
+          _seeded = true;
+          _a.text = '${mine.scoreA}';
+          _b.text = '${mine.scoreB}';
+        }
+
         // Predictions can be created/edited/removed only while the match is
         // still upcoming. They lock the moment kickoff passes (item #5) —
         // displayStatus reflects that even before the poller flips the status.
         final predictionsOpen = match.displayStatus == MatchStatus.upcoming;
         final editable = app.isParticipant && predictionsOpen;
-        final showInput = editable && (mine == null || _editing);
+        final dirty = _isDirty(mine);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (showInput)
-                _predictionInput(c, app, isUpdate: mine != null)
+              if (editable)
+                _predictionInput(c, app, mine, dirty)
               else if (mine != null) ...[
-                _yourPredChip(c, app, mine, editable),
+                _yourPredChip(c, mine),
                 const SizedBox(height: 13),
               ] else if (!predictionsOpen) ...[
                 _predictionLocked(c, match),
@@ -1106,14 +1108,23 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     );
   }
 
-  Widget _predictionInput(AppColors c, AppState app, {required bool isUpdate}) {
+  Widget _predictionInput(
+    AppColors c,
+    AppState app,
+    Prediction? mine,
+    bool dirty,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 13),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.accent.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: dirty
+              ? c.accent.withValues(alpha: 0.35)
+              : c.accent.withValues(alpha: 0.15),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1122,9 +1133,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
             children: [
               Expanded(
                 child: Text(
-                  isUpdate
-                      ? context.l10n.t('updateYourPrediction')
-                      : context.l10n.t('yourPrediction'),
+                  context.l10n.t('yourPrediction'),
                   style: TextStyle(
                     color: c.text,
                     fontWeight: FontWeight.w700,
@@ -1132,14 +1141,12 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                   ),
                 ),
               ),
-              if (isUpdate)
-                GestureDetector(
-                  onTap: _busy ? null : _cancelEdit,
-                  child: MonoLabel(
-                    context.l10n.t('cancelUpper'),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+              if (mine != null)
+                _predAction(
+                  c,
+                  Icons.delete_outline,
+                  context.l10n.t('deleteUpper'),
+                  _busy ? null : () => _delete(app),
                 ),
             ],
           ),
@@ -1168,12 +1175,14 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           ),
           const SizedBox(height: 14),
           AccentButton(
-            label: isUpdate
+            label: mine != null
                 ? context.l10n.t('update')
                 : context.l10n.t('predict'),
             expand: true,
             busy: _busy,
-            onPressed: () => _submit(app, isUpdate: isUpdate),
+            color: dirty ? null : c.muted.withValues(alpha: 0.25),
+            foreground: dirty ? Colors.white : c.muted,
+            onPressed: (dirty && !_busy) ? () => _submit(app, mine) : null,
           ),
         ],
       ),
@@ -1260,12 +1269,8 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     );
   }
 
-  Widget _yourPredChip(
-    AppColors c,
-    AppState app,
-    Prediction mine,
-    bool editable,
-  ) {
+  // Shown for locked matches (live/finished) where the user has a prediction.
+  Widget _yourPredChip(AppColors c, Prediction mine) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -1273,45 +1278,21 @@ class _PredictionsTabState extends State<_PredictionsTab> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: c.accent2.withValues(alpha: 0.28)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.check, size: 16, color: c.accent2),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  context.l10n.t('yourPredictionIsIn'),
-                  style: TextStyle(
-                    color: c.text,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          Icon(Icons.lock_outline, size: 15, color: c.accent2),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              context.l10n.t('yourPredictionIsIn'),
+              style: TextStyle(
+                color: c.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
-              _PredScore(match: widget.match, prediction: mine),
-            ],
-          ),
-          if (editable) ...[
-            const SizedBox(height: 11),
-            Row(
-              children: [
-                _predAction(
-                  c,
-                  Icons.edit_outlined,
-                  context.l10n.t('editUpper'),
-                  _busy ? null : () => _startEdit(mine),
-                ),
-                const SizedBox(width: 9),
-                _predAction(
-                  c,
-                  Icons.delete_outline,
-                  context.l10n.t('deleteUpper'),
-                  _busy ? null : () => _delete(app),
-                ),
-              ],
             ),
-          ],
+          ),
+          _PredScore(match: widget.match, prediction: mine),
         ],
       ),
     );

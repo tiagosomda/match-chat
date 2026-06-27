@@ -263,7 +263,7 @@ const Map<String, String> _en = {
   'lastPage': 'Last page',
   'contentPrefs': 'Content',
   'contentPrefsHint': 'Hide features you don\'t care about.',
-  'showPredictionsLabel': 'Show predictions',
+  'showPredictionsLabel': 'Show predictions & ranking',
   'showChatLabel': 'Show chat & comments',
   'yourPickUpper': 'YOUR PICK',
   'language': 'Language',
@@ -332,6 +332,11 @@ const Map<String, String> _en = {
   'aboutTipSub': 'Totally optional — helps cover the running costs',
   'aboutMadeBy': 'MADE WITH ♥ BY TIAGO',
   'couldNotOpenLink': 'Could not open {url}',
+  // my predictions screen
+  'myPredictions': 'My Predictions',
+  'myPredictionsDesc': 'Your picks across all matches',
+  'noPrediction': 'No prediction',
+  'pointsEarned': '{n} pts',
 };
 
 // ---------------------------------------------------------------------------
@@ -488,7 +493,7 @@ const Map<String, String> _es = {
   'lastPage': 'Última página',
   'contentPrefs': 'Contenido',
   'contentPrefsHint': 'Oculta las funciones que no te interesan.',
-  'showPredictionsLabel': 'Mostrar pronósticos',
+  'showPredictionsLabel': 'Mostrar pronósticos y ranking',
   'showChatLabel': 'Mostrar chat y comentarios',
   'yourPickUpper': 'TU PRONÓSTICO',
   'language': 'Idioma',
@@ -554,6 +559,10 @@ const Map<String, String> _es = {
   'aboutTipSub': 'Totalmente opcional — ayuda a cubrir los costos',
   'aboutMadeBy': 'HECHO CON ♥ POR TIAGO',
   'couldNotOpenLink': 'No se pudo abrir {url}',
+  'myPredictions': 'Mis Pronósticos',
+  'myPredictionsDesc': 'Tus pronósticos en todos los partidos',
+  'noPrediction': 'Sin pronóstico',
+  'pointsEarned': '{n} pts',
 };
 
 // ---------------------------------------------------------------------------
@@ -709,7 +718,7 @@ const Map<String, String> _pt = {
   'lastPage': 'Última página',
   'contentPrefs': 'Conteúdo',
   'contentPrefsHint': 'Esconde as funcionalidades que não te interessam.',
-  'showPredictionsLabel': 'Mostrar palpites',
+  'showPredictionsLabel': 'Mostrar palpites e ranking',
   'showChatLabel': 'Mostrar chat e comentários',
   'yourPickUpper': 'O TEU PALPITE',
   'language': 'Idioma',
@@ -775,6 +784,10 @@ const Map<String, String> _pt = {
   'aboutTipSub': 'Totalmente opcional — ajuda a cobrir os custos',
   'aboutMadeBy': 'FEITO COM ♥ PELO TIAGO',
   'couldNotOpenLink': 'Não foi possível abrir {url}',
+  'myPredictions': 'Os Meus Palpites',
+  'myPredictionsDesc': 'Os teus palpites em todos os jogos',
+  'noPrediction': 'Sem palpite',
+  'pointsEarned': '{n} pts',
 };
 
 // ---------------------------------------------------------------------------
@@ -892,4 +905,7 @@ const Map<String, String> _ptBR = {
   'aboutMoreTitle': 'Conheça mais sobre o Tiago',
   'aboutMoreSub': 'Me encontre e veja meus outros projetos',
   'aboutTipTitle': 'Me paga um café',
+  'myPredictions': 'Meus Palpites',
+  'myPredictionsDesc': 'Seus palpites em todas as partidas',
+  'noPrediction': 'Sem palpite',
 };
