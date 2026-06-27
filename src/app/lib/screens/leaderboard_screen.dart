@@ -40,12 +40,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _ensure(AppState app) {
     if (_tid != app.tournamentId) {
       _tid = app.tournamentId;
-      _future = app.leaderboard.compute(app.tournamentId!);
+      _future = app.leaderboard.load(app.tournamentId!);
     }
   }
 
   Future<void> _refresh(AppState app) async {
-    setState(() => _future = app.leaderboard.compute(app.tournamentId!));
+    setState(
+      () => _future = app.leaderboard.load(app.tournamentId!, force: true),
+    );
   }
 
   @override

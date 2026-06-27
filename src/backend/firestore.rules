@@ -107,6 +107,15 @@ service cloud.firestore {
           }
         }
 
+        // ---- leaderboard cache ----------------------------------------
+        // The poller (Admin SDK, bypasses rules) maintains a precomputed
+        // standing here so the app reads it instead of recomputing (#8).
+        // Clients may only read it.
+        match /standings/{docId} {
+          allow read: if isSignedIn();
+          allow write: if isAdmin();
+        }
+
         // ---- chat (the read-only "Buzz" feed) -------------------------
         // Messages here are mirrors of match comments (see CommentService).
         // Authors may update/delete their own mirror so comment edits/deletes

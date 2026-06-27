@@ -27,4 +27,15 @@ class LeaderboardEntry {
 
   /// 1-based standing; equal points share a rank. Assigned after sorting.
   int rank;
+
+  /// Parses an entry from the poller's cached standings doc (#8).
+  factory LeaderboardEntry.fromMap(Map<String, dynamic> d) => LeaderboardEntry(
+    userId: (d['userId'] ?? '') as String,
+    displayName: (d['displayName'] ?? '') as String,
+    points: (d['points'] ?? 0) as int,
+    exact: (d['exact'] ?? 0) as int,
+    scored: (d['scored'] ?? 0) as int,
+    favoriteTeam: d['favoriteTeam'] as String?,
+    rank: (d['rank'] ?? 0) as int,
+  );
 }

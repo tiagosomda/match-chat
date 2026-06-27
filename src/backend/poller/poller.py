@@ -202,6 +202,19 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
         except Exception as e:
             log.warning("Final reconcile failed (%s); will retry next window", e)
 
+    # A live window just ended, so some matches likely just finished — refresh
+    # the cached leaderboard so the app's Ranks tab loads instantly (#8).
+    _recompute_standings(fs)
+
+
+def _recompute_standings(fs: FirestoreSync) -> None:
+    """Best-effort leaderboard refresh; never let it disrupt the poll loop."""
+    try:
+        n = fs.recompute_standings()
+        log.info("Recomputed leaderboard standings: %d player(s)", n)
+    except Exception as e:
+        log.warning("Standings recompute failed (%s)", e)
+
 
 def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
     """Fixture ids in the recent lookback that still need a (re)write: either
@@ -259,6 +272,8 @@ def reconcile(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: list)
     if wrote:
         cache.save()
         log.info("Reconciled %d fixture(s) (final status / scorers)", wrote)
+        # Finals may have been written — refresh the cached leaderboard (#8).
+        _recompute_standings(fs)
 
 
 def _setup():
@@ -279,6 +294,7 @@ def run_once() -> None:
     cfg, budget, api, fs, cache = _setup()
     log.info("One-shot sync for %s (league=%s season=%s)", cfg.tournament_name, cfg.league_id, cfg.season)
     daily_sync(api, fs, cache)
+    _recompute_standings(fs)
     log.info("Done. %d API request(s) used; budget remaining: %d", budget.used, budget.remaining)
 
 

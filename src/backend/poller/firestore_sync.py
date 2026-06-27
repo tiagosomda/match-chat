@@ -12,6 +12,8 @@ import logging
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+import scoring
+
 log = logging.getLogger("poller.firestore")
 
 
@@ -22,14 +24,16 @@ class FirestoreSync:
         firebase_admin.initialize_app(cred)
         self.db = firestore.client()
 
-    def _matches_col(self):
+    def _tournament_ref(self):
         return (
             self.db.collection("match-chat")
             .document("app")
             .collection("tournaments")
             .document(self.cfg.tournament_id)
-            .collection("matches")
         )
+
+    def _matches_col(self):
+        return self._tournament_ref().collection("matches")
 
     def ensure_tournament(self) -> None:
         ref = (
@@ -68,3 +72,73 @@ class FirestoreSync:
         """Merge-write a single match's live score/status."""
         ref = self._matches_col().document(str(doc["apiFixtureId"]))
         ref.set(doc, merge=True)
+
+    def recompute_standings(self) -> int:
+        """Recompute the prediction leaderboard from finished matches and their
+        predictions, and write it to tournaments/{tid}/standings/current so the
+        app reads a precomputed standing instead of doing it client-side (#8).
+
+        Mirrors lib/services/leaderboard_service.dart: 5/3/1 scoring, sorted by
+        points then exact hits then name, with dense (equal points share a rank)
+        ranking. Returns the number of ranked players.
+        """
+        col = self._matches_col()
+        acc: dict = {}
+        counted = 0
+        # The schedule is ~100 matches, so a single full read + Python-side
+        # filter is cheaper than maintaining a status index.
+        for mdoc in col.stream():
+            m = mdoc.to_dict() or {}
+            if m.get("status") != "finished":
+                continue
+            score_a, score_b = m.get("scoreA"), m.get("scoreB")
+            if score_a is None or score_b is None:
+                continue
+            counted += 1
+            for pdoc in col.document(mdoc.id).collection("predictions").stream():
+                p = pdoc.to_dict() or {}
+                uid = p.get("userId") or pdoc.id
+                pa, pb = p.get("scoreA"), p.get("scoreB")
+                if pa is None or pb is None:
+                    continue
+                pts = scoring.points(pa, pb, score_a, score_b)
+                a = acc.setdefault(
+                    uid,
+                    {
+                        "userId": uid,
+                        "displayName": "",
+                        "favoriteTeam": None,
+                        "points": 0,
+                        "exact": 0,
+                        "scored": 0,
+                    },
+                )
+                a["points"] += pts
+                a["scored"] += 1
+                if pts == scoring.EXACT_POINTS:
+                    a["exact"] += 1
+                if p.get("displayName"):
+                    a["displayName"] = p["displayName"]
+                if p.get("favoriteTeam"):
+                    a["favoriteTeam"] = p["favoriteTeam"]
+
+        entries = sorted(
+            acc.values(),
+            key=lambda e: (-e["points"], -e["exact"], e["displayName"].lower()),
+        )
+        rank = 0
+        prev = None
+        for i, e in enumerate(entries):
+            if prev is None or e["points"] != prev:
+                rank = i + 1
+                prev = e["points"]
+            e["rank"] = rank
+
+        self._tournament_ref().collection("standings").document("current").set(
+            {
+                "entries": entries,
+                "matchesCounted": counted,
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            }
+        )
+        return len(entries)

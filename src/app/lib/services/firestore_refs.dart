@@ -48,6 +48,11 @@ class Refs {
   static CollectionReference<Map<String, dynamic>> chat(String tid) =>
       tournament(tid).collection('chat');
 
+  /// The poller-maintained leaderboard cache: a single `current` doc holding the
+  /// precomputed standing so the app doesn't recompute it client-side (#8).
+  static DocumentReference<Map<String, dynamic>> standings(String tid) =>
+      tournament(tid).collection('standings').doc('current');
+
   static CollectionReference<Map<String, dynamic>> get inviteCodes =>
       appDoc.collection('inviteCodes');
 
