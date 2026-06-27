@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/chat_message.dart';
 import '../models/comment.dart';
 import 'firestore_refs.dart';
 
@@ -11,8 +12,13 @@ class CommentService {
         .map((snap) => snap.docs.map(CommentModel.fromDoc).toList());
   }
 
-  /// Posts a comment (or reply when [parentId] is set) and bumps the match's
-  /// cached commentCount in a single batch.
+  /// Posts a comment (or reply when [parentId] is set), mirrors it into the
+  /// tournament's Buzz feed (the `chat` collection, tagged with [mid]), and
+  /// bumps the match's cached commentCount — all in a single atomic batch.
+  ///
+  /// The mirror is what surfaces on the read-only Buzz tab; the comment stores
+  /// the mirror's id ([CommentModel.chatMsgId]) so later edits/deletes can keep
+  /// the two in sync.
   Future<void> post({
     required String tid,
     required String mid,
@@ -24,6 +30,7 @@ class CommentService {
   }) async {
     final batch = Refs.db.batch();
     final commentRef = Refs.comments(tid, mid).doc();
+    final chatRef = Refs.chat(tid).doc();
     batch.set(
       commentRef,
       CommentModel(
@@ -33,6 +40,18 @@ class CommentService {
         body: body,
         favoriteTeam: favoriteTeam,
         parentId: parentId,
+        chatMsgId: chatRef.id,
+      ).toCreateMap(),
+    );
+    batch.set(
+      chatRef,
+      ChatMessage(
+        id: chatRef.id,
+        userId: userId,
+        displayName: displayName,
+        body: body,
+        favoriteTeam: favoriteTeam,
+        matchId: mid,
       ).toCreateMap(),
     );
     batch.update(Refs.match(tid, mid), {
@@ -41,32 +60,48 @@ class CommentService {
     await batch.commit();
   }
 
-  /// Edits a comment's body (owner only — enforced by rules). Stamps editedAt.
+  /// Edits a comment's body (owner only — enforced by rules). Stamps editedAt
+  /// and updates the mirrored Buzz message when [chatMsgId] is known.
   Future<void> edit({
     required String tid,
     required String mid,
     required String commentId,
     required String body,
+    String? chatMsgId,
   }) {
-    return Refs.comments(tid, mid).doc(commentId).update(<String, dynamic>{
+    final batch = Refs.db.batch();
+    batch.update(Refs.comments(tid, mid).doc(commentId), <String, dynamic>{
       'body': body,
       'editedAt': FieldValue.serverTimestamp(),
     });
+    if (chatMsgId != null) {
+      batch.update(Refs.chat(tid).doc(chatMsgId), <String, dynamic>{
+        'body': body,
+      });
+    }
+    return batch.commit();
   }
 
   /// Soft-deletes a comment: keeps the doc (so replies stay anchored) but
-  /// clears the body and records who removed it ('user' or 'admin').
+  /// clears the body and records who removed it ('user' or 'admin'). The
+  /// mirrored Buzz message is removed outright so it drops out of the feed.
   Future<void> softDelete({
     required String tid,
     required String mid,
     required String commentId,
     required bool byAdmin,
+    String? chatMsgId,
   }) {
-    return Refs.comments(tid, mid).doc(commentId).update(<String, dynamic>{
+    final batch = Refs.db.batch();
+    batch.update(Refs.comments(tid, mid).doc(commentId), <String, dynamic>{
       'deleted': true,
       'deletedBy': byAdmin ? 'admin' : 'user',
       'body': '',
     });
+    if (chatMsgId != null) {
+      batch.delete(Refs.chat(tid).doc(chatMsgId));
+    }
+    return batch.commit();
   }
 
   /// Builds an ordered, indented tree from a flat comment list.

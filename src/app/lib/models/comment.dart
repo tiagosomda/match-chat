@@ -11,6 +11,7 @@ class CommentModel {
     required this.body,
     this.favoriteTeam,
     this.parentId,
+    this.chatMsgId,
     this.votes = 0,
     this.deleted = false,
     this.deletedBy,
@@ -24,6 +25,13 @@ class CommentModel {
   final String body;
   final String? favoriteTeam;
   final String? parentId;
+
+  /// Id of the mirrored message in the tournament's Buzz feed (`chat`
+  /// collection). Set when the comment is posted so edits/deletes can keep the
+  /// Buzz copy in sync. Null for comments created before the Buzz projection
+  /// existed — those simply have no feed entry to update.
+  final String? chatMsgId;
+
   final int votes;
 
   /// Soft-delete: the doc is kept (so replies stay anchored) but the body is
@@ -44,6 +52,7 @@ class CommentModel {
       body: (d['body'] ?? '') as String,
       favoriteTeam: d['favoriteTeam'] as String?,
       parentId: d['parentId'] as String?,
+      chatMsgId: d['chatMsgId'] as String?,
       votes: (d['votes'] ?? 0) as int,
       deleted: (d['deleted'] ?? false) as bool,
       deletedBy: d['deletedBy'] as String?,
@@ -58,6 +67,7 @@ class CommentModel {
     'body': body,
     if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
     'parentId': parentId,
+    if (chatMsgId != null) 'chatMsgId': chatMsgId,
     'votes': 0,
     'createdAt': FieldValue.serverTimestamp(),
   };

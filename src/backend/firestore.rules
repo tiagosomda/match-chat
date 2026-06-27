@@ -107,13 +107,17 @@ service cloud.firestore {
           }
         }
 
-        // ---- chat -----------------------------------------------------
+        // ---- chat (the read-only "Buzz" feed) -------------------------
+        // Messages here are mirrors of match comments (see CommentService).
+        // Authors may update/delete their own mirror so comment edits/deletes
+        // stay in sync; admins may moderate any. Same owner-or-admin rule as
+        // comments.
         match /chat/{msgId} {
           allow read: if isSignedIn();
           allow create: if isParticipant()
             && request.resource.data.userId == request.auth.uid;
-          allow update: if false;
-          allow delete: if isAdmin();
+          allow update, delete: if isAdmin()
+            || (isSignedIn() && resource.data.userId == request.auth.uid);
         }
       }
 
