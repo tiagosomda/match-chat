@@ -13,6 +13,7 @@ import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
 import 'about_screen.dart';
 import 'admin_screen.dart';
+import 'my_predictions_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -183,6 +184,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 14),
           ],
           if (app.isParticipant) ...[
+            _myPredictionsCard(c, app),
+            const SizedBox(height: 14),
             _InviteCodesCard(),
             const SizedBox(height: 14),
           ],
@@ -815,6 +818,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   context.l10n.t('aboutCardSub'),
+                  style: TextStyle(color: c.muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.arrow_forward, color: c.muted, size: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _myPredictionsCard(AppColors c, AppState app) {
+    final tid = app.tournamentId;
+    return SurfaceCard(
+      onTap: tid == null
+          ? null
+          : () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      MyPredictionsScreen(tournamentId: tid),
+                ),
+              ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              Icons.sports_soccer_outlined,
+              size: 19,
+              color: c.accent,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.t('myPredictions'),
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  context.l10n.t('myPredictionsDesc'),
                   style: TextStyle(color: c.muted, fontSize: 12),
                 ),
               ],
