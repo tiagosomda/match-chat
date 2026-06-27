@@ -34,8 +34,9 @@ class UserService {
       isAdmin: false,
     );
     await ref.set(user.toCreateMap());
-    final created = await ref.get();
-    return AppUser.fromDoc(created);
+    // Return the just-written user directly instead of an extra server read —
+    // the live watch will deliver the canonical doc moments later (#7).
+    return user;
   }
 
   Future<void> updateDisplayName(String uid, String name) {

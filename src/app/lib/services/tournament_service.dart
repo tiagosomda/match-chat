@@ -23,7 +23,12 @@ class TournamentService {
   /// Picks the tournament to load into: the user's preferred one if it still
   /// exists, otherwise the default, otherwise the first available.
   Future<Tournament?> resolveInitial(String? preferredId) async {
-    final all = await fetchAll();
+    return resolveFrom(await fetchAll(), preferredId);
+  }
+
+  /// Pure resolver over an already-fetched list, so callers that have just
+  /// loaded the tournaments don't trigger a second round-trip (#7).
+  Tournament? resolveFrom(List<Tournament> all, String? preferredId) {
     if (all.isEmpty) return null;
     if (preferredId != null) {
       for (final t in all) {

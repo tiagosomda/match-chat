@@ -217,23 +217,39 @@ class AppState extends ChangeNotifier {
           : (user.displayName?.trim().isNotEmpty == true
                 ? user.displayName!.trim()
                 : (user.email?.split('@').first ?? 'Player'));
-      await users.ensureUser(
+
+      // Ensure the user doc and load the tournament list concurrently — they're
+      // independent, so on a cold connection this overlaps two round-trips
+      // instead of running them back to back (#7).
+      final ensureFuture = users.ensureUser(
         uid: user.uid,
         email: user.email ?? '',
         displayName: fallbackName,
       );
+      final tournamentsFuture = tournaments.fetchAll();
+
+      final appUser = await ensureFuture;
 
       // Live-watch the user document so participant/admin/profile changes
       // reflect immediately.
-      _userSub = users.watch(user.uid).listen((appUser) {
-        _appUser = appUser;
+      _userSub = users.watch(user.uid).listen((u) {
+        _appUser = u;
         _loadingUser = false;
         notifyListeners();
       });
 
-      await _resolveTournament(user.uid);
+      // Resolve the active tournament from the list we already fetched, with no
+      // second round-trip (#7).
+      _allTournaments = await tournamentsFuture;
+      _tournament = tournaments.resolveFrom(
+        _allTournaments,
+        appUser.preferredTournamentId,
+      );
+      _tournamentResolved = true;
+      notifyListeners();
     } catch (e) {
       _loadingUser = false;
+      _tournamentResolved = true;
       notifyListeners();
     }
   }
@@ -242,7 +258,7 @@ class AppState extends ChangeNotifier {
     try {
       _allTournaments = await tournaments.fetchAll();
       final preferred = _appUser?.preferredTournamentId;
-      _tournament = await tournaments.resolveInitial(preferred);
+      _tournament = tournaments.resolveFrom(_allTournaments, preferred);
     } catch (_) {
       _tournament = null;
     }
