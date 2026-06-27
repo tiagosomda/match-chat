@@ -165,9 +165,9 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
       _strength(
         c,
-        Icons.visibility_outlined,
-        l.t('strengthFriendsTitle'),
-        l.t('strengthFriendsDesc'),
+        Icons.emoji_events_outlined,
+        l.t('strengthPredictionsTitle'),
+        l.t('strengthPredictionsDesc'),
       ),
       _strength(
         c,

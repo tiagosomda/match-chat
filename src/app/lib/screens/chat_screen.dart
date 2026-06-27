@@ -78,51 +78,66 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
                 final messages = snap.data ?? const <ChatMessage>[];
-                return ListView(
-                  padding: const EdgeInsets.all(16),
+                return Column(
                   children: [
-                    Center(
-                      child: MonoLabel(
-                        context.l10n.t('globalChatLive'),
-                        fontSize: 10.5,
-                        letterSpacing: 1.6,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Column(
+                        children: [
+                          Center(
+                            child: MonoLabel(
+                              context.l10n.t('globalChatLive'),
+                              fontSize: 10.5,
+                              letterSpacing: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (!_infoBannerDismissed)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _BuzzInfoBanner(onDismiss: _dismissBanner),
+                            ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (!_infoBannerDismissed)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _BuzzInfoBanner(onDismiss: _dismissBanner),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        children: [
+                          if (messages.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Center(
+                                child: Text(
+                                  context.l10n.t('noMessagesYet'),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: c.muted),
+                                ),
+                              ),
+                            ),
+                          for (final m in messages) ...[
+                            () {
+                              final tagged = m.matchId == null
+                                  ? null
+                                  : matchById[m.matchId];
+                              return _ChatRow(
+                                message: m,
+                                taggedMatch: tagged,
+                                revealed: _isRevealed(m, reveals),
+                                onReveal: () => _revealMatch(app, m.matchId),
+                                onUser: () =>
+                                    _openUser(context, tid, m.displayName),
+                                onTagTap: tagged == null
+                                    ? null
+                                    : () =>
+                                        _openMatchChat(context, tid, m.matchId!),
+                              );
+                            }(),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
                       ),
-                    if (messages.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 40),
-                        child: Center(
-                          child: Text(
-                            context.l10n.t('noMessagesYet'),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: c.muted),
-                          ),
-                        ),
-                      ),
-                    for (final m in messages) ...[
-                      () {
-                        final tagged = m.matchId == null
-                            ? null
-                            : matchById[m.matchId];
-                        return _ChatRow(
-                          message: m,
-                          taggedMatch: tagged,
-                          revealed: _isRevealed(m, reveals),
-                          onReveal: () => _revealMatch(app, m.matchId),
-                          onUser: () => _openUser(context, tid, m.displayName),
-                          onTagTap: tagged == null
-                              ? null
-                              : () => _openMatchChat(context, tid, m.matchId!),
-                        );
-                      }(),
-                      const SizedBox(height: 16),
-                    ],
+                    ),
                   ],
                 );
               },
@@ -191,6 +206,7 @@ class _BuzzInfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               context.l10n.t('buzzInfoBanner'),
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: c.text,
                 fontSize: 13,

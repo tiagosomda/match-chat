@@ -122,9 +122,9 @@ const Map<String, String> _en = {
   'strengthScheduleTitle': 'Spoiler-free schedule',
   'strengthScheduleDesc':
       'Scores, comments and predictions stay hidden until you choose to reveal them.',
-  'strengthFriendsTitle': 'See which friends have watched',
-  'strengthFriendsDesc':
-      'Know who has already seen a match — without giving the result away.',
+  'strengthPredictionsTitle': 'Predict & compete with the community',
+  'strengthPredictionsDesc':
+      'Make predictions on every match, track your score on the leaderboard, and chat live during games.',
   'strengthInviteOnlyTitle': 'Invite-only community',
   'strengthInviteOnlyDesc':
       'Only members invited by existing participants can post. This keeps conversations genuine and spam-free.',
@@ -371,9 +371,9 @@ const Map<String, String> _es = {
   'strengthScheduleTitle': 'Calendario sin spoilers',
   'strengthScheduleDesc':
       'Los resultados, comentarios y pronósticos quedan ocultos hasta que decidas mostrarlos.',
-  'strengthFriendsTitle': 'Mira qué amigos ya lo vieron',
-  'strengthFriendsDesc':
-      'Descubre quién ya vio un partido, sin revelar el resultado.',
+  'strengthPredictionsTitle': 'Pronostica y compite con la comunidad',
+  'strengthPredictionsDesc':
+      'Haz pronósticos en cada partido, sigue tu puntuación en el ranking y chatea en directo durante los juegos.',
   'strengthInviteOnlyTitle': 'Comunidad solo por invitación',
   'strengthInviteOnlyDesc':
       'Solo los miembros invitados por participantes existentes pueden publicar. Esto mantiene las conversaciones genuinas y sin spam.',
@@ -600,8 +600,9 @@ const Map<String, String> _pt = {
   'strengthScheduleTitle': 'Calendário sem spoilers',
   'strengthScheduleDesc':
       'Os resultados, comentários e palpites ficam ocultos até decidires revelá-los.',
-  'strengthFriendsTitle': 'Vê que amigos já viram',
-  'strengthFriendsDesc': 'Sabe quem já viu um jogo — sem revelar o resultado.',
+  'strengthPredictionsTitle': 'Palpita e compete com a comunidade',
+  'strengthPredictionsDesc':
+      'Faz palpites em cada jogo, acompanha a tua pontuação na classificação e conversa em direto durante os jogos.',
   'strengthInviteOnlyTitle': 'Comunidade só por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem publicar. Isto mantém as conversas genuínas e sem spam.',
@@ -823,9 +824,9 @@ const Map<String, String> _ptBR = {
   'strengthScheduleTitle': 'Agenda sem spoilers',
   'strengthScheduleDesc':
       'Os placares, comentários e palpites ficam ocultos até você decidir revelá-los.',
-  'strengthFriendsTitle': 'Veja quais amigos já assistiram',
-  'strengthFriendsDesc':
-      'Saiba quem já viu uma partida — sem revelar o resultado.',
+  'strengthPredictionsTitle': 'Palpite e compete com a comunidade',
+  'strengthPredictionsDesc':
+      'Faça palpites em cada partida, acompanhe sua pontuação no ranking e converse ao vivo durante os jogos.',
   'strengthInviteOnlyTitle': 'Comunidade apenas por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem postar. Isso mantém as conversas genuínas e sem spam.',
