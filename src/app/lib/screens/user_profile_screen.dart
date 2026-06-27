@@ -42,9 +42,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<_ProfileData> _load() async {
     final app = context.read<AppState>();
+    final currentUid = app.firebaseUser?.uid;
     final user = await app.users.fetchByName(widget.displayName);
     if (user == null) {
-      return _ProfileData(null, const [], null);
+      return _ProfileData(null, const [], null, const []);
     }
     final results = await Future.wait([
       app.predictions.fetchForUserAcross(widget.tournamentId, user.id),
@@ -92,7 +93,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (bt == null) return -1;
       return af ? bt.compareTo(at) : at.compareTo(bt);
     });
-    return _ProfileData(user, rows, myEntry);
+
+    List<AppUser> friends = const [];
+    if (user.id == currentUid && user.friends.isNotEmpty) {
+      friends = await app.users.fetchByIds(user.friends);
+    }
+
+    return _ProfileData(user, rows, myEntry, friends);
   }
 
   @override
@@ -230,6 +237,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ],
           ),
         ),
+        if (isSelf) ...[
+          const SizedBox(height: 14),
+          _friendsSection(c, data.friends, app),
+        ],
         if (app.showPredictions) ...[
         const SizedBox(height: 14),
         SurfaceCard(
@@ -307,6 +318,87 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         ],
       ],
+    );
+  }
+
+  Widget _friendsSection(AppColors c, List<AppUser> friends, AppState app) {
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.t('friends'),
+            style: TextStyle(
+              color: c.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 13),
+          if (friends.isEmpty)
+            Text(
+              context.l10n.t('noFriendsYet'),
+              style: TextStyle(color: c.muted, fontSize: 13),
+            )
+          else
+            for (final f in friends) ...[
+              _friendRow(c, f, app),
+              if (f != friends.last) const SizedBox(height: 10),
+            ],
+        ],
+      ),
+    );
+  }
+
+  Widget _friendRow(AppColors c, AppUser friend, AppState app) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(
+            tournamentId: widget.tournamentId,
+            displayName: friend.displayName,
+          ),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          children: [
+            Avatar(
+              name: friend.displayName,
+              favoriteTeam: friend.favoriteTeam,
+              size: 36,
+              gradient: friend.favoriteTeam == null,
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(
+                friend.displayName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: c.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (friend.favoriteTeam != null) ...[
+              Text(
+                Teams.flagFor(friend.favoriteTeam),
+                style: const TextStyle(fontSize: 18),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Icon(Icons.arrow_forward_ios, size: 13, color: c.muted),
+          ],
+        ),
+      ),
     );
   }
 
@@ -504,10 +596,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 }
 
 class _ProfileData {
-  _ProfileData(this.user, this.predictions, this.entry);
+  _ProfileData(this.user, this.predictions, this.entry, this.friends);
   final AppUser? user;
   final List<_PredRow> predictions;
   final LeaderboardEntry? entry;
+  final List<AppUser> friends;
 }
 
 class _PredRow {

@@ -14,6 +14,7 @@ import '../widgets/ui.dart';
 import 'about_screen.dart';
 import 'admin_screen.dart';
 import 'my_predictions_screen.dart';
+import 'user_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -255,6 +256,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 7),
                 _tierBadge(c, app.isParticipant),
+                if (!app.isGuest && app.tournamentId != null) ...[
+                  const SizedBox(height: 8),
+                  _publicProfileChip(c, app),
+                ],
               ],
             ),
           ),
@@ -282,6 +287,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
           fontWeight: FontWeight.w700,
           letterSpacing: 1,
           color: participant ? c.accent : c.muted,
+        ),
+      ),
+    );
+  }
+
+  Widget _publicProfileChip(AppColors c, AppState app) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(
+            tournamentId: app.tournamentId!,
+            displayName: app.displayName,
+          ),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.open_in_new, size: 11, color: c.muted),
+            const SizedBox(width: 4),
+            Text(
+              context.l10n.t('viewPublicProfile'),
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 10,
+                color: c.muted,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
       ),
     );

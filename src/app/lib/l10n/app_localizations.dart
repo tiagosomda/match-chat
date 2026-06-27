@@ -337,6 +337,9 @@ const Map<String, String> _en = {
   'myPredictionsDesc': 'Your picks across all matches',
   'noPrediction': 'No prediction',
   'pointsEarned': '{n} pts',
+  // public profile
+  'viewPublicProfile': 'Public profile',
+  'noFriendsYet': 'No friends yet.',
 };
 
 // ---------------------------------------------------------------------------
