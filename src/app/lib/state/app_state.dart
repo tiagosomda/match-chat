@@ -21,8 +21,9 @@ import '../services/user_service.dart';
 
 enum AppThemeMode { auto, light, dark }
 
-/// Top-level navigation tabs.
-enum AppTab { matches, leaderboard, chat, profile }
+/// Top-level navigation tabs, in bottom-bar order (Profile is reached from the
+/// header, not the bottom bar — see [HomeShell]).
+enum AppTab { matches, chat, leaderboard }
 
 /// Holds session-wide state: the authenticated user, the active tournament, the
 /// theme preference, and shared service instances.

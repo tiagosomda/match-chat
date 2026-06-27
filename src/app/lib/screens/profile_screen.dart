@@ -11,6 +11,7 @@ import '../utils/teams.dart';
 import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
+import 'about_screen.dart';
 import 'admin_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -69,8 +70,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final app = context.watch<AppState>();
     final c = context.colors;
 
+    return Scaffold(
+      backgroundColor: c.bg2,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.of(context).maybePop(),
+                    borderRadius: BorderRadius.circular(11),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(color: c.line),
+                      ),
+                      child: Icon(Icons.arrow_back, size: 18, color: c.text),
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  MonoLabel(
+                    context.l10n.t('profileUpper'),
+                    fontSize: 11,
+                    letterSpacing: 1.6,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _list(c, app)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _list(AppColors c, AppState app) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
         _hero(c, app),
         const SizedBox(height: 14),
@@ -96,6 +138,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _languageCard(c, app),
         const SizedBox(height: 14),
         if (app.isAdmin) ...[_adminCard(c), const SizedBox(height: 14)],
+        _aboutCard(c),
+        const SizedBox(height: 14),
         Center(
           child: TextButton.icon(
             onPressed: () => app.signOut(),
@@ -614,6 +658,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onChanged: (v) => app.setLocale(v),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// A friendly "made for fun" card that opens the full About page (#3).
+  Widget _aboutCard(AppColors c) {
+    return SurfaceCard(
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.accent2.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(Icons.favorite_outline, size: 19, color: c.accent2),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.t('aboutTitle'),
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  context.l10n.t('aboutCardSub'),
+                  style: TextStyle(color: c.muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.arrow_forward, color: c.muted, size: 18),
         ],
       ),
     );

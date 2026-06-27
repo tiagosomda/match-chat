@@ -192,7 +192,8 @@ const Map<String, String> _en = {
   'predictionRemoved': 'Prediction removed',
   'couldNotSubmit': 'Could not submit: {e}',
   'couldNotRemove': 'Could not remove: {e}',
-  'invitePredictionPrompt': 'Get an invite code to add your prediction →',
+  'invitePredictionPrompt':
+      'Predictions are invite-only — tap to redeem a code from a friend.',
   'predictionsHidden': '{n} PREDICTIONS HIDDEN',
   'revealPredictions': 'Reveal predictions',
   'predictionsLocked': 'Predictions locked',
@@ -213,7 +214,8 @@ const Map<String, String> _en = {
   'commentDeletedByUser': 'Comment deleted by user',
   'commentDeletedByAdmin': 'Comment deleted by admin',
   'editedTag': '· EDITED',
-  'inviteCommentPrompt': 'Get an invite code to join the conversation →',
+  'inviteCommentPrompt':
+      'Chat is invite-only — tap to redeem a code from a friend.',
   'deleteCommentTitle': 'Delete comment?',
   'deleteCommentBodyUser':
       'This will replace it with “deleted by user”. Replies stay.',
@@ -295,6 +297,24 @@ const Map<String, String> _en = {
   'leaderboardEmpty':
       'No scored predictions yet — check back once some matches have finished.',
   'leaderboardNoneHere': 'Nobody here yet.',
+  // about (#3)
+  'aboutUpper': 'ABOUT',
+  'aboutTitle': 'About Match Chat',
+  'aboutCardSub': 'Made for fun · free during the World Cup',
+  'aboutHeadline': 'Made for the love of the game',
+  'aboutBody':
+      'Match Chat is a little passion project — a spoiler-free way to follow '
+      'the World Cup with friends, reveal scores on your own terms, and chat '
+      'without anything being ruined.',
+  'aboutFree':
+      "It's completely free for the entire World Cup. No ads, no catch — just "
+      'enjoy the tournament. ⚽',
+  'aboutMoreTitle': 'Know more about Tiago',
+  'aboutMoreSub': 'Find me and my other projects',
+  'aboutTipTitle': 'Buy me a coffee',
+  'aboutTipSub': 'Totally optional — helps cover the running costs',
+  'aboutMadeBy': 'MADE WITH ♥ BY TIAGO',
+  'couldNotOpenLink': 'Could not open {url}',
 };
 
 // ---------------------------------------------------------------------------
@@ -382,7 +402,7 @@ const Map<String, String> _es = {
   'couldNotSubmit': 'No se pudo enviar: {e}',
   'couldNotRemove': 'No se pudo eliminar: {e}',
   'invitePredictionPrompt':
-      'Consigue un código de invitación para añadir tu pronóstico →',
+      'Los pronósticos son solo por invitación — toca para canjear un código de un amigo.',
   'predictionsHidden': '{n} PRONÓSTICOS OCULTOS',
   'revealPredictions': 'Mostrar pronósticos',
   'predictionsLocked': 'Pronósticos bloqueados',
@@ -403,7 +423,7 @@ const Map<String, String> _es = {
   'commentDeletedByAdmin': 'Comentario eliminado por un administrador',
   'editedTag': '· EDITADO',
   'inviteCommentPrompt':
-      'Consigue un código de invitación para unirte a la conversación →',
+      'El chat es solo por invitación — toca para canjear un código de un amigo.',
   'deleteCommentTitle': '¿Eliminar comentario?',
   'deleteCommentBodyUser':
       'Se reemplazará con “eliminado por el usuario”. Las respuestas se mantienen.',
@@ -482,6 +502,23 @@ const Map<String, String> _es = {
   'leaderboardEmpty':
       'Aún no hay pronósticos puntuados — vuelve cuando terminen algunos partidos.',
   'leaderboardNoneHere': 'Aún no hay nadie aquí.',
+  'aboutUpper': 'ACERCA DE',
+  'aboutTitle': 'Acerca de Match Chat',
+  'aboutCardSub': 'Hecho por diversión · gratis durante el Mundial',
+  'aboutHeadline': 'Hecho por amor al fútbol',
+  'aboutBody':
+      'Match Chat es un pequeño proyecto personal — una forma sin spoilers de '
+      'seguir el Mundial con amigos, revelar los resultados a tu ritmo y '
+      'chatear sin que nada se arruine.',
+  'aboutFree':
+      'Es totalmente gratis durante todo el Mundial. Sin anuncios ni trucos — '
+      'solo disfruta del torneo. ⚽',
+  'aboutMoreTitle': 'Conoce más sobre Tiago',
+  'aboutMoreSub': 'Encuéntrame a mí y mis otros proyectos',
+  'aboutTipTitle': 'Invítame un café',
+  'aboutTipSub': 'Totalmente opcional — ayuda a cubrir los costos',
+  'aboutMadeBy': 'HECHO CON ♥ POR TIAGO',
+  'couldNotOpenLink': 'No se pudo abrir {url}',
 };
 
 // ---------------------------------------------------------------------------
@@ -568,7 +605,7 @@ const Map<String, String> _pt = {
   'couldNotSubmit': 'Não foi possível enviar: {e}',
   'couldNotRemove': 'Não foi possível remover: {e}',
   'invitePredictionPrompt':
-      'Obtém um código de convite para adicionar o teu palpite →',
+      'Os palpites são só por convite — toca para resgatar um código de um amigo.',
   'predictionsHidden': '{n} PALPITES OCULTOS',
   'revealPredictions': 'Revelar palpites',
   'predictionsLocked': 'Palpites bloqueados',
@@ -588,7 +625,8 @@ const Map<String, String> _pt = {
   'commentDeletedByUser': 'Comentário eliminado pelo utilizador',
   'commentDeletedByAdmin': 'Comentário eliminado por um administrador',
   'editedTag': '· EDITADO',
-  'inviteCommentPrompt': 'Obtém um código de convite para entrar na conversa →',
+  'inviteCommentPrompt':
+      'O chat é só por convite — toca para resgatar um código de um amigo.',
   'deleteCommentTitle': 'Eliminar comentário?',
   'deleteCommentBodyUser':
       'Será substituído por “eliminado pelo utilizador”. As respostas permanecem.',
@@ -667,6 +705,23 @@ const Map<String, String> _pt = {
   'leaderboardEmpty':
       'Ainda não há palpites pontuados — volta quando alguns jogos terminarem.',
   'leaderboardNoneHere': 'Ainda não há ninguém aqui.',
+  'aboutUpper': 'SOBRE',
+  'aboutTitle': 'Sobre o Match Chat',
+  'aboutCardSub': 'Feito por diversão · grátis durante o Mundial',
+  'aboutHeadline': 'Feito por amor ao futebol',
+  'aboutBody':
+      'O Match Chat é um pequeno projeto pessoal — uma forma sem spoilers de '
+      'seguir o Mundial com amigos, revelar os resultados ao teu ritmo e '
+      'conversar sem nada ser estragado.',
+  'aboutFree':
+      'É totalmente grátis durante todo o Mundial. Sem anúncios nem truques — '
+      'aproveita o torneio. ⚽',
+  'aboutMoreTitle': 'Sabe mais sobre o Tiago',
+  'aboutMoreSub': 'Encontra-me e aos meus outros projetos',
+  'aboutTipTitle': 'Paga-me um café',
+  'aboutTipSub': 'Totalmente opcional — ajuda a cobrir os custos',
+  'aboutMadeBy': 'FEITO COM ♥ PELO TIAGO',
+  'couldNotOpenLink': 'Não foi possível abrir {url}',
 };
 
 // ---------------------------------------------------------------------------
@@ -711,7 +766,7 @@ const Map<String, String> _ptBR = {
   'yourPredictionIsIn': 'Seu palpite foi registrado',
   'enterBothScores': 'Informe os dois placares',
   'invitePredictionPrompt':
-      'Consiga um código de convite para adicionar seu palpite →',
+      'Os palpites são só por convite — toque para resgatar um código de um amigo.',
   'predictionsLockedLiveDesc':
       'A partida já começou — os palpites estão fechados.',
   'predictionsLockedOverDesc':
@@ -722,7 +777,7 @@ const Map<String, String> _ptBR = {
   'commentDeletedByUser': 'Comentário excluído pelo usuário',
   'commentDeletedByAdmin': 'Comentário excluído por um administrador',
   'inviteCommentPrompt':
-      'Consiga um código de convite para entrar na conversa →',
+      'O chat é só por convite — toque para resgatar um código de um amigo.',
   'deleteCommentTitle': 'Excluir comentário?',
   'deleteCommentBodyUser':
       'Será substituído por “excluído pelo usuário”. As respostas permanecem.',
@@ -764,4 +819,14 @@ const Map<String, String> _ptBR = {
   'scoreResult': 'Resultado correto',
   'leaderboardEmpty':
       'Ainda não há palpites pontuados — volte quando algumas partidas terminarem.',
+  'aboutBody':
+      'O Match Chat é um pequeno projeto pessoal — um jeito sem spoilers de '
+      'acompanhar a Copa com os amigos, revelar os resultados no seu ritmo e '
+      'conversar sem nada ser estragado.',
+  'aboutFree':
+      'É totalmente grátis durante toda a Copa. Sem anúncios nem pegadinhas — '
+      'aproveite o torneio. ⚽',
+  'aboutMoreTitle': 'Conheça mais sobre o Tiago',
+  'aboutMoreSub': 'Me encontre e veja meus outros projetos',
+  'aboutTipTitle': 'Me paga um café',
 };

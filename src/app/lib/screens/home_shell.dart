@@ -6,14 +6,16 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../widgets/avatar.dart';
 import '../widgets/ui.dart';
+import 'about_screen.dart';
 import 'chat_screen.dart';
 import 'leaderboard_screen.dart';
 import 'matches_screen.dart';
 import 'no_tournament_screen.dart';
 import 'profile_screen.dart';
 
-/// The signed-in scaffold: a header (logo + avatar) over the active tab, plus a
-/// bottom navigation bar (Matches / Chat / Profile).
+/// The signed-in scaffold: a header (logo + name/avatar) over the active tab,
+/// plus a bottom navigation bar (Matches / Buzz / Ranks). Profile is opened from
+/// the header rather than a bottom tab; the logo opens the About page.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -27,6 +29,18 @@ class _HomeShellState extends State<HomeShell> {
   void _select(AppTab tab) {
     setState(() => _tab = tab);
     context.read<AppState>().setLastTab(tab);
+  }
+
+  void _openProfile() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+  }
+
+  void _openAbout() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AboutScreen()));
   }
 
   @override
@@ -49,7 +63,6 @@ class _HomeShellState extends State<HomeShell> {
       AppTab.matches => const MatchesScreen(),
       AppTab.leaderboard => const LeaderboardScreen(),
       AppTab.chat => const ChatScreen(),
-      AppTab.profile => const ProfileScreen(),
     };
 
     return Scaffold(
@@ -58,10 +71,7 @@ class _HomeShellState extends State<HomeShell> {
         bottom: false,
         child: Column(
           children: [
-            _Header(
-              onLogo: () => _select(AppTab.matches),
-              onAvatar: () => _select(AppTab.profile),
-            ),
+            _Header(onLogo: _openAbout, onProfile: _openProfile),
             Expanded(child: body),
           ],
         ),
@@ -72,9 +82,9 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onLogo, required this.onAvatar});
+  const _Header({required this.onLogo, required this.onProfile});
   final VoidCallback onLogo;
-  final VoidCallback onAvatar;
+  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -90,12 +100,37 @@ class _Header extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(onTap: onLogo, child: const AppLogo()),
-          Avatar(
-            name: app.displayName,
-            favoriteTeam: app.appUser?.favoriteTeam,
-            size: 34,
-            gradient: true,
-            onTap: onAvatar,
+          // Name + avatar together open the profile.
+          InkWell(
+            onTap: onProfile,
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 130),
+                    child: Text(
+                      app.displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: c.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Avatar(
+                    name: app.displayName,
+                    favoriteTeam: app.appUser?.favoriteTeam,
+                    size: 34,
+                    gradient: true,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -116,8 +151,11 @@ class _BottomNav extends StatelessWidget {
         color: c.bg2,
         border: Border(top: BorderSide(color: c.line)),
       ),
+      // A minimum bottom inset keeps the labels clear of the device's home
+      // indicator / gesture bar on phones whose safe-area inset is small (#11).
       child: SafeArea(
         top: false,
+        minimum: const EdgeInsets.only(bottom: 8),
         child: Row(
           children: [
             _navItem(
@@ -128,21 +166,15 @@ class _BottomNav extends StatelessWidget {
             ),
             _navItem(
               c,
-              Icons.emoji_events_outlined,
-              context.l10n.t('navRanks').toUpperCase(),
-              AppTab.leaderboard,
-            ),
-            _navItem(
-              c,
               Icons.chat_bubble_outline,
               context.l10n.t('navChat').toUpperCase(),
               AppTab.chat,
             ),
             _navItem(
               c,
-              Icons.person_outline,
-              context.l10n.t('navProfile').toUpperCase(),
-              AppTab.profile,
+              Icons.emoji_events_outlined,
+              context.l10n.t('navRanks').toUpperCase(),
+              AppTab.leaderboard,
             ),
           ],
         ),

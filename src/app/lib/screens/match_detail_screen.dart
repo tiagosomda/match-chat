@@ -20,6 +20,7 @@ import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
 import 'admin_edit_match_sheet.dart';
 import 'country_matches_screen.dart';
+import 'profile_screen.dart';
 import 'user_profile_screen.dart';
 
 class MatchDetailScreen extends StatefulWidget {
@@ -1238,15 +1239,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
                   ),
                 ),
               ),
-              Text(
-                mine.scoreText,
-                style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: c.accent2,
-                ),
-              ),
+              _PredScore(match: widget.match, prediction: mine),
             ],
           ),
           if (editable) ...[
@@ -1306,6 +1299,17 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     );
   }
 
+  void _openUser(String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UserProfileScreen(
+          tournamentId: widget.tournamentId,
+          displayName: name,
+        ),
+      ),
+    );
+  }
+
   Widget _predList(AppColors c, List<Prediction> preds) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1323,37 +1327,65 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           )
         else
           for (final p in preds) ...[
-            Row(
-              children: [
-                Avatar(
-                  name: p.displayName,
-                  favoriteTeam: p.favoriteTeam,
-                  size: 30,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    p.displayName,
-                    style: TextStyle(
-                      color: c.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openUser(p.displayName),
+              child: Row(
+                children: [
+                  Avatar(
+                    name: p.displayName,
+                    favoriteTeam: p.favoriteTeam,
+                    size: 30,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      p.displayName,
+                      style: TextStyle(
+                        color: c.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  p.scoreText,
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: c.accent2,
-                  ),
-                ),
-              ],
+                  _PredScore(match: widget.match, prediction: p),
+                ],
+              ),
             ),
             const SizedBox(height: 11),
           ],
+      ],
+    );
+  }
+}
+
+/// A score prediction rendered with each team's flag so it's clear which number
+/// belongs to which side (#16): "🇧🇷 2 : 1 🇦🇷".
+class _PredScore extends StatelessWidget {
+  const _PredScore({required this.match, required this.prediction});
+
+  final MatchModel match;
+  final Prediction prediction;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(match.flagA, style: const TextStyle(fontSize: 14)),
+        const SizedBox(width: 5),
+        Text(
+          prediction.scoreText,
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: c.accent2,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(match.flagB, style: const TextStyle(fontSize: 14)),
       ],
     );
   }
@@ -1876,14 +1908,41 @@ Widget _revealableBox(
   );
 }
 
+/// An invite-only notice that doubles as a link to the profile, where a code
+/// can be redeemed (#1, #2).
 Widget _invitePrompt(BuildContext context, String text) {
   final c = context.colors;
-  return Text(
-    text,
-    style: TextStyle(
-      color: c.accent,
-      fontWeight: FontWeight.w600,
-      fontSize: 12.5,
+  return InkWell(
+    onTap: () => Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+    borderRadius: BorderRadius.circular(12),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.10), c.surface),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_open_outlined, size: 16, color: c.accent),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: c.accent,
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+                height: 1.35,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(Icons.arrow_forward, size: 15, color: c.accent),
+        ],
+      ),
     ),
   );
 }
