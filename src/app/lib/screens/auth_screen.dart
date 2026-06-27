@@ -169,6 +169,12 @@ class _AuthScreenState extends State<AuthScreen> {
         l.t('strengthFriendsTitle'),
         l.t('strengthFriendsDesc'),
       ),
+      _strength(
+        c,
+        Icons.lock_outline,
+        l.t('strengthInviteOnlyTitle'),
+        l.t('strengthInviteOnlyDesc'),
+      ),
       const SizedBox(height: 24),
       AccentButton(
         label: l.t('browseMatches'),
