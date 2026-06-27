@@ -228,7 +228,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     final c = context.colors;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(20),
@@ -236,14 +236,42 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       ),
       child: Column(
         children: [
-          if (match.description.trim().isNotEmpty) ...[
-            MonoLabel(
-              match.description.toUpperCase(),
-              fontSize: 10.5,
-              letterSpacing: 1.6,
-            ),
-            const SizedBox(height: 16),
-          ],
+          // Top row: description (left) · status pill + kickoff time (right)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: match.description.trim().isNotEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: MonoLabel(
+                          match.description.toUpperCase(),
+                          fontSize: 10,
+                          letterSpacing: 1.6,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _statusPill(context, c, match),
+                  const SizedBox(height: 4),
+                  Text(
+                    Formatting.kickoff(match.scheduledAt),
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 10.5,
+                      color: c.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Teams + score
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -259,60 +287,33 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               ),
             ],
           ),
+          // Venue below score, above goals, no divider
+          if (match.hasLocation) ...[
+            const SizedBox(height: 8),
+            _venueLine(c, match),
+          ],
           _goalsWidget(context, app, match, reveal),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.only(top: 13),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: c.line)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  Formatting.kickoff(match.scheduledAt),
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontSize: 11.5,
-                    color: c.muted,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                MonoLabel(
-                  context.l10n.tp('yourLocalTime', {
-                    'tz': Formatting.timezoneLabel(),
-                  }),
-                  fontSize: 9,
-                  letterSpacing: 1.4,
-                ),
-                if (match.hasLocation) _venueLine(c, match),
-                _statusPill(context, c, match),
-              ],
-            ),
-          ),
           _friendsCounter(context, app, match),
         ],
       ),
     );
   }
 
-  /// The match venue ("Stadium · City") shown in the hero info block (#2).
+  /// The match venue ("Stadium · City") shown between score and goals.
   Widget _venueLine(AppColors c, MatchModel match) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 9),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.place_outlined, size: 14, color: c.muted),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              match.locationText,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: c.muted, fontSize: 12),
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.place_outlined, size: 14, color: c.muted),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            match.locationText,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: c.muted, fontSize: 12),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -333,54 +334,48 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Widget _kickoffCountdown(AppColors c, MatchModel match) {
     final left = Formatting.untilKickoff(match.scheduledAt);
     if (left == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 9),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.accent.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
-            const SizedBox(width: 6),
-            Text(
-              context.l10n.tp('startsIn', {'time': left}),
-              style: TextStyle(
-                color: c.accent,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
+          const SizedBox(width: 6),
+          Text(
+            context.l10n.tp('startsIn', {'time': left}),
+            style: TextStyle(
+              color: c.accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   /// A "● LIVE" badge shown while a match is in play.
   Widget _livePill(BuildContext context, AppColors c) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 9),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
-        ),
-        child: Text(
-          context.l10n.t('statusLive'),
-          style: TextStyle(
-            fontFamily: AppTheme.mono,
-            color: c.accent2,
-            fontWeight: FontWeight.w700,
-            fontSize: 11.5,
-            letterSpacing: 1,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
+      ),
+      child: Text(
+        context.l10n.t('statusLive'),
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          color: c.accent2,
+          fontWeight: FontWeight.w700,
+          fontSize: 11.5,
+          letterSpacing: 1,
         ),
       ),
     );
@@ -388,24 +383,21 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
 
   /// A muted "FULL TIME" badge shown once a match has ended.
   Widget _finishedPill(BuildContext context, AppColors c) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 9),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.line),
-        ),
-        child: Text(
-          context.l10n.t('statusFullTime'),
-          style: TextStyle(
-            fontFamily: AppTheme.mono,
-            color: c.muted,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            letterSpacing: 1.2,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.line),
+      ),
+      child: Text(
+        context.l10n.t('statusFullTime'),
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          color: c.muted,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+          letterSpacing: 1.2,
         ),
       ),
     );
