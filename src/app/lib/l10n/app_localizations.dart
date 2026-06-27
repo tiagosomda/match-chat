@@ -128,6 +128,8 @@ const Map<String, String> _en = {
   'strengthInviteOnlyTitle': 'Invite-only community',
   'strengthInviteOnlyDesc':
       'Only members invited by existing participants can post. This keeps conversations genuine and spam-free.',
+  'strengthFootnote':
+      'And if you don\'t want chat or predictions, you can disable and hide them completely.',
   'browseMatches': 'Browse matches',
   'signInOrCreate': 'Sign in or create account',
   'browseReadOnly':
@@ -377,6 +379,8 @@ const Map<String, String> _es = {
   'strengthInviteOnlyTitle': 'Comunidad solo por invitación',
   'strengthInviteOnlyDesc':
       'Solo los miembros invitados por participantes existentes pueden publicar. Esto mantiene las conversaciones genuinas y sin spam.',
+  'strengthFootnote':
+      'Y si no quieres chat o pronósticos, puedes desactivarlos y ocultarlos completamente.',
   'browseMatches': 'Ver partidos',
   'signInOrCreate': 'Inicia sesión o crea una cuenta',
   'browseReadOnly':
@@ -606,6 +610,8 @@ const Map<String, String> _pt = {
   'strengthInviteOnlyTitle': 'Comunidade só por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem publicar. Isto mantém as conversas genuínas e sem spam.',
+  'strengthFootnote':
+      'E se não quiseres chat ou palpites, podes desativá-los e ocultá-los completamente.',
   'browseMatches': 'Ver jogos',
   'signInOrCreate': 'Inicia sessão ou cria conta',
   'browseReadOnly':
@@ -830,6 +836,8 @@ const Map<String, String> _ptBR = {
   'strengthInviteOnlyTitle': 'Comunidade apenas por convite',
   'strengthInviteOnlyDesc':
       'Apenas membros convidados por participantes existentes podem postar. Isso mantém as conversas genuínas e sem spam.',
+  'strengthFootnote':
+      'E se você não quiser chat ou palpites, pode desabilitá-los e ocultá-los completamente.',
   'browseMatches': 'Ver partidas',
   'signInOrCreate': 'Entre ou crie uma conta',
   'browseReadOnly':

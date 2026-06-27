@@ -175,6 +175,19 @@ class _AuthScreenState extends State<AuthScreen> {
         l.t('strengthInviteOnlyTitle'),
         l.t('strengthInviteOnlyDesc'),
       ),
+      const SizedBox(height: 16),
+      Center(
+        child: Text(
+          l.t('strengthFootnote'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: c.muted,
+            fontSize: 11.5,
+            height: 1.4,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ),
       const SizedBox(height: 24),
       AccentButton(
         label: l.t('browseMatches'),
