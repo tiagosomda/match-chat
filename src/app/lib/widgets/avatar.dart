@@ -32,7 +32,7 @@ class Avatar extends StatelessWidget {
     final content = hasFlag
         ? Text(
             Teams.flagFor(favoriteTeam),
-            style: TextStyle(fontSize: size * 0.9),
+            style: TextStyle(fontSize: size * 0.9, height: 1.2),
           )
         : Text(
             Formatting.initials(name),

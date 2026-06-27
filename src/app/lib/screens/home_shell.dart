@@ -112,17 +112,29 @@ class _Header extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(onTap: onLogo, child: const AppLogo()),
-          // Name + avatar together open the profile.
+          // Avatar + name together open the profile.
           InkWell(
             onTap: onProfile,
             borderRadius: BorderRadius.circular(999),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 5, 12, 5),
+              decoration: BoxDecoration(
+                border: Border.all(color: c.line),
+                borderRadius: BorderRadius.circular(999),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Avatar(
+                    name: app.displayName,
+                    favoriteTeam: app.appUser?.favoriteTeam,
+                    size: 28,
+                    gradient: true,
+                  ),
+                  const SizedBox(width: 8),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
+                    constraints: const BoxConstraints(maxWidth: 120),
                     child: Text(
                       app.displayName,
                       overflow: TextOverflow.ellipsis,
@@ -132,13 +144,6 @@ class _Header extends StatelessWidget {
                         fontSize: 14,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 9),
-                  Avatar(
-                    name: app.displayName,
-                    favoriteTeam: app.appUser?.favoriteTeam,
-                    size: 34,
-                    gradient: true,
                   ),
                 ],
               ),
