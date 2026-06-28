@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/leaderboard_entry.dart';
 import '../models/match.dart';
 import '../models/prediction.dart';
@@ -34,22 +36,78 @@ class LeaderboardService {
         return cached;
       }
       try {
-        final doc = await Refs.standings(tid).get();
-        final raw = doc.data()?['entries'] as List?;
-        if (raw != null && raw.isNotEmpty) {
-          final entries = raw
-              .map(
-                (e) =>
-                    LeaderboardEntry.fromMap((e as Map).cast<String, dynamic>()),
-              )
-              .toList();
-          return _remember(tid, entries);
-        }
+        final entries = _entriesFromDoc(await Refs.standings(tid).get());
+        if (entries != null) return _remember(tid, entries);
       } catch (_) {
         // Fall through to a client-side compute.
       }
     }
     return _remember(tid, await compute(tid));
+  }
+
+  /// Stale-while-revalidate stream for the Ranks tab (performance.md Phase 2).
+  ///
+  /// Emits whatever is available *immediately* — the in-memory cache, then the
+  /// Firestore on-disk cache — so the list paints without a network wait, then
+  /// emits the authoritative server standing (or a client-side compute when no
+  /// `standings/current` doc exists) once it arrives. Repeat visits within a
+  /// session are instant; cross-session visits paint from the disk cache first.
+  Stream<List<LeaderboardEntry>> watch(String tid) async* {
+    // 1. In-memory cache — instant tab flips within the session.
+    final at = _memAt[tid];
+    final cached = _mem[tid];
+    if (at != null &&
+        cached != null &&
+        DateTime.now().difference(at) < _memTtl) {
+      yield cached;
+      return;
+    }
+
+    var emitted = false;
+
+    // 2. Firestore's on-disk cache — instant on repeat visits across sessions.
+    try {
+      final entries = _entriesFromDoc(
+        await Refs.standings(tid).get(const GetOptions(source: Source.cache)),
+      );
+      if (entries != null) {
+        emitted = true;
+        yield _remember(tid, entries);
+      }
+    } catch (_) {
+      // No cached doc yet — fall through to the network.
+    }
+
+    // 3. Authoritative server read.
+    try {
+      final entries = _entriesFromDoc(
+        await Refs.standings(tid).get(const GetOptions(source: Source.server)),
+      );
+      if (entries != null) {
+        yield _remember(tid, entries);
+        return;
+      }
+    } catch (_) {
+      // Offline or the doc is missing — fall through to compute.
+    }
+
+    // 4. Last resort: compute client-side. Skip if we already painted a cached
+    //    standing (a stale-but-valid cache beats a slow recompute).
+    if (!emitted) {
+      yield _remember(tid, await compute(tid));
+    }
+  }
+
+  /// Parses the `entries` array of a `standings/current` doc, or null when the
+  /// doc is missing or empty.
+  List<LeaderboardEntry>? _entriesFromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final raw = doc.data()?['entries'] as List?;
+    if (raw == null || raw.isEmpty) return null;
+    return raw
+        .map((e) => LeaderboardEntry.fromMap((e as Map).cast<String, dynamic>()))
+        .toList();
   }
 
   List<LeaderboardEntry> _remember(String tid, List<LeaderboardEntry> entries) {

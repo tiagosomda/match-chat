@@ -8,7 +8,14 @@ The app sometimes feels slow on first load, especially the leaderboard. Cold sta
 
 These remaining phases improve the user-visible loading experience and fix genuine performance bottlenecks.
 
-## Phase 2: Leaderboard stale-while-revalidate
+## Phase 2: Leaderboard stale-while-revalidate (complete)
+
+Implemented: `LeaderboardService.watch()` is a stale-while-revalidate stream
+that emits the in-memory cache, then the Firestore on-disk cache, then the
+authoritative server `standings/current` doc (falling back to a client-side
+`compute()` only when no doc exists). `LeaderboardScreen` consumes it via a
+`StreamSubscription` instead of a `FutureBuilder`, so the list paints from cache
+with no blank network wait. Pull-to-refresh still forces a recompute.
 
 **Symptom:** The leaderboard feels slow *every* time you open it, even on repeat visits within the same session, because it shows a blank `FutureBuilder` spinner until the first network response lands.
 
@@ -29,6 +36,11 @@ These remaining phases improve the user-visible loading experience and fix genui
 **Impact:** Opens instantly on repeat visits + within-session revisits; no blank spinner.
 
 ## Phase 3: Render shell before data
+
+> Applied to the **Leaderboard/Ranks** screen alongside Phase 2: its header,
+> tabs, search and legend now render immediately while only the list waits,
+> showing a pulsing skeleton (`_SkeletonList`) instead of a full-screen spinner.
+> Matches and My Predictions still wait on their top-level builders — pending.
 
 **Symptom:** Every screen (Matches, Leaderboard, My Predictions) shows a full-screen spinner until the first network/cache response lands.
 

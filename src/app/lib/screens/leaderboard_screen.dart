@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,26 +30,54 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _query = '';
   _LbTab _tab = _LbTab.global;
 
-  Future<List<LeaderboardEntry>>? _future;
+  // Stale-while-revalidate state (performance.md Phase 2): the standing is
+  // pushed in via [LeaderboardService.watch] — cache first, then server — so
+  // the list paints without a blank network wait. null = not loaded yet.
+  List<LeaderboardEntry>? _entries;
+  Object? _error;
+  StreamSubscription<List<LeaderboardEntry>>? _sub;
   String? _tid;
 
   @override
   void dispose() {
     _search.dispose();
+    _sub?.cancel();
     super.dispose();
   }
 
   void _ensure(AppState app) {
-    if (_tid != app.tournamentId) {
-      _tid = app.tournamentId;
-      _future = app.leaderboard.load(app.tournamentId!);
-    }
+    if (_tid == app.tournamentId) return;
+    _tid = app.tournamentId;
+    _entries = null;
+    _error = null;
+    _sub?.cancel();
+    _sub = app.leaderboard.watch(_tid!).listen(
+      (data) {
+        if (mounted) {
+          setState(() {
+            _entries = data;
+            _error = null;
+          });
+        }
+      },
+      onError: (Object e) {
+        if (mounted) setState(() => _error = e);
+      },
+    );
   }
 
   Future<void> _refresh(AppState app) async {
-    setState(
-      () => _future = app.leaderboard.load(app.tournamentId!, force: true),
-    );
+    try {
+      final data = await app.leaderboard.load(app.tournamentId!, force: true);
+      if (mounted) {
+        setState(() {
+          _entries = data;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
   }
 
   @override
@@ -56,53 +86,45 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final c = context.colors;
     _ensure(app);
 
-    return FutureBuilder<List<LeaderboardEntry>>(
-      future: _future,
-      builder: (context, snap) {
-        final loading = snap.connectionState == ConnectionState.waiting;
-        final all = snap.data ?? const <LeaderboardEntry>[];
-        final uid = app.firebaseUser!.uid;
-        final friendIds = app.appUser?.friends ?? const <String>[];
+    final all = _entries ?? const <LeaderboardEntry>[];
+    final loading = _entries == null && _error == null;
+    final uid = app.firebaseUser!.uid;
+    final friendIds = app.appUser?.friends ?? const <String>[];
 
-        final view = _viewFor(all, uid, friendIds);
-        final filtered = _applySearch(view);
+    final view = _viewFor(all, uid, friendIds);
+    final filtered = _applySearch(view);
 
-        return RefreshIndicator(
-          color: c.accent,
-          onRefresh: () => _refresh(app),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-            children: [
-              _header(c, all),
-              const SizedBox(height: 13),
-              _tabs(c),
-              const SizedBox(height: 13),
-              _searchField(c),
-              const SizedBox(height: 13),
-              _legend(c),
-              const SizedBox(height: 14),
-              if (loading)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 50),
-                  child: Center(
-                    child: CircularProgressIndicator(color: c.accent),
-                  ),
-                )
-              else if (snap.hasError)
-                _emptyState(c, '${snap.error}')
-              else if (all.isEmpty)
-                _emptyState(c, context.l10n.t('leaderboardEmpty'))
-              else if (filtered.isEmpty)
-                _emptyState(c, context.l10n.t('leaderboardNoneHere'))
-              else
-                for (final e in filtered) ...[
-                  _row(c, e, isMe: e.userId == uid),
-                  const SizedBox(height: 9),
-                ],
+    // The header / tabs / search / legend paint immediately (Phase 3); only the
+    // list waits, showing a lightweight skeleton instead of a blank spinner.
+    return RefreshIndicator(
+      color: c.accent,
+      onRefresh: () => _refresh(app),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+        children: [
+          _header(c, all),
+          const SizedBox(height: 13),
+          _tabs(c),
+          const SizedBox(height: 13),
+          _searchField(c),
+          const SizedBox(height: 13),
+          _legend(c),
+          const SizedBox(height: 14),
+          if (loading)
+            const _SkeletonList()
+          else if (_error != null)
+            _emptyState(c, '$_error')
+          else if (all.isEmpty)
+            _emptyState(c, context.l10n.t('leaderboardEmpty'))
+          else if (filtered.isEmpty)
+            _emptyState(c, context.l10n.t('leaderboardNoneHere'))
+          else
+            for (final e in filtered) ...[
+              _row(c, e, isMe: e.userId == uid),
+              const SizedBox(height: 9),
             ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -365,6 +387,92 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A gently pulsing placeholder that mimics a few leaderboard rows while the
+/// standing loads (performance.md Phase 3) — so the screen reads as "loading
+/// the list" rather than a blank spinner over an empty page.
+class _SkeletonList extends StatefulWidget {
+  const _SkeletonList();
+
+  @override
+  State<_SkeletonList> createState() => _SkeletonListState();
+}
+
+class _SkeletonListState extends State<_SkeletonList>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.45, end: 0.9).animate(_ctrl),
+      child: Column(
+        children: [
+          for (var i = 0; i < 7; i++) ...[
+            _skeletonRow(c, i),
+            const SizedBox(height: 9),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _skeletonRow(AppColors c, int i) {
+    Widget bar(double w, double h) => Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.line),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: 30, child: Center(child: bar(14, 14))),
+          const SizedBox(width: 8),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: c.surface2,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                bar(120 - (i % 3) * 18, 12),
+                const SizedBox(height: 7),
+                bar(70, 9),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          bar(24, 18),
+        ],
       ),
     );
   }
