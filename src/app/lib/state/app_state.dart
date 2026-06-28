@@ -41,6 +41,10 @@ class AppState extends ChangeNotifier {
   final CommentService comments = CommentService();
   final PredictionService predictions = PredictionService();
   final ChatService chat = ChatService();
+
+  /// View state for the Buzz feed (scroll depth + offset) that outlives the
+  /// per-visit `ChatScreen` State. See [BuzzFeedState].
+  final BuzzFeedState buzz = BuzzFeedState();
   final InviteService invites = InviteService();
   final LeaderboardService leaderboard = LeaderboardService();
   final RevealService reveals = RevealService();
