@@ -32,6 +32,36 @@ class AppLogo extends StatelessWidget {
   }
 }
 
+/// A small "BETA" pill — a persistent, low-key reminder that Match Chat is
+/// still a work in progress. Sits next to the wordmark in the header and on the
+/// landing page. "BETA" is left untranslated on purpose (it reads the same
+/// across our supported locales).
+class BetaBadge extends StatelessWidget {
+  const BetaBadge({super.key, this.fontSize = 8.5});
+
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: c.accent2.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.5)),
+      ),
+      child: MonoLabel(
+        'BETA',
+        color: c.accent2,
+        fontSize: fontSize,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
 /// A monospaced, letter-spaced label (used for tiny section captions).
 class MonoLabel extends StatelessWidget {
   const MonoLabel(

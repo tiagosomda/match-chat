@@ -153,7 +153,15 @@ class _AuthScreenState extends State<AuthScreen> {
   List<Widget> _landingChildren(AppColors c) {
     final l = context.l10n;
     return [
-      MonoLabel(l.t('taglineSpoilerFree'), letterSpacing: 3),
+      Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 10,
+        runSpacing: 8,
+        children: [
+          MonoLabel(l.t('taglineSpoilerFree'), letterSpacing: 3),
+          const BetaBadge(),
+        ],
+      ),
       const SizedBox(height: 18),
       _heading(c),
       const SizedBox(height: 20),

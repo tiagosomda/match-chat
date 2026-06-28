@@ -111,7 +111,18 @@ class _Header extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(onTap: onLogo, child: const AppLogo()),
+          GestureDetector(
+            onTap: onLogo,
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                AppLogo(),
+                SizedBox(width: 7),
+                BetaBadge(),
+              ],
+            ),
+          ),
           // Avatar + name together open the profile.
           InkWell(
             onTap: onProfile,

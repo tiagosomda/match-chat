@@ -14,6 +14,7 @@ class AboutScreen extends StatelessWidget {
 
   static const String _linksUrl = 'https://links.tiago.dev';
   static const String _tipUrl = 'https://ko-fi.com/tiagodev';
+  static const String _repoUrl = 'https://github.com/tiagosomda/match-chat';
 
   Future<void> _open(BuildContext context, String url) async {
     final ok = await launchUrl(
@@ -68,6 +69,16 @@ class AboutScreen extends StatelessWidget {
                   _intro(context, c),
                   const SizedBox(height: 14),
                   _freeCard(context, c),
+                  const SizedBox(height: 14),
+                  _linkCard(
+                    context,
+                    c,
+                    icon: Icons.code,
+                    color: c.accent2,
+                    title: context.l10n.t('aboutRepoTitle'),
+                    subtitle: context.l10n.t('aboutRepoSub'),
+                    url: _repoUrl,
+                  ),
                   const SizedBox(height: 14),
                   _linkCard(
                     context,
