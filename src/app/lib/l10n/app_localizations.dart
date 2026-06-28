@@ -243,7 +243,7 @@ const Map<String, String> _en = {
   'couldNotSave': 'Could not save: {e}',
   'couldNotDelete': 'Could not delete: {e}',
   // chat
-  'globalChatLive': 'BUZZ · LIVE',
+  'globalChatLive': 'BUZZ · MATCH CHAT FEED',
   'noMessagesYet': 'Nothing here yet — open a match to start the chat.',
   'revealMatchToRead': 'Reveal match to read',
   // profile
@@ -337,6 +337,8 @@ const Map<String, String> _en = {
   'aboutFree':
       "It's completely free for the entire World Cup. No ads, no catch — just "
       'enjoy the tournament. ⚽',
+  'aboutRepoTitle': 'Open source on GitHub',
+  'aboutRepoSub': 'A work in progress — contributions are welcome',
   'aboutMoreTitle': 'Know more about Tiago',
   'aboutMoreSub': 'Find me and my other projects',
   'aboutTipTitle': 'Buy me a coffee',
@@ -352,7 +354,7 @@ const Map<String, String> _en = {
   'viewPublicProfile': 'Public profile',
   'noFriendsYet': 'No friends yet.',
   // buzz screen
-  'buzzInfoBanner': 'Pure chaos of match chats — live feed.\nTap a game badge to focus on one conversation.',
+  'buzzInfoBanner': 'pure chaos of match chats.\ntap a game badge to focus on one conversation.',
 };
 
 // ---------------------------------------------------------------------------
@@ -482,9 +484,10 @@ const Map<String, String> _es = {
   'couldNotPost': 'No se pudo publicar: {e}',
   'couldNotSave': 'No se pudo guardar: {e}',
   'couldNotDelete': 'No se pudo eliminar: {e}',
-  'globalChatLive': 'BUZZ · EN VIVO',
+  'globalChatLive': 'BUZZ · FEED DE MATCH CHAT',
   'noMessagesYet': 'Nada por aquí todavía — abre un partido para empezar el chat.',
   'revealMatchToRead': 'Muestra el partido para leer',
+  'buzzInfoBanner': 'puro caos de chats de partidos.\ntoca la etiqueta de un juego para centrarte en una conversación.',
   'displayNameLabel': 'NOMBRE',
   'yourName': 'Tu nombre',
   'displayNameHint': 'Cómo apareces en el chat, comentarios y pronósticos.',
@@ -574,6 +577,8 @@ const Map<String, String> _es = {
   'aboutFree':
       'Es totalmente gratis durante todo el Mundial. Sin anuncios ni trucos — '
       'solo disfruta del torneo. ⚽',
+  'aboutRepoTitle': 'Código abierto en GitHub',
+  'aboutRepoSub': 'Un trabajo en progreso — se aceptan contribuciones',
   'aboutMoreTitle': 'Conoce más sobre Tiago',
   'aboutMoreSub': 'Encuéntrame a mí y mis otros proyectos',
   'aboutTipTitle': 'Invítame un café',
@@ -713,9 +718,10 @@ const Map<String, String> _pt = {
   'couldNotPost': 'Não foi possível publicar: {e}',
   'couldNotSave': 'Não foi possível guardar: {e}',
   'couldNotDelete': 'Não foi possível eliminar: {e}',
-  'globalChatLive': 'BUZZ · AO VIVO',
+  'globalChatLive': 'BUZZ · FEED DO MATCH CHAT',
   'noMessagesYet': 'Nada por aqui ainda — abre um jogo para começar o chat.',
   'revealMatchToRead': 'Revela o jogo para ler',
+  'buzzInfoBanner': 'puro caos dos chats de jogos.\ntoca na etiqueta de um jogo para focar numa conversa.',
   'displayNameLabel': 'NOME',
   'yourName': 'O teu nome',
   'displayNameHint': 'Como apareces no chat, comentários e palpites.',
@@ -805,6 +811,8 @@ const Map<String, String> _pt = {
   'aboutFree':
       'É totalmente grátis durante todo o Mundial. Sem anúncios nem truques — '
       'aproveita o torneio. ⚽',
+  'aboutRepoTitle': 'Código aberto no GitHub',
+  'aboutRepoSub': 'Um trabalho em progresso — as contribuições são bem-vindas',
   'aboutMoreTitle': 'Sabe mais sobre o Tiago',
   'aboutMoreSub': 'Encontra-me e aos meus outros projetos',
   'aboutTipTitle': 'Paga-me um café',
@@ -934,6 +942,7 @@ const Map<String, String> _ptBR = {
   'aboutFree':
       'É totalmente grátis durante toda a Copa. Sem anúncios nem pegadinhas — '
       'aproveite o torneio. ⚽',
+  'aboutRepoSub': 'Um trabalho em andamento — contribuições são bem-vindas',
   'aboutMoreTitle': 'Conheça mais sobre o Tiago',
   'aboutMoreSub': 'Me encontre e veja meus outros projetos',
   'aboutTipTitle': 'Me paga um café',

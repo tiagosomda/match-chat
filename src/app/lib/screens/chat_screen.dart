@@ -78,6 +78,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
                 final messages = snap.data ?? const <ChatMessage>[];
+                final friendIds = (app.appUser?.friends ?? const <String>[])
+                    .toSet();
                 return Column(
                   children: [
                     Padding(
@@ -123,6 +125,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               return _ChatRow(
                                 message: m,
                                 taggedMatch: tagged,
+                                isFriend: friendIds.contains(m.userId),
                                 revealed: _isRevealed(m, reveals),
                                 onReveal: () => _revealMatch(app, m.matchId),
                                 onUser: () =>
@@ -234,6 +237,7 @@ class _ChatRow extends StatelessWidget {
   const _ChatRow({
     required this.message,
     required this.taggedMatch,
+    required this.isFriend,
     required this.revealed,
     required this.onReveal,
     required this.onUser,
@@ -242,6 +246,10 @@ class _ChatRow extends StatelessWidget {
 
   final ChatMessage message;
   final MatchModel? taggedMatch;
+
+  /// Whether the message's author is in the viewer's friends list — their name
+  /// is tinted with the accent and badged so friends stand out in the feed.
+  final bool isFriend;
   final bool revealed;
   final VoidCallback onReveal;
   final VoidCallback onUser;
@@ -271,14 +279,25 @@ class _ChatRow extends StatelessWidget {
                   Flexible(
                     child: GestureDetector(
                       onTap: onUser,
-                      child: Text(
-                        message.displayName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: c.text,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.5,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              message.displayName,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isFriend ? c.accent : c.text,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ),
+                          if (isFriend) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.how_to_reg, size: 13, color: c.accent),
+                          ],
+                        ],
                       ),
                     ),
                   ),
