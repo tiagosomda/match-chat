@@ -90,6 +90,8 @@ class MatchModel {
     this.predictionCount = 0,
     this.archived = false,
     this.goals = const <GoalEvent>[],
+    this.roundIndexRaw,
+    this.bracketSlot,
   });
 
   final String id;
@@ -113,9 +115,42 @@ class MatchModel {
   /// Goal events (scorer + minute), set by the poller. Ordered by time.
   final List<GoalEvent> goals;
 
+  /// Explicit knockout round index from the doc (`roundIndex`), ascending toward
+  /// the final, or null when unset. When null, [roundIndex] derives it from
+  /// [description]. See the bracket screen (docs/bracket-screen.md).
+  final int? roundIndexRaw;
+
+  /// Explicit 0-based position of this match within its knockout round
+  /// (`bracketSlot`), top → bottom, or null. Used to order and connect bracket
+  /// nodes; the layout falls back to kickoff order when unset.
+  final int? bracketSlot;
+
   /// A match is auto-hidden once its scheduled time is at least 2 days in the
   /// past, even if it was never explicitly archived.
   static const Duration autoHideAfter = Duration(days: 2);
+
+  static final RegExp _thirdPlaceRe = RegExp(
+    r'(3rd|third).*place|place.*(3rd|third)',
+    caseSensitive: false,
+  );
+
+  /// Maps a free-text stage [description] to a canonical knockout round index
+  /// (ascending toward the final), or null for group / non-knockout / the
+  /// third-place playoff (which the bracket shows as a detached node). The
+  /// "quarter"/"semi"/third-place checks run before the bare "final" check
+  /// because "Quarter-Final" and "3rd Place Final" both contain "final".
+  static int? deriveRoundIndex(String description) {
+    final d = description.toLowerCase();
+    if (d.contains('group')) return null;
+    if (_thirdPlaceRe.hasMatch(d)) return null;
+    if (d.contains('round of 64') || d.contains('1/32')) return 0;
+    if (d.contains('round of 32') || d.contains('1/16')) return 1;
+    if (d.contains('round of 16') || d.contains('1/8')) return 2;
+    if (d.contains('quarter')) return 3;
+    if (d.contains('semi')) return 4;
+    if (d.contains('final')) return 5;
+    return null;
+  }
 
   String get flagA => Teams.flagFor(teamA);
   String get flagB => Teams.flagFor(teamB);
@@ -139,6 +174,18 @@ class MatchModel {
   }
 
   bool get isLocked => displayStatus != MatchStatus.upcoming;
+
+  /// Canonical knockout round index (ascending toward the final). Uses the
+  /// explicit [roundIndexRaw] when present, otherwise derives it from the
+  /// stage [description]. Null for group and other non-knockout matches.
+  int? get roundIndex => roundIndexRaw ?? deriveRoundIndex(description);
+
+  /// True for the third-place playoff, which sits outside the main rounds.
+  bool get isThirdPlace => _thirdPlaceRe.hasMatch(description);
+
+  /// True when this match belongs in the knockout bracket (a real round or the
+  /// third-place playoff).
+  bool get isKnockout => roundIndex != null || isThirdPlace;
 
   /// How long before kickoff a match starts reading as "live soon".
   static const Duration liveSoonLead = Duration(minutes: 15);
@@ -233,6 +280,8 @@ class MatchModel {
               )
               .toList() ??
           const <GoalEvent>[],
+      roundIndexRaw: (d['roundIndex'] as num?)?.toInt(),
+      bracketSlot: (d['bracketSlot'] as num?)?.toInt(),
     );
   }
 
@@ -249,5 +298,7 @@ class MatchModel {
     'venue': venue,
     'city': city,
     'archived': archived,
+    'roundIndex': roundIndexRaw,
+    'bracketSlot': bracketSlot,
   };
 }

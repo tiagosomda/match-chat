@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
 import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
+import 'bracket_view.dart';
 import 'match_detail_screen.dart';
 
 class MatchesScreen extends StatefulWidget {
@@ -25,10 +26,16 @@ class MatchesScreen extends StatefulWidget {
 
 enum _Filter { all, upcoming, live, finished }
 
+enum _View { list, bracket }
+
 class _MatchesScreenState extends State<MatchesScreen> {
   final _search = TextEditingController();
   String _query = '';
   _Filter _filter = _Filter.all;
+
+  // List vs. bracket view. The toggle only appears when the tournament has
+  // knockout matches; otherwise the screen stays on the list.
+  _View _view = _View.list;
 
   // Archived matches are hidden by default; a toggle at the end of the list
   // reveals them rather than a dedicated filter chip (#12).
@@ -37,6 +44,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   // The filter chip and search query are persisted across sessions (#1).
   static const _filterKey = 'matchesFilter';
   static const _queryKey = 'matchesSearch';
+  static const _viewKey = 'matchesView';
 
   // Streams are memoized so that rebuilds triggered by typing in the search
   // field don't recreate the underlying Firestore subscription (which would
@@ -64,11 +72,16 @@ class _MatchesScreenState extends State<MatchesScreen> {
     final prefs = await SharedPreferences.getInstance();
     final storedFilter = prefs.getString(_filterKey);
     final storedQuery = prefs.getString(_queryKey) ?? '';
+    final storedView = prefs.getString(_viewKey);
     if (!mounted) return;
     setState(() {
       _filter = _Filter.values.firstWhere(
         (f) => f.name == storedFilter,
         orElse: () => _Filter.all,
+      );
+      _view = _View.values.firstWhere(
+        (v) => v.name == storedView,
+        orElse: () => _View.list,
       );
       _query = storedQuery;
       _search.text = storedQuery;
@@ -79,6 +92,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_filterKey, _filter.name);
     await prefs.setString(_queryKey, _query);
+    await prefs.setString(_viewKey, _view.name);
   }
 
   void _ensureStreams(AppState app) {
@@ -232,67 +246,158 @@ class _MatchesScreenState extends State<MatchesScreen> {
     // finished") so the Live chip badge is a truthful at-a-glance signal.
     final liveCount =
         all.where((m) => m.displayPhase == MatchPhase.live).length;
+    // The bracket toggle only appears once the tournament has knockout matches.
+    final hasKnockout = all.any((m) => m.isKnockout);
+    final showBracket = hasKnockout && _view == _View.bracket;
+    final titleStyle = TextStyle(
+      fontFamily: AppTheme.grotesk,
+      fontWeight: FontWeight.w700,
+      fontSize: 24,
+      letterSpacing: -0.5,
+      color: c.text,
+    );
+
+    if (showBracket) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    app.tournament!.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: titleStyle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _viewToggle(c),
+              ],
+            ),
+          ),
+          Expanded(
+            child: BracketView(
+              matches: all,
+              reveals: reveals,
+              onOpenMatch: (mid) => _open(tid, mid),
+              onToggleScore: (mid, current) => _toggleScore(app, mid, current),
+            ),
+          ),
+        ],
+      );
+    }
+
     return ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          app.tournament!.name,
-                          style: TextStyle(
-                            fontFamily: AppTheme.grotesk,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 24,
-                            letterSpacing: -0.5,
-                            color: c.text,
-                          ),
-                        ),
-                        MonoLabel(
-                          context.l10n.tp('shownCount', {
-                            'n': '${visible.length}',
-                          }),
-                          fontSize: 11,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 13),
-                    _searchField(c),
-                    const SizedBox(height: 13),
-                    _chips(c, liveCount),
-                    const SizedBox(height: 13),
-                    if (visible.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Text(
-                            context.l10n.t('noMatchesSearch'),
-                            style: TextStyle(color: c.muted),
-                          ),
-                        ),
-                      )
-                    else
-                      for (final m in visible) ...[
-                        _MatchCard(
-                          match: m,
-                          revealed: reveals[m.id]?.scoreRevealed ?? false,
-                          friendIds: friendIds,
-                          revealedFriendIds:
-                              revealedByMatch[m.id] ?? const <String>{},
-                          myPrediction: myPreds[m.id],
-                          onOpen: () => _open(tid, m.id),
-                          onToggleScore: () => _toggleScore(
-                            app,
-                            m.id,
-                            reveals[m.id]?.scoreRevealed ?? false,
-                          ),
-                        ),
-                        const SizedBox(height: 13),
-                      ],
-                    if (_hasArchived(all)) _archivedToggle(c),
-                  ],
-                );
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(app.tournament!.name, style: titleStyle),
+            MonoLabel(
+              context.l10n.tp('shownCount', {'n': '${visible.length}'}),
+              fontSize: 11,
+            ),
+          ],
+        ),
+        if (hasKnockout) ...[
+          const SizedBox(height: 13),
+          Align(alignment: Alignment.centerLeft, child: _viewToggle(c)),
+        ],
+        const SizedBox(height: 13),
+        _searchField(c),
+        const SizedBox(height: 13),
+        _chips(c, liveCount),
+        const SizedBox(height: 13),
+        if (visible.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Text(
+                context.l10n.t('noMatchesSearch'),
+                style: TextStyle(color: c.muted),
+              ),
+            ),
+          )
+        else
+          for (final m in visible) ...[
+            _MatchCard(
+              match: m,
+              revealed: reveals[m.id]?.scoreRevealed ?? false,
+              friendIds: friendIds,
+              revealedFriendIds: revealedByMatch[m.id] ?? const <String>{},
+              myPrediction: myPreds[m.id],
+              onOpen: () => _open(tid, m.id),
+              onToggleScore: () => _toggleScore(
+                app,
+                m.id,
+                reveals[m.id]?.scoreRevealed ?? false,
+              ),
+            ),
+            const SizedBox(height: 13),
+          ],
+        if (_hasArchived(all)) _archivedToggle(c),
+      ],
+    );
+  }
+
+  Widget _viewToggle(AppColors c) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _viewSeg(c, _View.list, context.l10n.t('viewList'),
+              Icons.view_agenda_outlined),
+          _viewSeg(c, _View.bracket, context.l10n.t('viewBracket'),
+              Icons.account_tree_outlined),
+        ],
+      ),
+    );
+  }
+
+  Widget _viewSeg(AppColors c, _View v, String label, IconData icon) {
+    final active = _view == v;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _view = v);
+        _persist();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? c.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: active ? Colors.white : c.muted),
+            const SizedBox(width: 6),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: active ? Colors.white : c.muted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _open(String tid, String mid) {
