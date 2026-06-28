@@ -369,12 +369,16 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatMessage m,
   ) {
     final tagged = m.matchId == null ? null : matchById[m.matchId];
+    final isReplyToMe =
+        m.replyToUserId != null &&
+        m.replyToUserId == app.firebaseUser!.uid;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: _ChatRow(
         message: m,
         taggedMatch: tagged,
         isFriend: friendIds.contains(m.userId),
+        isReplyToMe: isReplyToMe,
         revealed: _isRevealed(m, reveals),
         onReveal: () => _revealMatch(app, m.matchId),
         onUser: () => _openUser(context, _tid, m.displayName),
@@ -551,6 +555,7 @@ class _ChatRow extends StatelessWidget {
     required this.message,
     required this.taggedMatch,
     required this.isFriend,
+    required this.isReplyToMe,
     required this.revealed,
     required this.onReveal,
     required this.onUser,
@@ -563,6 +568,11 @@ class _ChatRow extends StatelessWidget {
   /// Whether the message's author is in the viewer's friends list — their name
   /// is tinted with the accent and badged so friends stand out in the feed.
   final bool isFriend;
+
+  /// Whether this message is a direct reply to one of the viewer's own
+  /// comments — the row is tinted with an accent rail and a "replied to you"
+  /// badge so responses are easy to spot in the feed.
+  final bool isReplyToMe;
   final bool revealed;
   final VoidCallback onReveal;
   final VoidCallback onUser;
@@ -571,6 +581,33 @@ class _ChatRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final row = _row(context, c);
+    if (!isReplyToMe) return row;
+    // Replies to the viewer get an accent rail + tinted card so they stand out.
+    return Container(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.06), c.surface),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 3, color: c.accent),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+                child: row,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, AppColors c) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -625,6 +662,10 @@ class _ChatRow extends StatelessWidget {
                   ),
                 ],
               ),
+              if (isReplyToMe) ...[
+                const SizedBox(height: 5),
+                _replyBadge(context, c),
+              ],
               if (taggedMatch != null) ...[
                 const SizedBox(height: 5),
                 _tagChip(c, taggedMatch!),
@@ -635,6 +676,30 @@ class _ChatRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _replyBadge(BuildContext context, AppColors c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: c.accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.reply, size: 11, color: c.accent),
+          const SizedBox(width: 4),
+          MonoLabel(
+            context.l10n.t('buzzReplyToYou'),
+            color: c.accent,
+            fontSize: 8.5,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w700,
+          ),
+        ],
+      ),
     );
   }
 

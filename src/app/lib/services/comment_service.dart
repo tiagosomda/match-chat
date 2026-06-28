@@ -27,10 +27,13 @@ class CommentService {
     required String body,
     String? favoriteTeam,
     String? parentId,
+    String? parentUserId,
+    String? parentName,
   }) async {
     final batch = Refs.db.batch();
     final commentRef = Refs.comments(tid, mid).doc();
     final chatRef = Refs.chat(tid).doc();
+    final isReply = parentId != null;
     batch.set(
       commentRef,
       CommentModel(
@@ -52,6 +55,10 @@ class CommentService {
         body: body,
         favoriteTeam: favoriteTeam,
         matchId: mid,
+        // Carry the parent author onto the Buzz mirror so the feed can flag
+        // replies aimed at the viewer.
+        replyToUserId: isReply ? parentUserId : null,
+        replyToName: isReply ? parentName : null,
       ).toCreateMap(),
     );
     batch.update(Refs.match(tid, mid), {

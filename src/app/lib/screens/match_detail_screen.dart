@@ -1552,7 +1552,12 @@ class _CommentsTabState extends State<_CommentsTab> {
     return result ?? false;
   }
 
-  Future<void> _post(AppState app, {String? parentId}) async {
+  Future<void> _post(
+    AppState app, {
+    String? parentId,
+    String? parentUserId,
+    String? parentName,
+  }) async {
     final ctrl = parentId == null ? _comment : _reply;
     final err = Validation.message(ctrl.text, max: Validation.maxComment);
     if (err != null) {
@@ -1569,6 +1574,8 @@ class _CommentsTabState extends State<_CommentsTab> {
         favoriteTeam: app.appUser?.favoriteTeam,
         body: Validation.cleanMessage(ctrl.text),
         parentId: parentId,
+        parentUserId: parentUserId,
+        parentName: parentName,
       );
       ctrl.clear();
       if (mounted) setState(() => _replyTo = null);
@@ -1707,7 +1714,7 @@ class _CommentsTabState extends State<_CommentsTab> {
               ),
             if (!comment.deleted && _editingId != comment.id)
               _commentActions(c, app, comment),
-            if (_replyTo == comment.id) _replyInput(c, app, comment.id),
+            if (_replyTo == comment.id) _replyInput(c, app, comment),
           ],
         ),
       ),
@@ -1817,7 +1824,13 @@ class _CommentsTabState extends State<_CommentsTab> {
     );
   }
 
-  Widget _replyInput(AppColors c, AppState app, String parentId) {
+  Widget _replyInput(AppColors c, AppState app, CommentModel parent) {
+    void send() => _post(
+      app,
+      parentId: parent.id,
+      parentUserId: parent.userId,
+      parentName: parent.displayName,
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 7),
       child: Row(
@@ -1830,14 +1843,14 @@ class _CommentsTabState extends State<_CommentsTab> {
                 context,
                 hint: context.l10n.t('replyHint'),
               ),
-              onSubmitted: (_) => _post(app, parentId: parentId),
+              onSubmitted: (_) => send(),
             ),
           ),
           const SizedBox(width: 6),
           AccentButton(
             label: context.l10n.t('replyButton'),
             busy: _busy,
-            onPressed: () => _post(app, parentId: parentId),
+            onPressed: send,
           ),
         ],
       ),

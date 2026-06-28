@@ -11,6 +11,8 @@ class ChatMessage {
     required this.body,
     this.favoriteTeam,
     this.matchId,
+    this.replyToUserId,
+    this.replyToName,
     this.createdAt,
   });
 
@@ -20,6 +22,13 @@ class ChatMessage {
   final String body;
   final String? favoriteTeam;
   final String? matchId;
+
+  /// When this message mirrors a *reply* comment, the uid (and name) of the
+  /// author it replies to. Lets the Buzz feed highlight replies aimed at the
+  /// viewer. Null for top-level messages (and for replies posted before this
+  /// field existed).
+  final String? replyToUserId;
+  final String? replyToName;
   final DateTime? createdAt;
 
   factory ChatMessage.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -31,6 +40,8 @@ class ChatMessage {
       body: (d['body'] ?? '') as String,
       favoriteTeam: d['favoriteTeam'] as String?,
       matchId: d['matchId'] as String?,
+      replyToUserId: d['replyToUserId'] as String?,
+      replyToName: d['replyToName'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -41,6 +52,8 @@ class ChatMessage {
     'body': body,
     if (favoriteTeam != null) 'favoriteTeam': favoriteTeam,
     'matchId': matchId,
+    if (replyToUserId != null) 'replyToUserId': replyToUserId,
+    if (replyToName != null) 'replyToName': replyToName,
     'createdAt': FieldValue.serverTimestamp(),
   };
 }
