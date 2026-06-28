@@ -228,6 +228,10 @@ class _MatchesScreenState extends State<MatchesScreen> {
     required List<MatchModel> all,
     required Map<String, Prediction> myPreds,
   }) {
+    // Count matches that are actually in progress (not "live soon" / "just
+    // finished") so the Live chip badge is a truthful at-a-glance signal.
+    final liveCount =
+        all.where((m) => m.displayPhase == MatchPhase.live).length;
     return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
                   children: [
@@ -256,7 +260,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     const SizedBox(height: 13),
                     _searchField(c),
                     const SizedBox(height: 13),
-                    _chips(c),
+                    _chips(c, liveCount),
                     const SizedBox(height: 13),
                     if (visible.isEmpty)
                       Padding(
@@ -319,7 +323,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
-  Widget _chips(AppColors c) {
+  Widget _chips(AppColors c, int liveCount) {
     final l = context.l10n;
     final defs = <(_Filter, String)>[
       (_Filter.all, l.t('filterAll')),
@@ -335,6 +339,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
             _Chip(
               label: d.$2,
               active: _filter == d.$1,
+              // Only the Live chip carries the live-now count badge.
+              liveCount: d.$1 == _Filter.live ? liveCount : 0,
               onTap: () {
                 setState(() => _filter = d.$1);
                 _persist();
@@ -369,10 +375,19 @@ class _MatchesScreenState extends State<MatchesScreen> {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.active, required this.onTap});
+  const _Chip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.liveCount = 0,
+  });
   final String label;
   final bool active;
   final VoidCallback onTap;
+
+  /// When > 0, a pulsing live-now badge is appended after the label (used only
+  /// by the Live chip so an ongoing match is glanceable from the list).
+  final int liveCount;
 
   @override
   Widget build(BuildContext context) {
@@ -380,22 +395,99 @@ class _Chip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.fromLTRB(14, 8, liveCount > 0 ? 8 : 14, 8),
         decoration: BoxDecoration(
           color: active ? c.accent : c.surface2,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: active ? c.accent : c.line),
         ),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontFamily: AppTheme.mono,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-            color: active ? Colors.white : c.muted,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: active ? Colors.white : c.muted,
+              ),
+            ),
+            if (liveCount > 0) ...[
+              const SizedBox(width: 7),
+              _LiveCountBadge(count: liveCount),
+            ],
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// A small amber pill with a pulsing dot and the number of matches that are
+/// live right now. The pulse draws the eye so an ongoing game is obvious at a
+/// glance from the filter row.
+class _LiveCountBadge extends StatefulWidget {
+  const _LiveCountBadge({required this.count});
+  final int count;
+
+  @override
+  State<_LiveCountBadge> createState() => _LiveCountBadgeState();
+}
+
+class _LiveCountBadgeState extends State<_LiveCountBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  // Dark ink that reads cleanly on the amber badge (matches the accent2 button
+  // foreground used elsewhere).
+  static const Color _ink = Color(0xFF1A1200);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(6, 2, 8, 2),
+      decoration: BoxDecoration(
+        color: c.accent2,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FadeTransition(
+            opacity: Tween<double>(begin: 0.3, end: 1).animate(_ctrl),
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '${widget.count}',
+            style: const TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: _ink,
+            ),
+          ),
+        ],
       ),
     );
   }
