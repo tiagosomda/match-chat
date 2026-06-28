@@ -292,6 +292,9 @@ const Map<String, String> _en = {
   'signInCreateAccount': 'Sign in / Create account',
   // user profile
   'profileUpper': 'PROFILE',
+  'settings': 'Settings',
+  'settingsUpper': 'SETTINGS',
+  'settingsCardSub': 'Appearance, language, content & more',
   'userNotFound': 'User not found.',
   'addFriend': 'Add friend',
   'friendTapRemove': 'Friend · tap to remove',
@@ -534,6 +537,9 @@ const Map<String, String> _es = {
       'Crea una cuenta para comentar, chatear y hacer pronósticos. Tus revelaciones de invitado quedan solo en este dispositivo.',
   'signInCreateAccount': 'Iniciar sesión / Crear cuenta',
   'profileUpper': 'PERFIL',
+  'settings': 'Ajustes',
+  'settingsUpper': 'AJUSTES',
+  'settingsCardSub': 'Apariencia, idioma, contenido y más',
   'userNotFound': 'Usuario no encontrado.',
   'addFriend': 'Añadir amigo',
   'friendTapRemove': 'Amigo · toca para quitar',
@@ -768,6 +774,9 @@ const Map<String, String> _pt = {
       'Cria uma conta para comentar, conversar e fazer palpites. As tuas revelações de convidado ficam só neste dispositivo.',
   'signInCreateAccount': 'Iniciar sessão / Criar conta',
   'profileUpper': 'PERFIL',
+  'settings': 'Definições',
+  'settingsUpper': 'DEFINIÇÕES',
+  'settingsCardSub': 'Aparência, idioma, conteúdo e mais',
   'userNotFound': 'Utilizador não encontrado.',
   'addFriend': 'Adicionar amigo',
   'friendTapRemove': 'Amigo · toca para remover',
@@ -830,6 +839,8 @@ const Map<String, String> _pt = {
 // ---------------------------------------------------------------------------
 const Map<String, String> _ptBR = {
   'navMatches': 'Partidas',
+  'settings': 'Configurações',
+  'settingsUpper': 'CONFIGURAÇÕES',
   'signIn': 'Entrar',
   'signOut': 'Sair',
   'save': 'Salvar',
