@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import time
 from datetime import datetime, timedelta, timezone
+from logging.handlers import TimedRotatingFileHandler
 
 from api_football import ApiFootball, RequestBudget
 from cache import Cache
@@ -162,7 +164,17 @@ def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict
 def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: list, cfg: Config) -> None:
     """Poll while any match is in its live window. Handles finals promptly by
     reconciling fixtures that drop out of the live set."""
-    seen_live: set = set()
+    # Pre-seed with any fixture currently in its window that isn't finished —
+    # so a match that ended while we were down still gets reconciled on first poll.
+    now = _utcnow()
+    lead = timedelta(seconds=cfg.prekickoff_wake)
+    seen_live: set = {
+        fixture_id(fx)
+        for fx in schedule
+        if (ko := _kickoff(fx))
+        and (ko - lead) <= now <= (ko + LIVE_WINDOW)
+        and cache.status_of(fixture_id(fx)) != "finished"
+    }
     while _in_any_window(schedule, _utcnow(), cfg.prekickoff_wake):
         if api.budget.exhausted:
             log.warning("Daily request budget exhausted; pausing live polling")
@@ -174,19 +186,33 @@ def run_live_loop(api: ApiFootball, fs: FirestoreSync, cache: Cache, schedule: l
             current_ids = set()
             wrote = 0
             for fixture in live:
-                current_ids.add(fixture["fixture"]["id"])
+                fid = fixture["fixture"]["id"]
+                current_ids.add(fid)
+                score = fixture.get("goals", {})
+                short = fixture.get("fixture", {}).get("status", {}).get("short", "?")
+                log.debug(
+                    "Poll: fixture %s status=%s score=%s-%s",
+                    fid, short, score.get("home"), score.get("away"),
+                )
                 if _write_live(api, fs, cache, fixture):
                     wrote += 1
 
+            appeared = current_ids - seen_live
+            dropped = seen_live - current_ids
+            if appeared:
+                log.info("Live set +%s: %s", len(appeared), sorted(appeared))
+            if dropped:
+                log.info("Live set -%s (fetching final): %s", len(dropped), sorted(dropped))
+
             # Matches that left the live set just finished — fetch their final
             # score.
-            finished = list(seen_live - current_ids)
-            if finished:
-                for fixture in api.fixtures_by_ids(finished):
+            if dropped:
+                for fixture in api.fixtures_by_ids(list(dropped)):
                     _write_live(api, fs, cache, fixture)
             seen_live = current_ids
 
-            if wrote or finished:
+            log.debug("Poll summary: %d in play, %d written", len(current_ids), wrote)
+            if wrote or dropped:
                 cache.save()
         except Exception as e:  # one bad poll shouldn't abandon the window
             log.warning("Live poll failed (%s); retrying after the interval", e)
@@ -355,10 +381,23 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    fmt = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console.setFormatter(fmt)
+
+    os.makedirs("logs", exist_ok=True)
+    file_handler = TimedRotatingFileHandler(
+        "logs/poller.log", when="midnight", backupCount=30, utc=True
     )
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(fmt)
+
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    root.addHandler(console)
+    root.addHandler(file_handler)
 
     if args.once:
         run_once()
