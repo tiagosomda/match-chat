@@ -4,13 +4,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:match_chat/models/bracket_layout.dart';
 import 'package:match_chat/models/match.dart';
 
-MatchModel _m(String id, String desc, {int? roundIndex, int? bracketSlot}) {
+MatchModel _m(
+  String id,
+  String desc, {
+  int? roundIndex,
+  int? bracketSlot,
+  String teamA = 'A',
+  String teamB = 'B',
+  MatchStatus status = MatchStatus.upcoming,
+  int? scoreA,
+  int? scoreB,
+}) {
   return MatchModel(
     id: id,
-    teamA: 'A',
-    teamB: 'B',
+    teamA: teamA,
+    teamB: teamB,
     description: desc,
-    status: MatchStatus.upcoming,
+    status: status,
+    scoreA: scoreA,
+    scoreB: scoreB,
     roundIndexRaw: roundIndex,
     bracketSlot: bracketSlot,
   );
@@ -79,6 +91,21 @@ void main() {
       expect(layout.connectors.length, 6);
     });
 
+    test('full-time matches emphasize their outgoing connectors', () {
+      final layout = BracketLayout.fromMatches([
+        _m(
+          'qf0',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 0,
+          status: MatchStatus.finished,
+          scoreA: 2,
+          scoreB: 1,
+        ),
+      ]);
+      expect(layout.connectors.where((c) => c.emphasized), hasLength(1));
+    });
+
     test('each parent is vertically centered between its two children', () {
       final layout = BracketLayout.fromMatches(matches);
       double centerYFor(String id) =>
@@ -144,6 +171,100 @@ void main() {
       // QF(4) + SF(2) + Final(1) = 7 nodes; 3 real, 4 placeholder.
       expect(layout.nodes.length, 7);
       expect(layout.nodes.where((n) => n.isPlaceholder).length, 4);
+    });
+
+    test('completed winners prefill empty slots in the next node', () {
+      final layout = BracketLayout.fromMatches([
+        _m(
+          'qf0',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 0,
+          teamA: 'Brazil',
+          teamB: 'Japan',
+          status: MatchStatus.finished,
+          scoreA: 2,
+          scoreB: 1,
+        ),
+        _m(
+          'qf1',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 1,
+          teamA: 'Germany',
+          teamB: 'France',
+          status: MatchStatus.finished,
+          scoreA: 0,
+          scoreB: 1,
+        ),
+      ]);
+
+      final semi = layout.nodes.firstWhere(
+        (node) => node.roundIndex == 4 && node.displaySlot == 0,
+      );
+      expect(semi.isPlaceholder, isTrue);
+      expect(semi.match.teamA, 'Brazil');
+      expect(semi.match.teamB, 'France');
+    });
+
+    test('derived winners never overwrite backend-authored teams', () {
+      final layout = BracketLayout.fromMatches([
+        _m(
+          'qf0',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 0,
+          teamA: 'Brazil',
+          teamB: 'Japan',
+          status: MatchStatus.finished,
+          scoreA: 2,
+          scoreB: 1,
+        ),
+        _m(
+          'qf1',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 1,
+          teamA: 'Germany',
+          teamB: 'France',
+          status: MatchStatus.finished,
+          scoreA: 0,
+          scoreB: 1,
+        ),
+        _m(
+          'sf0',
+          'Semi-Final',
+          roundIndex: 4,
+          bracketSlot: 0,
+          teamA: 'Backend Team',
+          teamB: 'TBD',
+        ),
+      ]);
+
+      final semi = layout.nodes.firstWhere((node) => node.match.id == 'sf0');
+      expect(semi.match.teamA, 'Backend Team');
+      expect(semi.match.teamB, 'France');
+    });
+
+    test('tied scores do not infer a winner', () {
+      final layout = BracketLayout.fromMatches([
+        _m(
+          'qf0',
+          'Quarter-Final',
+          roundIndex: 3,
+          bracketSlot: 0,
+          teamA: 'Brazil',
+          teamB: 'Japan',
+          status: MatchStatus.finished,
+          scoreA: 1,
+          scoreB: 1,
+        ),
+      ]);
+
+      final semi = layout.nodes.firstWhere(
+        (node) => node.roundIndex == 4 && node.displaySlot == 0,
+      );
+      expect(semi.match.teamA, isEmpty);
     });
   });
 }

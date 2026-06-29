@@ -9,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
 import 'friends_reveal.dart';
+import 'match_status_header.dart';
 
 /// A single match rendered as a bracket node: two team rows with hidden scores,
 /// a single-line status/kickoff header — a compact cousin of the match-list
@@ -44,8 +45,9 @@ class BracketNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final status = bracketStatusColor(c, match);
+    final status = matchStatusColor(c, match);
     final showScore = revealed && match.hasScore;
+    final isFullTime = match.status == MatchStatus.finished;
     final aWins = showScore && (match.scoreA ?? 0) > (match.scoreB ?? 0);
     final bWins = showScore && (match.scoreB ?? 0) > (match.scoreA ?? 0);
 
@@ -57,7 +59,10 @@ class BracketNode extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.line),
+          border: Border.all(
+            color: isFullTime ? c.muted.withValues(alpha: 0.58) : c.line,
+            width: isFullTime ? 2 : 1,
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,7 +158,7 @@ class BracketNode extends StatelessWidget {
     final label = [
       isThirdPlace
           ? context.l10n.t('bracketThirdPlace')
-          : bracketStatusLabel(context, match),
+          : matchStatusLabel(context, match),
       ?countdown,
     ].join(' · ');
     return Container(
@@ -379,7 +384,9 @@ class _FriendsBadge extends StatelessWidget {
 /// drawn yet: two muted "TBD" rows, no scores and no status, so it recedes
 /// behind the real fixtures while still completing the tree.
 class BracketPlaceholderNode extends StatelessWidget {
-  const BracketPlaceholderNode({super.key});
+  const BracketPlaceholderNode({super.key, required this.match});
+
+  final MatchModel match;
 
   @override
   Widget build(BuildContext context) {
@@ -395,26 +402,34 @@ class BracketPlaceholderNode extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _tbdRow(context, c),
+          _teamRow(context, c, match.flagA, match.teamA),
           const SizedBox(height: 9),
-          _tbdRow(context, c),
+          _teamRow(context, c, match.flagB, match.teamB),
         ],
       ),
     );
   }
 
-  Widget _tbdRow(BuildContext context, AppColors c) {
+  Widget _teamRow(BuildContext context, AppColors c, String flag, String name) {
+    final hasTeam = name.trim().isNotEmpty;
     return Row(
       children: [
-        Icon(Icons.radio_button_unchecked, size: 11, color: c.muted),
+        if (hasTeam)
+          Text(flag, style: const TextStyle(fontSize: 14))
+        else
+          Icon(Icons.radio_button_unchecked, size: 11, color: c.muted),
         const SizedBox(width: 8),
-        Text(
-          context.l10n.t('bracketTbd'),
-          style: TextStyle(
-            color: c.muted,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
+        Expanded(
+          child: Text(
+            hasTeam ? name : context.l10n.t('bracketTbd'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: hasTeam ? c.text : c.muted,
+              fontSize: 12.5,
+              fontWeight: hasTeam ? FontWeight.w600 : FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ],
@@ -428,44 +443,4 @@ Widget _maybeBlur({required bool blur, required Widget child}) {
     imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
     child: child,
   );
-}
-
-// Distinct tints for matches today / tomorrow, matching the match list.
-const Color kBracketTodayColor = Color(0xFFFB923C);
-const Color kBracketTomorrowColor = Color(0xFF38BDF8);
-
-/// The status tint for a match, matching the match-list conventions: yellow for
-/// live/soon, muted for finished, today/tomorrow tints, else the accent.
-Color bracketStatusColor(AppColors c, MatchModel match) {
-  switch (match.displayPhase) {
-    case MatchPhase.live:
-    case MatchPhase.liveSoon:
-      return c.accent2;
-    case MatchPhase.justFinished:
-    case MatchPhase.finished:
-      return c.muted;
-    case MatchPhase.upcoming:
-      if (match.isToday) return kBracketTodayColor;
-      if (match.isTomorrow) return kBracketTomorrowColor;
-      return c.accent;
-  }
-}
-
-/// The localized status label for a match (LIVE / FULL TIME / TODAY / …).
-String bracketStatusLabel(BuildContext context, MatchModel match) {
-  final l = context.l10n;
-  switch (match.displayPhase) {
-    case MatchPhase.live:
-      return l.t('statusLive');
-    case MatchPhase.liveSoon:
-      return l.t('statusLiveSoon');
-    case MatchPhase.justFinished:
-      return l.t('statusJustFinished');
-    case MatchPhase.finished:
-      return l.t('statusFullTime');
-    case MatchPhase.upcoming:
-      if (match.isToday) return l.t('statusToday');
-      if (match.isTomorrow) return l.t('statusTomorrow');
-      return l.t('statusUpcoming');
-  }
 }

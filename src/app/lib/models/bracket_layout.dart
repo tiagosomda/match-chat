@@ -66,8 +66,12 @@ class BracketNodeLayout {
 
 /// An orthogonal connector polyline from a child node to the parent it feeds.
 class BracketConnector {
-  const BracketConnector(this.points);
+  const BracketConnector(this.points, {this.emphasized = false});
   final List<Offset> points;
+
+  /// True when the source match is full time, so its advancement path can be
+  /// drawn more prominently than unresolved branches.
+  final bool emphasized;
 }
 
 /// A round column, used to pin header labels above each column.
@@ -162,6 +166,11 @@ class BracketLayout {
         columnRounds.add(r);
         columnMatches.add(column);
       }
+
+      // Backend-authored teams always win. When a later fixture is still empty,
+      // derive each completed child's winner into the corresponding parent
+      // slot so the bracket can advance optimistically between poller updates.
+      _prefillWinners(columnMatches);
     }
 
     final nodeByKey = <String, BracketNodeLayout>{};
@@ -214,7 +223,7 @@ class BracketLayout {
           Offset(midX, start.dy),
           Offset(midX, end.dy),
           end,
-        ]),
+        ], emphasized: child.match.status == MatchStatus.finished),
       );
     }
 
@@ -279,6 +288,67 @@ class BracketLayout {
   /// that round `r` holds `2^(_finalRoundIndex - r)` matches (Final = 1).
   static const int _finalRoundIndex = 5;
 
+  static void _prefillWinners(List<List<MatchModel>> columns) {
+    for (
+      var displayRound = 0;
+      displayRound < columns.length - 1;
+      displayRound++
+    ) {
+      final children = columns[displayRound];
+      final parents = columns[displayRound + 1];
+      for (var childSlot = 0; childSlot < children.length; childSlot++) {
+        final winner = _winnerOf(children[childSlot]);
+        if (winner == null) continue;
+        final parentSlot = childSlot ~/ 2;
+        if (parentSlot >= parents.length) continue;
+        final parent = parents[parentSlot];
+        if (childSlot.isEven) {
+          if (_isTeamMissing(parent.teamA)) {
+            parents[parentSlot] = _withTeams(parent, teamA: winner);
+          }
+        } else if (_isTeamMissing(parent.teamB)) {
+          parents[parentSlot] = _withTeams(parent, teamB: winner);
+        }
+      }
+    }
+  }
+
+  static String? _winnerOf(MatchModel match) {
+    if (match.status != MatchStatus.finished || !match.hasScore) return null;
+    final scoreA = match.scoreA!;
+    final scoreB = match.scoreB!;
+    if (scoreA == scoreB) return null;
+    return scoreA > scoreB ? match.teamA : match.teamB;
+  }
+
+  static bool _isTeamMissing(String team) {
+    final normalized = team.trim().toUpperCase();
+    return normalized.isEmpty || normalized == 'TBD' || normalized == 'TBC';
+  }
+
+  static MatchModel _withTeams(
+    MatchModel match, {
+    String? teamA,
+    String? teamB,
+  }) => MatchModel(
+    id: match.id,
+    teamA: teamA ?? match.teamA,
+    teamB: teamB ?? match.teamB,
+    description: match.description,
+    status: match.status,
+    scoreA: match.scoreA,
+    scoreB: match.scoreB,
+    scheduledAt: match.scheduledAt,
+    venue: match.venue,
+    city: match.city,
+    commentCount: match.commentCount,
+    predictionCount: match.predictionCount,
+    archived: match.archived,
+    goals: match.goals,
+    roundIndexRaw: match.roundIndexRaw,
+    bracketSlot: match.bracketSlot,
+  );
+
   /// A synthesized, non-interactive "TBD" slot for a round that hasn't been
   /// drawn yet. Carries an explicit [roundIndexRaw] so it groups correctly, and
   /// an id the layout uses to recognise it as a placeholder.
@@ -289,6 +359,7 @@ class BracketLayout {
     description: '',
     status: MatchStatus.upcoming,
     roundIndexRaw: roundIndex,
+    bracketSlot: slot,
   );
 
   /// Orders matches within a round by explicit slot, then kickoff, then id, so

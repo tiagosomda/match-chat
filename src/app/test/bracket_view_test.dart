@@ -164,6 +164,30 @@ void main() {
     expect(opened, isEmpty);
     expect(find.text('Open match'), findsOneWidget);
 
+    // The sheet mirrors the node: status/countdown left, intact kickoff right.
+    final sheetStatus = find.byKey(const ValueKey('sheet-status-pill'));
+    final sheetKickoff = find.byKey(const ValueKey('sheet-kickoff'));
+    expect(sheetStatus, findsOneWidget);
+    expect(sheetKickoff, findsOneWidget);
+    final sheetDescription = find.text('SEMI-FINAL');
+    expect(sheetDescription, findsOneWidget);
+    expect(
+      tester.getCenter(sheetDescription).dx,
+      closeTo(
+        tester.getCenter(find.byKey(const ValueKey('sheet-drag-handle'))).dx,
+        1,
+      ),
+    );
+    expect(
+      (tester.getCenter(sheetStatus).dy - tester.getCenter(sheetKickoff).dy)
+          .abs(),
+      lessThan(1),
+    );
+    final sheetKickoffText = tester.widget<Text>(sheetKickoff);
+    expect(sheetKickoffText.maxLines, 1);
+    expect(sheetKickoffText.softWrap, isFalse);
+    expect(sheetKickoffText.overflow, isNull);
+
     // The sheet stays open after the node tap, so the interaction is covered.
     expect(find.text('Open match'), findsOneWidget);
 

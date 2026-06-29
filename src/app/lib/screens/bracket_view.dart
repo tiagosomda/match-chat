@@ -12,10 +12,10 @@ import '../models/user_match_state.dart';
 import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../utils/formatting.dart';
 import '../widgets/bracket_connectors.dart';
 import '../widgets/bracket_node.dart';
 import '../widgets/friends_reveal.dart';
+import '../widgets/match_status_header.dart';
 import '../widgets/ui.dart';
 
 /// The pan-and-zoom knockout bracket. Renders the tournament's knockout matches
@@ -278,6 +278,7 @@ class _BracketViewState extends State<BracketView> {
               painter: BracketConnectorPainter(
                 connectors: layout.connectors,
                 color: c.lineStrong,
+                emphasizedColor: c.muted.withValues(alpha: 0.72),
               ),
             ),
           ),
@@ -309,7 +310,7 @@ class _BracketViewState extends State<BracketView> {
         top: node.rect.top,
         width: node.rect.width,
         height: node.rect.height,
-        child: const BracketPlaceholderNode(),
+        child: BracketPlaceholderNode(match: node.match),
       );
     }
     final match = node.match;
@@ -516,6 +517,7 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
           children: [
             Center(
               child: Container(
+                key: const ValueKey('sheet-drag-handle'),
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
@@ -525,40 +527,22 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: match.description.trim().isNotEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: MonoLabel(
-                            match.description.toUpperCase(),
-                            fontSize: 10,
-                            letterSpacing: 1.6,
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+            if (match.description.trim().isNotEmpty) ...[
+              Center(
+                child: MonoLabel(
+                  match.description.toUpperCase(),
+                  fontSize: 10,
+                  letterSpacing: 1.6,
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _statusPill(context, c, match),
-                    const SizedBox(height: 5),
-                    Text(
-                      Formatting.kickoff(match.scheduledAt),
-                      style: TextStyle(
-                        fontFamily: AppTheme.mono,
-                        fontSize: 10.5,
-                        color: c.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
+              const SizedBox(height: 10),
+            ],
+            MatchStatusKickoffRow(
+              match: match,
+              statusKey: const ValueKey('sheet-status-pill'),
+              kickoffKey: const ValueKey('sheet-kickoff'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -807,91 +791,6 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _statusPill(BuildContext context, AppColors c, MatchModel match) {
-    switch (match.displayStatus) {
-      case MatchStatus.upcoming:
-        return _kickoffCountdown(context, c, match);
-      case MatchStatus.live:
-        return _livePill(context, c);
-      case MatchStatus.finished:
-        return _finishedPill(context, c);
-    }
-  }
-
-  Widget _kickoffCountdown(
-    BuildContext context,
-    AppColors c,
-    MatchModel match,
-  ) {
-    final left = Formatting.untilKickoff(match.scheduledAt);
-    if (left == null) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
-          const SizedBox(width: 6),
-          Text(
-            context.l10n.tp('startsIn', {'time': left}),
-            style: TextStyle(
-              color: c.accent,
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _livePill(BuildContext context, AppColors c) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
-      ),
-      child: Text(
-        context.l10n.t('statusLive'),
-        style: TextStyle(
-          fontFamily: AppTheme.mono,
-          color: c.accent2,
-          fontWeight: FontWeight.w700,
-          fontSize: 11.5,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-  }
-
-  Widget _finishedPill(BuildContext context, AppColors c) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Text(
-        context.l10n.t('statusFullTime'),
-        style: TextStyle(
-          fontFamily: AppTheme.mono,
-          color: c.muted,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          letterSpacing: 1.2,
         ),
       ),
     );

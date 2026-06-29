@@ -18,6 +18,7 @@ import '../utils/reveal_state.dart';
 import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/friends_reveal.dart';
+import '../widgets/match_status_header.dart';
 import '../widgets/ui.dart';
 import 'admin_edit_match_sheet.dart';
 import 'country_matches_screen.dart';
@@ -106,7 +107,6 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                       child: ListView(
                         padding: const EdgeInsets.only(bottom: 24),
                         children: [
-                          const SizedBox(height: 14),
                           _hero(context, app, match, reveal),
                           const SizedBox(height: 14),
                           ..._tabSection(context, app, match, reveal),
@@ -126,7 +126,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Widget _topBar(BuildContext context, AppState app, MatchModel match) {
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
         children: [
           _iconBtn(c, Icons.arrow_back, () => Navigator.of(context).pop()),
@@ -231,41 +231,22 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
       child: Column(
         children: [
-          // Top row: description (left) · status pill + kickoff time (right)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: match.description.trim().isNotEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: MonoLabel(
-                          match.description.toUpperCase(),
-                          fontSize: 10,
-                          letterSpacing: 1.6,
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+          if (match.description.trim().isNotEmpty) ...[
+            Center(
+              child: MonoLabel(
+                match.description.toUpperCase(),
+                fontSize: 10,
+                letterSpacing: 1.6,
               ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _statusPill(context, c, match),
-                  const SizedBox(height: 4),
-                  Text(
-                    Formatting.kickoff(match.scheduledAt),
-                    style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontSize: 10.5,
-                      color: c.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
+            const SizedBox(height: 10),
+          ],
+          MatchStatusKickoffRow(
+            match: match,
+            statusKey: const ValueKey('detail-status-pill'),
+            kickoffKey: const ValueKey('detail-kickoff'),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           // Teams + score
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +256,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               ),
               SizedBox(
                 width: 112,
-                child: _centerCell(context, app, match, reveal),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _centerCell(context, app, match, reveal),
+                ),
               ),
               Expanded(
                 child: _teamColumn(context, c, match.flagB, match.teamB),
@@ -309,92 +293,6 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  /// The status pill under the kickoff line: a countdown while the match is
-  /// upcoming, a live badge once it's underway, and full-time once it's over.
-  Widget _statusPill(BuildContext context, AppColors c, MatchModel match) {
-    switch (match.displayStatus) {
-      case MatchStatus.upcoming:
-        return _kickoffCountdown(c, match);
-      case MatchStatus.live:
-        return _livePill(context, c);
-      case MatchStatus.finished:
-        return _finishedPill(context, c);
-    }
-  }
-
-  /// A countdown pill ("Starts in 3h 20m") shown for upcoming matches.
-  Widget _kickoffCountdown(AppColors c, MatchModel match) {
-    final left = Formatting.untilKickoff(match.scheduledAt);
-    if (left == null) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
-          const SizedBox(width: 6),
-          Text(
-            context.l10n.tp('startsIn', {'time': left}),
-            style: TextStyle(
-              color: c.accent,
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// A "● LIVE" badge shown while a match is in play.
-  Widget _livePill(BuildContext context, AppColors c) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
-      ),
-      child: Text(
-        context.l10n.t('statusLive'),
-        style: TextStyle(
-          fontFamily: AppTheme.mono,
-          color: c.accent2,
-          fontWeight: FontWeight.w700,
-          fontSize: 11.5,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-  }
-
-  /// A muted "FULL TIME" badge shown once a match has ended.
-  Widget _finishedPill(BuildContext context, AppColors c) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Text(
-        context.l10n.t('statusFullTime'),
-        style: TextStyle(
-          fontFamily: AppTheme.mono,
-          color: c.muted,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          letterSpacing: 1.2,
-        ),
-      ),
     );
   }
 
