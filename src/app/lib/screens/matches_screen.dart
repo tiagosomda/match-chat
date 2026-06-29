@@ -280,6 +280,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
           ),
           Expanded(
             child: BracketView(
+              tournamentId: tid,
               matches: all,
               reveals: reveals,
               onOpenMatch: (mid) => _open(tid, mid),

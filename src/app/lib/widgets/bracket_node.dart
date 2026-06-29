@@ -183,6 +183,53 @@ class BracketNode extends StatelessWidget {
   }
 }
 
+/// A synthesized, non-interactive bracket slot for a round that hasn't been
+/// drawn yet: two muted "TBD" rows, no scores and no status, so it recedes
+/// behind the real fixtures while still completing the tree.
+class BracketPlaceholderNode extends StatelessWidget {
+  const BracketPlaceholderNode({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.line),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _tbdRow(context, c),
+          const SizedBox(height: 9),
+          _tbdRow(context, c),
+        ],
+      ),
+    );
+  }
+
+  Widget _tbdRow(BuildContext context, AppColors c) {
+    return Row(
+      children: [
+        Icon(Icons.radio_button_unchecked, size: 11, color: c.muted),
+        const SizedBox(width: 8),
+        Text(
+          context.l10n.t('bracketTbd'),
+          style: TextStyle(
+            color: c.muted,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 Widget _maybeBlur({required bool blur, required Widget child}) {
   if (!blur) return child;
   return ImageFiltered(

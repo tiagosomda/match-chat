@@ -38,6 +38,7 @@ class BracketNodeLayout {
     required this.displaySlot,
     required this.rect,
     this.isThirdPlace = false,
+    this.isPlaceholder = false,
   });
 
   final MatchModel match;
@@ -54,6 +55,10 @@ class BracketNodeLayout {
 
   final Rect rect;
   final bool isThirdPlace;
+
+  /// True for a synthesized "TBD" slot — a round that hasn't been drawn yet, so
+  /// it has no real fixture behind it. Rendered non-interactively.
+  final bool isPlaceholder;
 
   Offset get leftCenter => Offset(rect.left, rect.center.dy);
   Offset get rightCenter => Offset(rect.right, rect.center.dy);
@@ -126,14 +131,44 @@ class BracketLayout {
       );
     }
 
-    final sortedRoundKeys = roundGroups.keys.toList()..sort();
+    // Complete the tree. A live tournament usually has only its first knockout
+    // round drawn (e.g. just the Round of 32); the later rounds don't exist as
+    // fixtures yet. Rather than render a lone column that reads like a list, we
+    // extend every present round forward to the Final, padding each round to its
+    // canonical size with "TBD" placeholder slots. The canonical index encodes
+    // the size directly — the Final is index 5 with 1 match, the semis index 4
+    // with 2, and so on (2^(finalRound - index)) — so a round, its label, and
+    // its match count line up automatically. See docs/bracket-screen.md.
+    final presentKeys = roundGroups.keys.toList()..sort();
+    final columnRounds = <int>[];
+    final columnMatches = <List<MatchModel>>[];
+    final placeholderIds = <String>{};
+    if (presentKeys.isNotEmpty) {
+      final minRound = presentKeys.first;
+      final maxRound = presentKeys.last > _finalRoundIndex
+          ? presentKeys.last
+          : _finalRoundIndex;
+      for (var r = minRound; r <= maxRound; r++) {
+        final real = <MatchModel>[...?roundGroups[r]]..sort(_slotOrder);
+        final expected = r <= _finalRoundIndex ? 1 << (_finalRoundIndex - r) : 1;
+        final column = <MatchModel>[...real];
+        for (var s = real.length; s < expected; s++) {
+          final placeholder = _placeholderMatch(r, s);
+          placeholderIds.add(placeholder.id);
+          column.add(placeholder);
+        }
+        columnRounds.add(r);
+        columnMatches.add(column);
+      }
+    }
+
     final nodeByKey = <String, BracketNodeLayout>{};
     final nodes = <BracketNodeLayout>[];
     final headers = <BracketRound>[];
 
-    for (var dr = 0; dr < sortedRoundKeys.length; dr++) {
-      final roundIndex = sortedRoundKeys[dr];
-      final group = roundGroups[roundIndex]!..sort(_slotOrder);
+    for (var dr = 0; dr < columnMatches.length; dr++) {
+      final roundIndex = columnRounds[dr];
+      final group = columnMatches[dr];
       final left = metrics.padding + dr * metrics.columnPitch;
       headers.add(
         BracketRound(
@@ -155,6 +190,7 @@ class BracketLayout {
             metrics.nodeWidth,
             metrics.nodeHeight,
           ),
+          isPlaceholder: placeholderIds.contains(group[s].id),
         );
         nodes.add(node);
         nodeByKey['$dr:$s'] = node;
@@ -190,7 +226,7 @@ class BracketLayout {
     // Detached third-place node, under the final column and below everything.
     BracketNodeLayout? thirdPlace;
     if (thirdPlaceMatch != null) {
-      final lastDr = sortedRoundKeys.isEmpty ? 0 : sortedRoundKeys.length - 1;
+      final lastDr = columnRounds.isEmpty ? 0 : columnRounds.length - 1;
       final left = metrics.padding + lastDr * metrics.columnPitch;
       final top = maxBottom + metrics.vGap * 1.5;
       thirdPlace = BracketNodeLayout(
@@ -241,6 +277,22 @@ class BracketLayout {
     // this round sits from the first one.
     return firstCenter + slot * metrics.lane * (1 << displayRound);
   }
+
+  /// The canonical round index of the Final. The knockout indices are sized so
+  /// that round `r` holds `2^(_finalRoundIndex - r)` matches (Final = 1).
+  static const int _finalRoundIndex = 5;
+
+  /// A synthesized, non-interactive "TBD" slot for a round that hasn't been
+  /// drawn yet. Carries an explicit [roundIndexRaw] so it groups correctly, and
+  /// an id the layout uses to recognise it as a placeholder.
+  static MatchModel _placeholderMatch(int roundIndex, int slot) => MatchModel(
+    id: '__tbd_${roundIndex}_$slot',
+    teamA: '',
+    teamB: '',
+    description: '',
+    status: MatchStatus.upcoming,
+    roundIndexRaw: roundIndex,
+  );
 
   /// Orders matches within a round by explicit slot, then kickoff, then id, so
   /// the column is stable whether or not `bracketSlot` is authored.

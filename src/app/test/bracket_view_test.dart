@@ -76,6 +76,7 @@ void main() {
     await tester.pumpWidget(
       _harness(
         BracketView(
+          tournamentId: 'test',
           matches: matches,
           reveals: const <String, UserMatchState>{},
           onOpenMatch: opened.add,

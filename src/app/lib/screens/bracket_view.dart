@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/bracket_layout.dart';
@@ -21,11 +22,15 @@ import '../widgets/ui.dart';
 class BracketView extends StatefulWidget {
   const BracketView({
     super.key,
+    required this.tournamentId,
     required this.matches,
     required this.reveals,
     required this.onOpenMatch,
     required this.onToggleScore,
   });
+
+  /// Identifies the tournament so the pan/zoom is remembered per-bracket.
+  final String tournamentId;
 
   /// All matches for the tournament; the bracket picks out the knockout ones.
   final List<MatchModel> matches;
@@ -39,12 +44,24 @@ class BracketView extends StatefulWidget {
 
 class _BracketViewState extends State<BracketView> {
   final _controller = TransformationController();
-  static const double _minScale = 0.3;
+  // Low floor so a fitted full bracket still has room to pinch further out
+  // instead of hitting a wall (which read as "snapping").
+  static const double _minScale = 0.12;
   static const double _maxScale = 2.4;
 
   Size _viewport = Size.zero;
   Size _canvas = Size.zero;
   bool _fitted = false;
+  SharedPreferences? _prefs;
+  bool _prefsLoaded = false;
+
+  String get _storageKey => 'bracketView:${widget.tournamentId}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersisted();
+  }
 
   @override
   void dispose() {
@@ -52,8 +69,53 @@ class _BracketViewState extends State<BracketView> {
     super.dispose();
   }
 
+  /// Restore this tournament's saved pan/zoom, or fall back to a one-time fit
+  /// once the viewport is measured. Gates [_maybeFit] so the auto-fit never
+  /// briefly overrides a restored view.
+  Future<void> _loadPersisted() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    var restored = false;
+    final saved = prefs.getStringList(_storageKey);
+    if (saved != null && saved.length == 3) {
+      final scale = double.tryParse(saved[0]);
+      final dx = double.tryParse(saved[1]);
+      final dy = double.tryParse(saved[2]);
+      if (scale != null && dx != null && dy != null) {
+        _controller.value =
+            _transform(scale.clamp(_minScale, _maxScale), dx, dy);
+        _fitted = true;
+        restored = true;
+      }
+    }
+    _prefs = prefs;
+    _prefsLoaded = true;
+    if (!restored) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFit());
+    }
+  }
+
+  /// Remember the current pan/zoom so it survives across sessions.
+  void _persist() {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    final m = _controller.value;
+    final t = m.getTranslation();
+    prefs.setStringList(_storageKey, [
+      m.getMaxScaleOnAxis().toStringAsFixed(5),
+      t.x.toStringAsFixed(3),
+      t.y.toStringAsFixed(3),
+    ]);
+  }
+
   void _maybeFit() {
-    if (!mounted || _fitted || _viewport.isEmpty || _canvas.isEmpty) return;
+    if (!mounted ||
+        !_prefsLoaded ||
+        _fitted ||
+        _viewport.isEmpty ||
+        _canvas.isEmpty) {
+      return;
+    }
     _fitted = true;
     _fit();
   }
@@ -68,6 +130,7 @@ class _BracketViewState extends State<BracketView> {
     final dx = math.max(0.0, (_viewport.width - _canvas.width * scale) / 2);
     final dy = math.max(0.0, (_viewport.height - _canvas.height * scale) / 2);
     _controller.value = _transform(scale, dx, dy);
+    _persist();
   }
 
   void _zoomBy(double factor) {
@@ -85,6 +148,7 @@ class _BracketViewState extends State<BracketView> {
       focal.dy * (1 - effective),
     );
     _controller.value = _controller.value.multiplied(zoom);
+    _persist();
   }
 
   /// A 2-D scale-then-translate matrix (avoids the deprecated Matrix4.translate
@@ -127,7 +191,6 @@ class _BracketViewState extends State<BracketView> {
       builder: (context, constraints) {
         _viewport = Size(constraints.maxWidth, constraints.maxHeight);
         WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFit());
-        final margin = math.max(_viewport.longestSide, 480.0);
         return Stack(
           children: [
             Positioned.fill(
@@ -138,7 +201,10 @@ class _BracketViewState extends State<BracketView> {
                 scaleEnabled: true,
                 minScale: _minScale,
                 maxScale: _maxScale,
-                boundaryMargin: EdgeInsets.all(margin),
+                boundaryMargin: EdgeInsets.all(
+                  math.max(_canvas.longestSide, 1200.0),
+                ),
+                onInteractionEnd: (_) => _persist(),
                 child: SizedBox(
                   width: layout.canvasSize.width,
                   height: layout.canvasSize.height,
@@ -189,6 +255,15 @@ class _BracketViewState extends State<BracketView> {
   }
 
   Widget _positioned(BracketNodeLayout node) {
+    if (node.isPlaceholder) {
+      return Positioned(
+        left: node.rect.left,
+        top: node.rect.top,
+        width: node.rect.width,
+        height: node.rect.height,
+        child: const BracketPlaceholderNode(),
+      );
+    }
     final match = node.match;
     return Positioned(
       left: node.rect.left,

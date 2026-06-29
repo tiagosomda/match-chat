@@ -105,4 +105,42 @@ void main() {
       expect(layout.nodes, isEmpty);
     });
   });
+
+  group('skeleton synthesis for an in-progress tournament', () {
+    List<MatchModel> roundOf32() => [
+      for (var i = 0; i < 16; i++)
+        _m('r32_$i', 'Round of 32', roundIndex: 1, bracketSlot: i),
+    ];
+
+    test('a lone first round extends to the Final with TBD placeholders', () {
+      final layout = BracketLayout.fromMatches(roundOf32());
+      // R32(16) + R16(8) + QF(4) + SF(2) + Final(1) = 5 columns, 31 nodes.
+      expect(layout.rounds.length, 5);
+      expect(layout.nodes.length, 31);
+      // Every node but the Final feeds a parent.
+      expect(layout.connectors.length, 30);
+    });
+
+    test('the drawn round stays real; later rounds are placeholders', () {
+      final layout = BracketLayout.fromMatches(roundOf32());
+      final real = layout.nodes.where((n) => !n.isPlaceholder).toList();
+      final tbd = layout.nodes.where((n) => n.isPlaceholder).toList();
+      expect(real.length, 16); // the drawn Round of 32
+      expect(tbd.length, 15); // 8 + 4 + 2 + 1 synthesized slots
+      expect(real.every((n) => n.roundIndex == 1), isTrue);
+      expect(tbd.every((n) => n.roundIndex > 1), isTrue);
+    });
+
+    test('a partially drawn later round is padded, not duplicated', () {
+      // 2 of 4 quarter-finals drawn, 1 of 2 semis.
+      final layout = BracketLayout.fromMatches([
+        _m('qf0', 'Quarter-Final', roundIndex: 3, bracketSlot: 0),
+        _m('qf1', 'Quarter-Final', roundIndex: 3, bracketSlot: 1),
+        _m('sf0', 'Semi-Final', roundIndex: 4, bracketSlot: 0),
+      ]);
+      // QF(4) + SF(2) + Final(1) = 7 nodes; 3 real, 4 placeholder.
+      expect(layout.nodes.length, 7);
+      expect(layout.nodes.where((n) => n.isPlaceholder).length, 4);
+    });
+  });
 }
