@@ -724,18 +724,30 @@ class _MatchCard extends StatelessWidget {
           ),
           child: Column(
             children: [
+              Center(
+                child: MonoLabel(
+                  match.description.toUpperCase(),
+                  fontSize: 10,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const SizedBox(height: 10),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        MonoLabel(
-                          match.description.toUpperCase(),
-                          fontSize: 10,
-                          letterSpacing: 1.4,
+                        Text(
+                          _phaseLabel(context),
+                          style: TextStyle(
+                            fontFamily: AppTheme.mono,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.4,
+                            color: _statusColor(c),
+                          ),
                         ),
                         if (match.shortLocation != null) ...[
                           const SizedBox(height: 3),
@@ -747,10 +759,9 @@ class _MatchCard extends StatelessWidget {
                                 color: c.muted,
                               ),
                               const SizedBox(width: 3),
-                              Flexible(
+                              Expanded(
                                 child: Text(
                                   match.shortLocation!,
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: c.muted,
                                     fontSize: 11,
@@ -783,30 +794,45 @@ class _MatchCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  if (countdown != null) ...[
-                    Icon(Icons.hourglass_bottom, size: 11, color: c.accent),
-                    const SizedBox(width: 4),
-                    Text(
-                      countdown,
-                      style: TextStyle(
-                        fontFamily: AppTheme.mono,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                        color: c.accent,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (countdown != null) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.hourglass_bottom,
+                              size: 11,
+                              color: c.accent,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              countdown,
+                              style: TextStyle(
+                                fontFamily: AppTheme.mono,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                color: c.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                      Text(
+                        Formatting.kickoff(match.scheduledAt),
+                        maxLines: 2,
+                        softWrap: true,
+                        style: TextStyle(
+                          color: c.muted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  Text(
-                    _phaseLabel(context),
-                    style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                      color: _statusColor(c),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -894,16 +920,6 @@ class _MatchCard extends StatelessWidget {
                           Text(
                             '${match.commentCount}',
                             style: TextStyle(color: c.muted, fontSize: 12),
-                          ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.schedule, size: 13, color: c.muted),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              Formatting.kickoff(match.scheduledAt),
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: c.muted, fontSize: 12),
-                            ),
                           ),
                         ],
                       ),

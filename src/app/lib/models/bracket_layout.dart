@@ -6,11 +6,11 @@ import 'match.dart';
 /// once the whole bracket is zoomed to fit; panning and zooming reveal detail.
 class BracketMetrics {
   const BracketMetrics({
-    this.nodeWidth = 180,
-    this.nodeHeight = 140,
-    this.hGap = 52,
-    this.vGap = 22,
-    this.padding = 22,
+    this.nodeWidth = 214,
+    this.nodeHeight = 148,
+    this.hGap = 58,
+    this.vGap = 28,
+    this.padding = 24,
   });
 
   final double nodeWidth;
@@ -150,7 +150,9 @@ class BracketLayout {
           : _finalRoundIndex;
       for (var r = minRound; r <= maxRound; r++) {
         final real = <MatchModel>[...?roundGroups[r]]..sort(_slotOrder);
-        final expected = r <= _finalRoundIndex ? 1 << (_finalRoundIndex - r) : 1;
+        final expected = r <= _finalRoundIndex
+            ? 1 << (_finalRoundIndex - r)
+            : 1;
         final column = <MatchModel>[...real];
         for (var s = real.length; s < expected; s++) {
           final placeholder = _placeholderMatch(r, s);
@@ -234,12 +236,7 @@ class BracketLayout {
         roundIndex: -1,
         displayRound: lastDr,
         displaySlot: 0,
-        rect: Rect.fromLTWH(
-          left,
-          top,
-          metrics.nodeWidth,
-          metrics.nodeHeight,
-        ),
+        rect: Rect.fromLTWH(left, top, metrics.nodeWidth, metrics.nodeHeight),
         isThirdPlace: true,
       );
       if (thirdPlace.rect.right > maxRight) maxRight = thirdPlace.rect.right;

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
@@ -8,11 +9,13 @@ import '../models/bracket_layout.dart';
 import '../models/match.dart';
 import '../models/prediction.dart';
 import '../models/user_match_state.dart';
+import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
 import '../widgets/bracket_connectors.dart';
 import '../widgets/bracket_node.dart';
+import '../widgets/friends_reveal.dart';
 import '../widgets/ui.dart';
 
 /// The pan-and-zoom knockout bracket. Renders the tournament's knockout matches
@@ -179,6 +182,7 @@ class _BracketViewState extends State<BracketView> {
 
   void _showInfo(MatchModel match) {
     final c = context.colors;
+    final app = context.read<AppState?>();
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: c.surface,
@@ -188,10 +192,24 @@ class _BracketViewState extends State<BracketView> {
       ),
       builder: (_) => _MatchInfoSheet(
         match: match,
+        goalsRevealed: widget.reveals[match.id]?.goalsRevealed ?? false,
+        scoreRevealed: widget.reveals[match.id]?.scoreRevealed ?? false,
+        friendIds: widget.friendIds,
+        revealedFriendIds: widget.revealedByMatch[match.id] ?? const <String>{},
         onOpen: () {
           Navigator.of(context).pop();
           widget.onOpenMatch(match.id);
         },
+        onToggleGoals: (current) {
+          if (app?.firebaseUser != null) {
+            app!.reveals.setReveal(
+              app.firebaseUser!.uid,
+              match.id,
+              goals: !current,
+            );
+          }
+        },
+        onToggleScore: (current) => widget.onToggleScore(match.id, current),
       ),
     );
   }
@@ -298,7 +316,7 @@ class _BracketViewState extends State<BracketView> {
         revealed: widget.reveals[match.id]?.scoreRevealed ?? false,
         goalsRevealed: widget.reveals[match.id]?.goalsRevealed ?? false,
         isThirdPlace: node.isThirdPlace,
-        onOpen: () => widget.onOpenMatch(match.id),
+        onOpen: () => _showInfo(match),
         onToggleScore: () => widget.onToggleScore(
           match.id,
           widget.reveals[match.id]?.scoreRevealed ?? false,
@@ -430,19 +448,59 @@ class _BracketEmpty extends StatelessWidget {
 
 /// The tap-to-open info "bubble": a compact bottom sheet with the match's
 /// status, kickoff, and venue — never the score (that stays behind the reveal).
-class _MatchInfoSheet extends StatelessWidget {
-  const _MatchInfoSheet({required this.match, required this.onOpen});
+class _MatchInfoSheet extends StatefulWidget {
+  const _MatchInfoSheet({
+    required this.match,
+    required this.goalsRevealed,
+    required this.scoreRevealed,
+    required this.friendIds,
+    required this.revealedFriendIds,
+    required this.onOpen,
+    required this.onToggleGoals,
+    required this.onToggleScore,
+  });
 
   final MatchModel match;
+  final bool goalsRevealed;
+  final bool scoreRevealed;
+  final List<String> friendIds;
+  final Set<String> revealedFriendIds;
   final VoidCallback onOpen;
+  final ValueChanged<bool> onToggleGoals;
+  final ValueChanged<bool> onToggleScore;
+
+  @override
+  State<_MatchInfoSheet> createState() => _MatchInfoSheetState();
+}
+
+class _MatchInfoSheetState extends State<_MatchInfoSheet> {
+  late bool _goalsRevealed;
+  late bool _scoreRevealed;
+
+  MatchModel get match => widget.match;
+
+  @override
+  void initState() {
+    super.initState();
+    _goalsRevealed = widget.goalsRevealed;
+    _scoreRevealed = widget.scoreRevealed;
+  }
+
+  void _toggleGoals() {
+    final current = _goalsRevealed;
+    setState(() => _goalsRevealed = !current);
+    widget.onToggleGoals(current);
+  }
+
+  void _toggleScore() {
+    final current = _scoreRevealed;
+    setState(() => _scoreRevealed = !current);
+    widget.onToggleScore(current);
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final status = bracketStatusColor(c, match);
-    final countdown = match.displayStatus == MatchStatus.upcoming
-        ? Formatting.untilKickoff(match.scheduledAt)
-        : null;
     return SafeArea(
       top: false,
       child: Padding(
@@ -462,62 +520,87 @@ class _MatchInfoSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Text('${match.flagA}  ', style: const TextStyle(fontSize: 18)),
-                Expanded(
-                  child: Text(
-                    match.title,
-                    style: TextStyle(
-                      color: c.text,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      fontFamily: AppTheme.grotesk,
-                    ),
-                  ),
-                ),
-                Text('  ${match.flagB}', style: const TextStyle(fontSize: 18)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            MonoLabel(
-              match.description.toUpperCase(),
-              fontSize: 10,
-              letterSpacing: 1.2,
-            ),
-            const SizedBox(height: 16),
-            _row(
-              c,
-              Icons.circle,
-              bracketStatusLabel(context, match),
-              iconColor: status,
-              iconSize: 9,
-            ),
-            const SizedBox(height: 11),
-            _row(
-              c,
-              Icons.schedule,
-              '${Formatting.kickoff(match.scheduledAt)}  ·  ${Formatting.timezoneLabel()}',
-            ),
-            if (countdown != null) ...[
-              const SizedBox(height: 11),
-              _row(
-                c,
-                Icons.hourglass_bottom,
-                context.l10n.tp('startsIn', {'time': countdown}),
-                iconColor: c.accent,
+            Container(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: c.line),
               ),
-            ],
-            if (match.hasLocation) ...[
-              const SizedBox(height: 11),
-              _row(c, Icons.place_outlined, match.locationText),
-            ],
-            const SizedBox(height: 20),
-            AccentButton(
-              label: context.l10n.t('openMatch'),
-              icon: Icons.arrow_forward,
-              expand: true,
-              onPressed: onOpen,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: match.description.trim().isNotEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: MonoLabel(
+                                  match.description.toUpperCase(),
+                                  fontSize: 10,
+                                  letterSpacing: 1.6,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _statusPill(context, c, match),
+                          const SizedBox(height: 4),
+                          Text(
+                            Formatting.kickoff(match.scheduledAt),
+                            style: TextStyle(
+                              fontFamily: AppTheme.mono,
+                              fontSize: 10.5,
+                              color: c.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _teamColumn(c, match.flagA, match.teamA)),
+                      const SizedBox(width: 10),
+                      SizedBox(width: 112, child: _centerCell(context, c)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
+                    ],
+                  ),
+                  if (match.hasLocation) ...[
+                    const SizedBox(height: 8),
+                    _venueLine(c, match),
+                  ],
+                  const SizedBox(height: 16),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _goalsRevealed
+                        ? _goalsSummary(context, c)
+                        : _goalsRevealButton(context, c),
+                  ),
+                  const SizedBox(height: 12),
+                  if (widget.friendIds.isNotEmpty) ...[
+                    FriendsRevealBadge(
+                      match: match,
+                      friendIds: widget.friendIds,
+                      revealedFriendIds: widget.revealedFriendIds,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  AccentButton(
+                    label: context.l10n.t('openMatch'),
+                    icon: Icons.arrow_forward,
+                    expand: true,
+                    onPressed: widget.onOpen,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -525,28 +608,287 @@ class _MatchInfoSheet extends StatelessWidget {
     );
   }
 
-  Widget _row(
-    AppColors c,
-    IconData icon,
-    String text, {
-    Color? iconColor,
-    double iconSize = 15,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 18,
-          child: Icon(icon, size: iconSize, color: iconColor ?? c.muted),
+  Widget _goalsRevealButton(BuildContext context, AppColors c) {
+    return GestureDetector(
+      key: const ValueKey('sheet-goals-hidden'),
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleGoals,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.line),
         ),
-        const SizedBox(width: 10),
-        Expanded(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sports_soccer, size: 14, color: c.accent),
+            const SizedBox(width: 6),
+            Text(
+              context.l10n.t('revealGoals'),
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 8.8,
+                fontWeight: FontWeight.w700,
+                color: c.accent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _goalsSummary(BuildContext context, AppColors c) {
+    final goals = [...match.goals]
+      ..sort((a, b) => (a.minute ?? 999).compareTo(b.minute ?? 999));
+    return Container(
+      key: const ValueKey('sheet-goals-revealed'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            goals.isEmpty
+                ? context.l10n.t('noGoalsYet')
+                : goals.map((goal) => goal.timeLabel).join('  ·  '),
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: goals.isEmpty ? c.muted : c.text,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _toggleGoals,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.t('hideUpper'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: c.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _venueLine(AppColors c, MatchModel match) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.place_outlined, size: 14, color: c.muted),
+        const SizedBox(width: 5),
+        Flexible(
           child: Text(
-            text,
-            style: TextStyle(color: c.text, fontSize: 13.5, height: 1.3),
+            match.locationText,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: c.muted, fontSize: 12),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _teamColumn(AppColors c, String flag, String name) {
+    return Column(
+      children: [
+        Text(flag, style: const TextStyle(fontSize: 40)),
+        const SizedBox(height: 8),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: c.text,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _centerCell(BuildContext context, AppColors c) {
+    if (!match.hasScore) {
+      return Center(
+        child: Text(
+          'VS',
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2,
+            color: c.muted,
+          ),
+        ),
+      );
+    }
+    if (_scoreRevealed) {
+      return Column(
+        children: [
+          Text(
+            match.scoreText,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontWeight: FontWeight.w700,
+              fontSize: 36,
+              height: 1,
+              color: c.text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: _toggleScore,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.visibility_off_outlined, size: 11, color: c.muted),
+                const SizedBox(width: 4),
+                MonoLabel(
+                  context.l10n.t('hideUpper'),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    return GestureDetector(
+      key: const ValueKey('sheet-score-hidden'),
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleScore,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: c.accent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.visibility_outlined,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              context.l10n.t('reveal'),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusPill(BuildContext context, AppColors c, MatchModel match) {
+    switch (match.displayStatus) {
+      case MatchStatus.upcoming:
+        return _kickoffCountdown(context, c, match);
+      case MatchStatus.live:
+        return _livePill(context, c);
+      case MatchStatus.finished:
+        return _finishedPill(context, c);
+    }
+  }
+
+  Widget _kickoffCountdown(
+    BuildContext context,
+    AppColors c,
+    MatchModel match,
+  ) {
+    final left = Formatting.untilKickoff(match.scheduledAt);
+    if (left == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent.withValues(alpha: 0.14), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.hourglass_bottom, size: 13, color: c.accent),
+          const SizedBox(width: 6),
+          Text(
+            context.l10n.tp('startsIn', {'time': left}),
+            style: TextStyle(
+              color: c.accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _livePill(BuildContext context, AppColors c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.16), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.34)),
+      ),
+      child: Text(
+        context.l10n.t('statusLive'),
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          color: c.accent2,
+          fontWeight: FontWeight.w700,
+          fontSize: 11.5,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _finishedPill(BuildContext context, AppColors c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.line),
+      ),
+      child: Text(
+        context.l10n.t('statusFullTime'),
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          color: c.muted,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }

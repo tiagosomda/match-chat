@@ -1,12 +1,10 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/match.dart';
 import '../models/prediction.dart';
-import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
@@ -49,7 +47,6 @@ class BracketNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final app = context.read<AppState?>();
     final c = context.colors;
     final status = bracketStatusColor(c, match);
     final showScore = revealed && match.hasScore;
@@ -97,55 +94,6 @@ class BracketNode extends StatelessWidget {
                       aWins,
                     ),
                     if (myPrediction != null) _predictionRow(context, c),
-                    if (match.goals.isNotEmpty ||
-                        !goalsRevealed ||
-                        goalsRevealed) ...[
-                      const SizedBox(height: 6),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        reverseDuration: const Duration(milliseconds: 160),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          final offsetAnimation =
-                              Tween<Offset>(
-                                begin: const Offset(0, 0.03),
-                                end: Offset.zero,
-                              ).animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                ),
-                              );
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: offsetAnimation,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: goalsRevealed
-                            ? (match.goals.isEmpty
-                                  ? KeyedSubtree(
-                                      key: const ValueKey('goals-status'),
-                                      child: _goalsStatus(
-                                        context,
-                                        c,
-                                        context.l10n.t('noGoalsYet'),
-                                        app,
-                                      ),
-                                    )
-                                  : KeyedSubtree(
-                                      key: const ValueKey('goals-summary'),
-                                      child: _goalsSummary(context, c, app),
-                                    ))
-                            : KeyedSubtree(
-                                key: const ValueKey('goals-reveal'),
-                                child: _goalsRevealAction(context, c, app),
-                              ),
-                      ),
-                    ],
                     _footerRow(context, c, showScore),
                   ],
                 ),
@@ -158,9 +106,6 @@ class BracketNode extends StatelessWidget {
   }
 
   Widget _topRow(BuildContext context, AppColors c, Color status) {
-    // Show description (e.g. "Quarter-Final") when it's distinct from the
-    // round label already shown in the column header.
-    final desc = match.description.trim();
     final countdown = match.displayStatus == MatchStatus.upcoming
         ? Formatting.untilKickoff(match.scheduledAt)
         : null;
@@ -170,6 +115,7 @@ class BracketNode extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 6,
@@ -178,59 +124,90 @@ class BracketNode extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             Expanded(
-              child: Text(
-                isThirdPlace
-                    ? context.l10n.t('bracketThirdPlace')
-                    : bracketStatusLabel(context, match),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontSize: 8.5,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w700,
-                  color: status,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isThirdPlace
+                        ? context.l10n.t('bracketThirdPlace')
+                        : bracketStatusLabel(context, match),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 8.5,
+                      letterSpacing: 1,
+                      fontWeight: FontWeight.w700,
+                      color: status,
+                    ),
+                  ),
+                  if (match.shortLocation != null) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(Icons.place_outlined, size: 8, color: c.muted),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            match.shortLocation!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: c.muted,
+                              fontSize: 8.2,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (countdown != null) ...[
-              Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
-              const SizedBox(width: 3),
-              Text(
-                countdown,
-                style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w700,
-                  color: c.accent,
-                ),
-              ),
-              const SizedBox(width: 4),
-            ],
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onInfo,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(6, 3, 2, 3),
-                child: Icon(Icons.info_outline, size: 15, color: c.muted),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (countdown != null) ...[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
+                        const SizedBox(width: 3),
+                        Text(
+                          countdown,
+                          style: TextStyle(
+                            fontFamily: AppTheme.mono,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            color: c.accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                  ],
+                  Text(
+                    Formatting.kickoff(match.scheduledAt),
+                    maxLines: 2,
+                    softWrap: true,
+                    style: TextStyle(
+                      color: c.muted,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        if (desc.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            desc.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.mono,
-              fontSize: 7.5,
-              letterSpacing: 0.8,
-              color: c.muted,
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -313,46 +290,18 @@ class BracketNode extends StatelessWidget {
   }
 
   Widget _footerRow(BuildContext context, AppColors c, bool showScore) {
-    final time = Formatting.shortKickoff(match.scheduledAt);
-    final loc = match.shortLocation;
-    final timeLabel = loc != null ? '$time  ·  $loc' : time;
-
     return Row(
       children: [
-        Icon(Icons.chat_bubble_outline, size: 10, color: c.muted),
-        const SizedBox(width: 4),
-        Text(
-          '${match.commentCount}',
-          style: TextStyle(
-            fontFamily: AppTheme.mono,
-            fontSize: 8.5,
-            color: c.muted,
-          ),
-        ),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Text(
-            timeLabel,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.mono,
-              fontSize: 8.5,
-              letterSpacing: 0.4,
-              color: c.muted,
-            ),
-          ),
-        ),
         if (friendIds.isNotEmpty) ...[
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _FriendsBadge(
             match: match,
             friendIds: friendIds,
             revealedFriendIds: revealedFriendIds,
           ),
         ],
+        const Spacer(),
         if (showScore) ...[
-          const SizedBox(width: 4),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onToggleScore,
@@ -363,178 +312,6 @@ class BracketNode extends StatelessWidget {
             ),
           ),
         ],
-      ],
-    );
-  }
-
-  Widget _goalsRevealAction(BuildContext context, AppColors c, AppState? app) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: app == null
-          ? null
-          : () => app.reveals.setReveal(
-              app.firebaseUser!.uid,
-              match.id,
-              goals: true,
-            ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: c.line),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sports_soccer, size: 10, color: c.accent),
-            const SizedBox(width: 4),
-            Text(
-              context.l10n.t('revealGoals'),
-              style: TextStyle(
-                fontFamily: AppTheme.mono,
-                fontSize: 8.4,
-                fontWeight: FontWeight.w700,
-                color: c.accent,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _goalsStatus(
-    BuildContext context,
-    AppColors c,
-    String label,
-    AppState? app,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: c.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontFamily: AppTheme.mono,
-              fontSize: 8.4,
-              fontWeight: FontWeight.w700,
-              color: c.muted,
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: app == null
-                ? null
-                : () => app.reveals.setReveal(
-                    app.firebaseUser!.uid,
-                    match.id,
-                    goals: false,
-                  ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.visibility_off_outlined, size: 10, color: c.muted),
-                const SizedBox(width: 3),
-                Text(
-                  context.l10n.t('hideUpper'),
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontSize: 8.2,
-                    fontWeight: FontWeight.w700,
-                    color: c.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _goalsSummary(BuildContext context, AppColors c, AppState? app) {
-    final goals = [...match.goals]
-      ..sort((a, b) => (a.minute ?? 999).compareTo(b.minute ?? 999));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 5,
-          runSpacing: 5,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-              decoration: BoxDecoration(
-                color: c.surface2,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: c.line),
-              ),
-              child: Text(
-                '${goals.length} GOALS',
-                style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontSize: 8.4,
-                  fontWeight: FontWeight.w700,
-                  color: c.accent,
-                ),
-              ),
-            ),
-            for (final goal in goals)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: c.surface2,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: c.line),
-                ),
-                child: Text(
-                  goal.timeLabel.isEmpty ? '??' : goal.timeLabel,
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontSize: 8.4,
-                    fontWeight: FontWeight.w700,
-                    color: c.text,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: app == null
-              ? null
-              : () => app.reveals.setReveal(
-                  app.firebaseUser!.uid,
-                  match.id,
-                  goals: false,
-                ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.visibility_off_outlined, size: 10, color: c.muted),
-              const SizedBox(width: 3),
-              Text(
-                context.l10n.t('hideUpper'),
-                style: TextStyle(
-                  fontFamily: AppTheme.mono,
-                  fontSize: 8.2,
-                  fontWeight: FontWeight.w700,
-                  color: c.muted,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

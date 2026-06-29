@@ -61,6 +61,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final opened = <String>[];
+    final scoreToggles = <({String matchId, bool current})>[];
     final now = DateTime.now();
     final matches = [
       _m(
@@ -114,7 +115,8 @@ void main() {
           matches: matches,
           reveals: const <String, UserMatchState>{},
           onOpenMatch: opened.add,
-          onToggleScore: (_, _) {},
+          onToggleScore: (matchId, current) =>
+              scoreToggles.add((matchId: matchId, current: current)),
         ),
       ),
     );
@@ -131,14 +133,32 @@ void main() {
     // Round header and zoom controls are present.
     expect(find.text('Quarter-finals'), findsOneWidget);
     expect(find.byTooltip('Fit to screen'), findsOneWidget);
+    expect(find.byIcon(Icons.chat_bubble_outline), findsNothing);
 
-    // Tapping a node opens that match.
-    await tester.tap(find.text('Brazil'));
-    expect(opened, contains('sf0'));
-
-    // Tapping the info icon opens the info bubble (bottom sheet).
-    await tester.tap(find.byIcon(Icons.info_outline).first);
+    // Tapping a node opens the info sheet instead of navigating directly.
+    await tester.tap(find.text('Brazil'), warnIfMissed: false);
     await tester.pumpAndSettle();
+    expect(opened, isEmpty);
+    expect(find.text('Open match'), findsOneWidget);
+
+    // The sheet stays open after the node tap, so the interaction is covered.
+    expect(find.text('Open match'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Open match'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Germany'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sheet-score-hidden')));
+    await tester.pumpAndSettle();
+
+    expect(scoreToggles, [(matchId: 'qf0', current: false)]);
+    expect(find.text('2 : 1'), findsOneWidget);
+    expect(find.text('Open match'), findsOneWidget);
+
+    await tester.tap(find.text('Reveal goals'));
+    await tester.pumpAndSettle();
+    expect(find.text('No goals yet'), findsOneWidget);
     expect(find.text('Open match'), findsOneWidget);
   });
 }

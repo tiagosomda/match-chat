@@ -4,12 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:match_chat/models/bracket_layout.dart';
 import 'package:match_chat/models/match.dart';
 
-MatchModel _m(
-  String id,
-  String desc, {
-  int? roundIndex,
-  int? bracketSlot,
-}) {
+MatchModel _m(String id, String desc, {int? roundIndex, int? bracketSlot}) {
   return MatchModel(
     id: id,
     teamA: 'A',
@@ -49,6 +44,11 @@ void main() {
   });
 
   group('BracketLayout.fromMatches', () {
+    test('uses a wider default node width for the expanded footer', () {
+      final metrics = const BracketMetrics();
+      expect(metrics.nodeWidth, greaterThan(180));
+    });
+
     // A complete 8-team finish: 4 QF -> 2 SF -> 1 Final, plus third place and a
     // group match that must be excluded.
     final matches = <MatchModel>[
@@ -88,7 +88,10 @@ void main() {
       expect(sf0, closeTo((centerYFor('qf0') + centerYFor('qf1')) / 2, 0.01));
 
       final finalY = centerYFor('final');
-      expect(finalY, closeTo((centerYFor('sf0') + centerYFor('sf1')) / 2, 0.01));
+      expect(
+        finalY,
+        closeTo((centerYFor('sf0') + centerYFor('sf1')) / 2, 0.01),
+      );
     });
 
     test('columns advance left to right by round', () {
