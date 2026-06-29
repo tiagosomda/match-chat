@@ -761,7 +761,10 @@ class _ChatRow extends StatelessWidget {
       onTap: onReveal,
       child: SizedBox(
         width: double.infinity,
-        child: Stack(
+        height: null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 36),
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             ImageFiltered(
@@ -802,6 +805,7 @@ class _ChatRow extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
