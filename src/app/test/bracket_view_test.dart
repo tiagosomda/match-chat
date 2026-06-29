@@ -65,6 +65,7 @@ void main() {
 
     final opened = <String>[];
     final scoreToggles = <({String matchId, bool current})>[];
+    final winnerReveals = <String>[];
     final now = DateTime.now();
     final matches = [
       _m(
@@ -117,10 +118,22 @@ void main() {
         BracketView(
           tournamentId: 'test',
           matches: matches,
-          reveals: const <String, UserMatchState>{},
+          reveals: {
+            'qf0': UserMatchState(
+              userId: 'viewer',
+              matchId: 'qf0',
+              winnerRevealed: true,
+            ),
+            'qf1': UserMatchState(
+              userId: 'viewer',
+              matchId: 'qf1',
+              winnerRevealed: true,
+            ),
+          },
           onOpenMatch: opened.add,
           onToggleScore: (matchId, current) =>
               scoreToggles.add((matchId: matchId, current: current)),
+          onRevealWinner: winnerReveals.add,
         ),
       ),
     );
@@ -203,9 +216,76 @@ void main() {
     expect(find.text('2 : 1'), findsOneWidget);
     expect(find.text('Open match'), findsOneWidget);
 
-    await tester.tap(find.text('Reveal goals'));
+    expect(find.text('Reveal score'), findsNothing);
+    await tester.tap(find.text('Reveal goal times'));
     await tester.pumpAndSettle();
     expect(find.text('No goals yet'), findsOneWidget);
     expect(find.text('Open match'), findsOneWidget);
+  });
+
+  testWidgets('hides an advancing team until its winner is revealed', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final winnerReveals = <String>[];
+    final matches = [
+      _m(
+        'qf0',
+        'South Africa',
+        'Canada',
+        'Quarter-Final',
+        MatchStatus.finished,
+        sa: 0,
+        sb: 1,
+        round: 3,
+        slot: 0,
+      ),
+      _m(
+        'qf1',
+        'Brazil',
+        'Japan',
+        'Quarter-Final',
+        MatchStatus.upcoming,
+        round: 3,
+        slot: 1,
+      ),
+    ];
+
+    Widget bracket(Map<String, UserMatchState> reveals) => _harness(
+      BracketView(
+        tournamentId: 'winner-reveal-test',
+        matches: matches,
+        reveals: reveals,
+        onOpenMatch: (_) {},
+        onToggleScore: (_, _) {},
+        onRevealWinner: winnerReveals.add,
+      ),
+    );
+
+    await tester.pumpWidget(bracket(const {}));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Canada'), findsOneWidget);
+    expect(find.text('Winner hidden'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('reveal-winner-qf0')));
+    expect(winnerReveals, ['qf0']);
+
+    await tester.pumpWidget(
+      bracket({
+        'qf0': UserMatchState(
+          userId: 'viewer',
+          matchId: 'qf0',
+          winnerRevealed: true,
+        ),
+      }),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Canada'), findsNWidgets(2));
+    expect(find.text('Winner hidden'), findsNothing);
   });
 }

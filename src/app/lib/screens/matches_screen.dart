@@ -30,7 +30,9 @@ enum _View { list, bracket }
 
 class _MatchesScreenState extends State<MatchesScreen> {
   final _search = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
+  bool _searchVisible = false;
   _Filter _filter = _Filter.all;
 
   // List vs. bracket view. The toggle only appears when the tournament has
@@ -65,6 +67,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -85,6 +88,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
       );
       _query = storedQuery;
       _search.text = storedQuery;
+      // Never restore an invisible active filter: a saved query brings the
+      // search field back with it.
+      _searchVisible = storedQuery.isNotEmpty;
     });
   }
 
@@ -257,9 +263,12 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
 
     // Shared header — identical in both views so the toggle never jumps.
-    // Title gets its own line; the count + toggle share the row below it.
-    final header = Padding(
+    // The title and optional list/bracket toggle each get their own line.
+    final header = Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: c.line)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -269,27 +278,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
             overflow: TextOverflow.ellipsis,
             style: titleStyle,
           ),
-          if (hasKnockout) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _viewToggle(c),
-                if (!showBracket) ...[
-                  const Spacer(),
-                  MonoLabel(
-                    context.l10n.tp('shownCount', {'n': '${visible.length}'}),
-                    fontSize: 11,
-                  ),
-                ],
-              ],
-            ),
-          ] else if (!showBracket) ...[
-            const SizedBox(height: 4),
-            MonoLabel(
-              context.l10n.tp('shownCount', {'n': '${visible.length}'}),
-              fontSize: 11,
-            ),
-          ],
+          if (hasKnockout) ...[const SizedBox(height: 10), _viewToggle(c)],
         ],
       ),
     );
@@ -306,6 +295,11 @@ class _MatchesScreenState extends State<MatchesScreen> {
               reveals: reveals,
               onOpenMatch: (mid) => _open(tid, mid),
               onToggleScore: (mid, current) => _toggleScore(app, mid, current),
+              onRevealWinner: (mid) => app.reveals.setReveal(
+                app.firebaseUser!.uid,
+                mid,
+                winner: true,
+              ),
               myPreds: myPreds,
               friendIds: friendIds,
               revealedByMatch: revealedByMatch,
@@ -319,12 +313,11 @@ class _MatchesScreenState extends State<MatchesScreen> {
       slivers: [
         SliverToBoxAdapter(child: header),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              _searchField(c),
-              const SizedBox(height: 13),
               _chips(c, liveCount),
+              _animatedSearch(c),
               const SizedBox(height: 13),
             ]),
           ),
@@ -454,14 +447,29 @@ class _MatchesScreenState extends State<MatchesScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          width: 34,
           height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: active ? c.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Center(
-            child: Icon(icon, size: 16, color: active ? Colors.white : c.muted),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: active ? Colors.white : c.muted),
+                const SizedBox(width: 6),
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: AppTheme.grotesk,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: active ? Colors.white : c.muted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -482,7 +490,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   Widget _searchField(AppColors c) {
     return TextField(
+      key: const ValueKey('matches-search-field'),
       controller: _search,
+      focusNode: _searchFocus,
       onChanged: (v) {
         setState(() => _query = v);
         _persist();
@@ -496,18 +506,79 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
+  Widget _animatedSearch(AppColors c) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      reverseDuration: const Duration(milliseconds: 210),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: ClipRect(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 230),
+          reverseDuration: const Duration(milliseconds: 180),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SizeTransition(
+                sizeFactor: animation,
+                axisAlignment: -1,
+                child: child,
+              ),
+            );
+          },
+          child: _searchVisible
+              ? Padding(
+                  key: const ValueKey('matches-search-open'),
+                  padding: const EdgeInsets.only(top: 13),
+                  child: _searchField(c),
+                )
+              : const SizedBox(
+                  key: ValueKey('matches-search-closed'),
+                  width: double.infinity,
+                ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleSearch() {
+    if (_searchVisible) {
+      _searchFocus.unfocus();
+      _search.clear();
+      setState(() {
+        _query = '';
+        _searchVisible = false;
+      });
+      _persist();
+      return;
+    }
+
+    setState(() => _searchVisible = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
+
   Widget _chips(AppColors c, int liveCount) {
     final l = context.l10n;
     final defs = <(_Filter, String)>[
-      (_Filter.all, l.t('filterAll')),
       (_Filter.upcoming, l.t('filterUpcoming')),
       (_Filter.live, l.t('filterLive')),
       (_Filter.finished, l.t('filterFinished')),
+      (_Filter.all, l.t('filterAll')),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          _SearchChip(
+            active: _searchVisible,
+            tooltip: context.l10n.t('searchHint'),
+            onTap: _toggleSearch,
+          ),
+          const SizedBox(width: 7),
           for (final d in defs) ...[
             _Chip(
               label: d.$2,
@@ -594,6 +665,51 @@ class _Chip extends StatelessWidget {
               _LiveCountBadge(count: liveCount),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchChip extends StatelessWidget {
+  const _SearchChip({
+    required this.active,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final bool active;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        toggled: active,
+        label: tooltip,
+        child: InkWell(
+          key: const ValueKey('matches-search-toggle'),
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? c.accent : c.surface2,
+              border: Border.all(color: active ? c.accent : c.line),
+            ),
+            child: Icon(
+              Icons.search,
+              size: 18,
+              color: active ? Colors.white : c.muted,
+            ),
+          ),
         ),
       ),
     );
@@ -813,7 +929,7 @@ class _MatchCard extends StatelessWidget {
                   Expanded(
                     child: _teamSide(c, match.flagA, match.teamA, false),
                   ),
-                  _scoreBox(c, showScore),
+                  _scoreBox(context, c, showScore),
                   Expanded(child: _teamSide(c, match.flagB, match.teamB, true)),
                 ],
               ),
@@ -1184,11 +1300,12 @@ class _MatchCard extends StatelessWidget {
     );
   }
 
-  Widget _scoreBox(AppColors c, bool showScore) {
+  Widget _scoreBox(BuildContext context, AppColors c, bool showScore) {
     return GestureDetector(
       onTap: onToggleScore,
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 62),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        constraints: BoxConstraints(minWidth: showScore ? 62 : 92),
         height: 34,
         margin: const EdgeInsets.symmetric(horizontal: 8),
         alignment: Alignment.center,
@@ -1214,7 +1331,32 @@ class _MatchCard extends StatelessWidget {
               ),
             ),
             if (!showScore)
-              Icon(Icons.visibility_outlined, size: 15, color: c.accent),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.visibility_outlined,
+                        size: 14,
+                        color: c.accent,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        context.l10n.t('revealScore'),
+                        style: TextStyle(
+                          fontFamily: AppTheme.mono,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          color: c.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

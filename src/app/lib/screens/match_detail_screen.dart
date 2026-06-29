@@ -54,9 +54,44 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   // Goal widget local toggle: false = show goal times, true = show scorers.
   bool _showScorers = false;
 
+  // Keep goal-reveal changes local while Firestore catches up. Without this,
+  // a rebuild can briefly render the stream's previous `false` value and flash
+  // the reveal button between the times and scorers views.
+  bool? _goalsRevealedOverride;
+
+  // These streams must survive local setState calls (such as toggling between
+  // goal times and scorers). Re-subscribing during the animation can briefly
+  // leave the nested builders without their latest snapshot.
+  AppState? _streamApp;
+  Stream<MatchModel?>? _matchStream;
+  Stream<UserMatchState>? _revealStream;
+
   // Memoized so the hero counter doesn't re-subscribe on every rebuild.
   Stream<List<UserMatchState>>? _friendRevealsStream;
   String? _friendsKey;
+
+  void _bindMatchStreams(AppState app) {
+    if (identical(_streamApp, app) &&
+        _matchStream != null &&
+        _revealStream != null) {
+      return;
+    }
+    _streamApp = app;
+    _matchStream = app.matches.watch(widget.tournamentId, widget.matchId);
+    _revealStream = app.reveals.watch(app.firebaseUser!.uid, widget.matchId);
+  }
+
+  @override
+  void didUpdateWidget(covariant MatchDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tournamentId != widget.tournamentId ||
+        oldWidget.matchId != widget.matchId) {
+      _matchStream = null;
+      _revealStream = null;
+      _goalsRevealedOverride = null;
+      _showScorers = false;
+    }
+  }
 
   Stream<List<UserMatchState>> _friendStream(AppState app) {
     final friendIds = app.appUser?.friends ?? const <String>[];
@@ -72,12 +107,13 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final c = context.colors;
+    _bindMatchStreams(app);
 
     return Scaffold(
       backgroundColor: c.bg2,
       body: SafeArea(
         child: StreamBuilder<MatchModel?>(
-          stream: app.matches.watch(widget.tournamentId, widget.matchId),
+          stream: _matchStream,
           builder: (context, matchSnap) {
             final match = matchSnap.data;
             if (matchSnap.connectionState == ConnectionState.waiting) {
@@ -92,7 +128,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               );
             }
             return StreamBuilder<UserMatchState>(
-              stream: app.reveals.watch(app.firebaseUser!.uid, widget.matchId),
+              stream: _revealStream,
               builder: (context, revealSnap) {
                 final reveal =
                     revealSnap.data ??
@@ -248,23 +284,33 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           ),
           const SizedBox(height: 20),
           // Teams + score
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _teamColumn(context, c, match.flagA, match.teamA),
-              ),
-              SizedBox(
-                width: 112,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _centerCell(context, app, match, reveal),
-                ),
-              ),
-              Expanded(
-                child: _teamColumn(context, c, match.flagB, match.teamB),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Give the labeled reveal button a real center lane while still
+              // preserving useful team-column width on narrow phones.
+              final centerWidth = (constraints.maxWidth * 0.46).clamp(
+                132.0,
+                168.0,
+              );
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _teamColumn(context, c, match.flagA, match.teamA),
+                  ),
+                  SizedBox(
+                    width: centerWidth,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _centerCell(context, app, match, reveal),
+                    ),
+                  ),
+                  Expanded(
+                    child: _teamColumn(context, c, match.flagB, match.teamB),
+                  ),
+                ],
+              );
+            },
           ),
           // Venue below score, above goals, no divider
           if (match.hasLocation) ...[
@@ -333,8 +379,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     // The three mutually exclusive states of this panel. Each carries a stable
     // key so the AnimatedSwitcher cross-fades — and AnimatedSize grows/shrinks —
     // between them instead of snapping when the viewer toggles scorers.
+    final goalsRevealed = _effectiveGoalsRevealed(reveal);
     final revealView = goalRevealView(
-      goalsRevealed: reveal.goalsRevealed,
+      goalsRevealed: goalsRevealed,
       showScorers: _showScorers,
     );
     final Widget content;
@@ -342,7 +389,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       case GoalRevealView.hidden:
         content = KeyedSubtree(
           key: const ValueKey('goals-reveal'),
-          child: _goalsReveal(c, app, match, revealView),
+          child: _goalsReveal(app, match),
         );
         break;
       case GoalRevealView.scorers:
@@ -370,7 +417,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         border: Border(top: BorderSide(color: c.line)),
       ),
       child: GestureDetector(
-        onTap: reveal.goalsRevealed
+        onTap: goalsRevealed
             ? () => setState(() => _showScorers = !_showScorers)
             : null,
         behavior: HitTestBehavior.opaque,
@@ -414,30 +461,44 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  Widget _goalsReveal(
-    AppColors c,
-    AppState app,
-    MatchModel match,
-    GoalRevealView revealView,
-  ) {
-    return Column(
-      children: [
-        MonoLabel(
-          context.l10n.tp('goalsCount', {'n': '${match.goals.length}'}),
-          fontSize: 9.5,
-        ),
-        const SizedBox(height: 10),
-        AccentButton(
-          label: context.l10n.t('revealGoals'),
-          icon: Icons.sports_soccer,
-          pill: true,
-          onPressed: () => app.reveals.setReveal(
-            app.firebaseUser!.uid,
-            match.id,
-            goals: true,
-          ),
-        ),
-      ],
+  bool _effectiveGoalsRevealed(UserMatchState reveal) {
+    final local = _goalsRevealedOverride;
+    if (local != null && reveal.goalsRevealed == local) {
+      // The stream has acknowledged the optimistic value. Drop the override
+      // after this frame; both values agree, so the visible state cannot jump.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            _goalsRevealedOverride != local ||
+            reveal.goalsRevealed != local) {
+          return;
+        }
+        setState(() => _goalsRevealedOverride = null);
+      });
+    }
+    return local ?? reveal.goalsRevealed;
+  }
+
+  void _setGoalsRevealed(AppState app, String matchId, bool revealed) {
+    setState(() {
+      _goalsRevealedOverride = revealed;
+      if (!revealed) _showScorers = false;
+    });
+
+    app.reveals
+        .setReveal(app.firebaseUser!.uid, matchId, goals: revealed)
+        .catchError((Object _) {
+          if (mounted && _goalsRevealedOverride == revealed) {
+            setState(() => _goalsRevealedOverride = null);
+          }
+        });
+  }
+
+  Widget _goalsReveal(AppState app, MatchModel match) {
+    return AccentButton(
+      label: context.l10n.t('revealGoals'),
+      icon: Icons.sports_soccer,
+      pill: true,
+      onPressed: () => _setGoalsRevealed(app, match.id, true),
     );
   }
 
@@ -506,11 +567,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             const SizedBox(height: 6),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => app.reveals.setReveal(
-                app.firebaseUser!.uid,
-                match.id,
-                goals: false,
-              ),
+              onTap: () => _setGoalsRevealed(app, match.id, false),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -546,11 +603,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           label: context.l10n.t('hideUpper'),
           icon: Icons.visibility_off_outlined,
           pill: true,
-          onPressed: () => app.reveals.setReveal(
-            app.firebaseUser!.uid,
-            match.id,
-            goals: false,
-          ),
+          onPressed: () => _setGoalsRevealed(app, match.id, false),
         ),
       ],
     );
@@ -785,12 +838,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       );
     }
     return Center(
-      child: AccentButton(
-        label: context.l10n.t('reveal'),
-        icon: Icons.visibility_outlined,
-        pill: true,
-        onPressed: () =>
-            app.reveals.setReveal(app.firebaseUser!.uid, match.id, score: true),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: AccentButton(
+          label: context.l10n.t('revealScore'),
+          icon: Icons.visibility_outlined,
+          pill: true,
+          onPressed: () => app.reveals.setReveal(
+            app.firebaseUser!.uid,
+            match.id,
+            score: true,
+          ),
+        ),
       ),
     );
   }

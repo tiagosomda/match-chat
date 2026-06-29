@@ -18,6 +18,7 @@ class PredictionService {
   Stream<Map<String, Prediction>> watchMine(String uid) {
     return Refs.db
         .collectionGroup('predictions')
+        .where('appId', isEqualTo: Refs.appId)
         .where('userId', isEqualTo: uid)
         .snapshots()
         .map((snap) {
@@ -51,16 +52,17 @@ class PredictionService {
     final ref = Refs.predictions(tid, mid).doc(userId);
     final existing = await ref.get();
     final batch = Refs.db.batch();
-    batch.set(
-      ref,
-      Prediction(
-        userId: userId,
-        displayName: displayName,
-        scoreA: scoreA,
-        scoreB: scoreB,
-        favoriteTeam: favoriteTeam,
-      ).toMap(),
-    );
+    final data =
+        Prediction(
+            userId: userId,
+            displayName: displayName,
+            scoreA: scoreA,
+            scoreB: scoreB,
+            favoriteTeam: favoriteTeam,
+          ).toMap()
+          ..['appId'] = Refs.appId
+          ..['tournamentId'] = tid;
+    batch.set(ref, data);
     if (!existing.exists) {
       batch.update(Refs.match(tid, mid), {
         'predictionCount': FieldValue.increment(1),
@@ -93,13 +95,21 @@ class PredictionService {
     String tid,
     String uid,
   ) async {
-    final matchesSnap = await Refs.matches(tid).get();
+    // Query the predictions that actually exist instead of probing the user's
+    // document under every match in the tournament. Tournament id is not stored
+    // on legacy prediction documents, so scope the collection-group result by
+    // its ancestor path.
+    final snap = await Refs.db
+        .collectionGroup('predictions')
+        .where('appId', isEqualTo: Refs.appId)
+        .where('userId', isEqualTo: uid)
+        .get();
     final result = <({String matchId, Prediction prediction})>[];
-    for (final m in matchesSnap.docs) {
-      final p = await Refs.predictions(tid, m.id).doc(uid).get();
-      if (p.exists) {
-        result.add((matchId: m.id, prediction: Prediction.fromDoc(p)));
-      }
+    for (final doc in snap.docs) {
+      final matchRef = doc.reference.parent.parent;
+      final tournamentRef = matchRef?.parent.parent;
+      if (matchRef == null || tournamentRef?.id != tid) continue;
+      result.add((matchId: matchRef.id, prediction: Prediction.fromDoc(doc)));
     }
     return result;
   }

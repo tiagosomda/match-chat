@@ -11,6 +11,11 @@ class MatchService {
         .map((snap) => snap.docs.map(MatchModel.fromDoc).toList());
   }
 
+  Future<List<MatchModel>> fetchAll(String tid) async {
+    final snap = await Refs.matches(tid).orderBy('scheduledAt').get();
+    return snap.docs.map(MatchModel.fromDoc).toList();
+  }
+
   Stream<MatchModel?> watch(String tid, String mid) {
     return Refs.match(
       tid,

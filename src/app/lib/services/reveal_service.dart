@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_match_state.dart';
 import 'firestore_refs.dart';
 
-/// Manages per-user reveal state for matches (score / predictions / comments).
+/// Manages per-user reveal state for matches (winner / score / predictions /
+/// comments).
 class RevealService {
   Stream<UserMatchState> watch(String uid, String mid) {
     return Refs.userMatchState(uid, mid).snapshots().map((doc) {
@@ -46,13 +47,20 @@ class RevealService {
   Future<void> setReveal(
     String uid,
     String mid, {
+    bool? winner,
     bool? score,
     bool? predictions,
     bool? comments,
     bool? goals,
   }) {
     final data = <String, dynamic>{'userId': uid, 'matchId': mid};
-    if (score != null) data['scoreRevealed'] = score;
+    if (winner != null) data['winnerRevealed'] = winner;
+    if (score != null) {
+      data['scoreRevealed'] = score;
+      // Hiding a score restores the bracket's spoiler boundary too, even when
+      // the winner had previously been revealed independently.
+      if (!score) data['winnerRevealed'] = false;
+    }
     if (predictions != null) data['predictionsRevealed'] = predictions;
     if (comments != null) data['commentsRevealed'] = comments;
     if (goals != null) data['goalsRevealed'] = goals;

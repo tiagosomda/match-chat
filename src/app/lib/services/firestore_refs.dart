@@ -9,6 +9,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Refs {
   Refs._();
 
+  static const String appId = 'match-chat';
+
   static FirebaseFirestore get db => FirebaseFirestore.instance;
 
   /// The single application root document: match-chat/app

@@ -31,6 +31,7 @@ class BracketView extends StatefulWidget {
     required this.reveals,
     required this.onOpenMatch,
     required this.onToggleScore,
+    required this.onRevealWinner,
     this.myPreds = const <String, Prediction>{},
     this.friendIds = const <String>[],
     this.revealedByMatch = const <String, Set<String>>{},
@@ -44,6 +45,7 @@ class BracketView extends StatefulWidget {
   final Map<String, UserMatchState> reveals;
   final void Function(String matchId) onOpenMatch;
   final void Function(String matchId, bool current) onToggleScore;
+  final void Function(String matchId) onRevealWinner;
 
   /// The viewer's own predictions, keyed by match id.
   final Map<String, Prediction> myPreds;
@@ -224,7 +226,17 @@ class _BracketViewState extends State<BracketView> {
         (widget.myPreds.isNotEmpty ? 18.0 : 0.0) +
         (widget.friendIds.isNotEmpty ? 12.0 : 0.0);
     final metrics = BracketMetrics(nodeHeight: nodeHeight);
-    final layout = BracketLayout.fromMatches(widget.matches, metrics: metrics);
+    final revealedWinnerMatchIds = widget.reveals.entries
+        .where(
+          (entry) => entry.value.winnerRevealed || entry.value.scoreRevealed,
+        )
+        .map((entry) => entry.key)
+        .toSet();
+    final layout = BracketLayout.fromMatches(
+      widget.matches,
+      metrics: metrics,
+      revealedWinnerMatchIds: revealedWinnerMatchIds,
+    );
     if (layout.isEmpty) return const _BracketEmpty();
     _canvas = layout.canvasSize;
 
@@ -278,7 +290,7 @@ class _BracketViewState extends State<BracketView> {
               painter: BracketConnectorPainter(
                 connectors: layout.connectors,
                 color: c.lineStrong,
-                emphasizedColor: c.muted.withValues(alpha: 0.72),
+                emphasizedColor: c.accent,
               ),
             ),
           ),
@@ -310,7 +322,12 @@ class _BracketViewState extends State<BracketView> {
         top: node.rect.top,
         width: node.rect.width,
         height: node.rect.height,
-        child: BracketPlaceholderNode(match: node.match),
+        child: BracketPlaceholderNode(
+          match: node.match,
+          hiddenTeamAFromMatchId: node.hiddenTeamAFromMatchId,
+          hiddenTeamBFromMatchId: node.hiddenTeamBFromMatchId,
+          onRevealWinner: widget.onRevealWinner,
+        ),
       );
     }
     final match = node.match;
@@ -328,6 +345,9 @@ class _BracketViewState extends State<BracketView> {
           match.id,
           widget.reveals[match.id]?.scoreRevealed ?? false,
         ),
+        onRevealWinner: widget.onRevealWinner,
+        hiddenTeamAFromMatchId: node.hiddenTeamAFromMatchId,
+        hiddenTeamBFromMatchId: node.hiddenTeamBFromMatchId,
         myPrediction: widget.myPreds[match.id],
         friendIds: widget.friendIds,
         revealedFriendIds: widget.revealedByMatch[match.id] ?? const <String>{},
@@ -782,7 +802,7 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
               ),
               const SizedBox(width: 5),
               Text(
-                context.l10n.t('reveal'),
+                context.l10n.t('revealScore'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11,

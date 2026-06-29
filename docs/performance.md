@@ -81,11 +81,11 @@ Widget build(BuildContext context) {
 
 **Impact:** User sees familiar UI immediately, knows the screen loaded (just still fetching list). Feels faster.
 
-## Phase 4: Parallelize N+1 queries
+## Phase 4: Eliminate N+1 queries (complete)
 
 **Symptom:** Opening a user's profile is slow; pulling to refresh the leaderboard is very slow.
 
-**Root cause:** Two screens make sequential Firestore reads:
+**Root cause:** Two screens made sequential Firestore reads:
 
 1. **User profile** → [prediction_service.dart:92 `fetchForUserAcross()`](../src/app/lib/services/prediction_service.dart):
    ```dart
@@ -95,7 +95,7 @@ Widget build(BuildContext context) {
    }
    ```
 
-2. **Leaderboard force-refresh** → [leaderboard_service.dart:62 `compute()`](../src/app/lib/services/leaderboard_service.dart):
+2. **Leaderboard force-refresh** → the former client-side `compute()` fallback:
    ```dart
    for (final mdoc in matchesSnap.docs) {       // ~100 sequential reads
      if (!match.hasScore) continue;
@@ -104,27 +104,26 @@ Widget build(BuildContext context) {
    }
    ```
 
-On a fast connection these are ~1–2s per 10 reads; on a slower connection they're unbearable.
+On a fast connection these were ~1–2s per 10 reads; on a slower connection they
+were unbearable. Merely parallelizing the reads would improve latency without
+reducing request count.
 
-**Solution:** Parallelize with `Future.wait`:
+**Solution:** Remove both fan-outs:
 
-```dart
-// Before (sequential):
-for (final m in matches) {
-  final p = await fetch(m.id);
-  result.add(p);
-}
+- Public profiles use one tenant-scoped `collectionGroup('predictions')` query
+  filtered by `appId` and `userId`, then scope results to the active tournament
+  by ancestor path.
+- The Ranks tab reads only the poller-maintained `standings/current` document.
+  Pull-to-refresh forces a server read of that document; clients never rebuild
+  the global ranking match by match.
+- An empty backend `entries` array is a valid empty leaderboard rather than a
+  signal to run a fallback.
 
-// After (parallel):
-final futures = matches.map((m) => fetch(m.id));
-final results = await Future.wait(futures);
-```
+The backend poller remains responsible for recomputing standings after match
+results change.
 
-Also consider **server-side aggregation** as a longer-term win: have the backend precompute user profiles (total predictions, accuracy) and serve them in a single doc, rather than reconstructing them client-side.
-
-**Effort:** Low (refactor loops to `.map().wait()`) + medium (if implementing server aggregation).
-
-**Impact:** Profile opens ~3–5× faster; leaderboard refresh on large datasets becomes acceptable.
+**Impact:** Profile prediction reads drop from one per tournament match to one
+query, while initial ranking load and refresh drop to one standings document.
 
 ## Testing strategy
 

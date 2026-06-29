@@ -174,30 +174,33 @@ void main() {
     });
 
     test('completed winners prefill empty slots in the next node', () {
-      final layout = BracketLayout.fromMatches([
-        _m(
-          'qf0',
-          'Quarter-Final',
-          roundIndex: 3,
-          bracketSlot: 0,
-          teamA: 'Brazil',
-          teamB: 'Japan',
-          status: MatchStatus.finished,
-          scoreA: 2,
-          scoreB: 1,
-        ),
-        _m(
-          'qf1',
-          'Quarter-Final',
-          roundIndex: 3,
-          bracketSlot: 1,
-          teamA: 'Germany',
-          teamB: 'France',
-          status: MatchStatus.finished,
-          scoreA: 0,
-          scoreB: 1,
-        ),
-      ]);
+      final layout = BracketLayout.fromMatches(
+        [
+          _m(
+            'qf0',
+            'Quarter-Final',
+            roundIndex: 3,
+            bracketSlot: 0,
+            teamA: 'Brazil',
+            teamB: 'Japan',
+            status: MatchStatus.finished,
+            scoreA: 2,
+            scoreB: 1,
+          ),
+          _m(
+            'qf1',
+            'Quarter-Final',
+            roundIndex: 3,
+            bracketSlot: 1,
+            teamA: 'Germany',
+            teamB: 'France',
+            status: MatchStatus.finished,
+            scoreA: 0,
+            scoreB: 1,
+          ),
+        ],
+        revealedWinnerMatchIds: const {'qf0', 'qf1'},
+      );
 
       final semi = layout.nodes.firstWhere(
         (node) => node.roundIndex == 4 && node.displaySlot == 0,
@@ -207,8 +210,8 @@ void main() {
       expect(semi.match.teamB, 'France');
     });
 
-    test('derived winners never overwrite backend-authored teams', () {
-      final layout = BracketLayout.fromMatches([
+    test('backend-authored winners stay hidden until explicitly revealed', () {
+      final matches = [
         _m(
           'qf0',
           'Quarter-Final',
@@ -239,11 +242,71 @@ void main() {
           teamA: 'Backend Team',
           teamB: 'TBD',
         ),
-      ]);
+      ];
+
+      final hiddenLayout = BracketLayout.fromMatches(matches);
+      final hiddenSemi = hiddenLayout.nodes.firstWhere(
+        (node) => node.match.id == 'sf0',
+      );
+      expect(hiddenSemi.match.teamA, isEmpty);
+      expect(hiddenSemi.hiddenTeamAFromMatchId, 'qf0');
+
+      final revealedLayout = BracketLayout.fromMatches(
+        matches,
+        revealedWinnerMatchIds: const {'qf0'},
+      );
+      final revealedSemi = revealedLayout.nodes.firstWhere(
+        (node) => node.match.id == 'sf0',
+      );
+      expect(revealedSemi.match.teamA, 'Backend Team');
+    });
+
+    test('later-round reveals derive from unredacted feeder teams', () {
+      final layout = BracketLayout.fromMatches(
+        [
+          _m(
+            'qf0',
+            'Quarter-Final',
+            roundIndex: 3,
+            bracketSlot: 0,
+            teamA: 'Brazil',
+            teamB: 'Japan',
+            status: MatchStatus.finished,
+            scoreA: 2,
+            scoreB: 1,
+          ),
+          _m(
+            'qf1',
+            'Quarter-Final',
+            roundIndex: 3,
+            bracketSlot: 1,
+            teamA: 'France',
+            teamB: 'Germany',
+            status: MatchStatus.finished,
+            scoreA: 1,
+            scoreB: 0,
+          ),
+          _m(
+            'sf0',
+            'Semi-Final',
+            roundIndex: 4,
+            bracketSlot: 0,
+            teamA: 'Brazil',
+            teamB: 'France',
+            status: MatchStatus.finished,
+            scoreA: 3,
+            scoreB: 1,
+          ),
+        ],
+        revealedWinnerMatchIds: const {'sf0'},
+      );
 
       final semi = layout.nodes.firstWhere((node) => node.match.id == 'sf0');
-      expect(semi.match.teamA, 'Backend Team');
-      expect(semi.match.teamB, 'France');
+      expect(semi.match.teamA, isEmpty);
+      expect(semi.match.teamB, isEmpty);
+
+      final finalNode = layout.nodes.firstWhere((node) => node.roundIndex == 5);
+      expect(finalNode.match.teamA, 'Brazil');
     });
 
     test('tied scores do not infer a winner', () {

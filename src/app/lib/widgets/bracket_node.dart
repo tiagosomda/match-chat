@@ -21,7 +21,10 @@ class BracketNode extends StatelessWidget {
     required this.revealed,
     required this.onOpen,
     required this.onToggleScore,
+    required this.onRevealWinner,
     this.isThirdPlace = false,
+    this.hiddenTeamAFromMatchId,
+    this.hiddenTeamBFromMatchId,
     this.myPrediction,
     this.friendIds = const <String>[],
     this.revealedFriendIds = const <String>{},
@@ -31,7 +34,10 @@ class BracketNode extends StatelessWidget {
   final bool revealed;
   final VoidCallback onOpen;
   final VoidCallback onToggleScore;
+  final ValueChanged<String> onRevealWinner;
   final bool isThirdPlace;
+  final String? hiddenTeamAFromMatchId;
+  final String? hiddenTeamBFromMatchId;
 
   /// The viewer's own prediction for this match, if any.
   final Prediction? myPrediction;
@@ -60,7 +66,7 @@ class BracketNode extends StatelessWidget {
           color: c.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isFullTime ? c.muted.withValues(alpha: 0.58) : c.line,
+            color: isFullTime ? c.accent : c.line,
             width: isFullTime ? 2 : 1,
           ),
         ),
@@ -88,6 +94,7 @@ class BracketNode extends StatelessWidget {
                       showScore,
                       aWins,
                       bWins,
+                      hiddenTeamAFromMatchId,
                     ),
                     _teamRow(
                       c,
@@ -97,6 +104,7 @@ class BracketNode extends StatelessWidget {
                       showScore,
                       bWins,
                       aWins,
+                      hiddenTeamBFromMatchId,
                     ),
                     if (myPrediction != null) ...[
                       const SizedBox(height: 2),
@@ -212,7 +220,14 @@ class BracketNode extends StatelessWidget {
     bool showScore,
     bool emphasize,
     bool dim,
+    String? hiddenFromMatchId,
   ) {
+    if (hiddenFromMatchId != null) {
+      return _HiddenWinnerRow(
+        sourceMatchId: hiddenFromMatchId,
+        onReveal: onRevealWinner,
+      );
+    }
     final isTbd = name.trim().isEmpty;
     final color = dim && !isTbd ? c.muted : c.text;
     return SizedBox(
@@ -380,13 +395,22 @@ class _FriendsBadge extends StatelessWidget {
   }
 }
 
-/// A synthesized, non-interactive bracket slot for a round that hasn't been
-/// drawn yet: two muted "TBD" rows, no scores and no status, so it recedes
-/// behind the real fixtures while still completing the tree.
+/// A synthesized bracket slot for a round that hasn't been drawn yet: muted
+/// TBD rows complete the tree, while finished feeder matches offer an explicit
+/// spoiler-safe winner reveal.
 class BracketPlaceholderNode extends StatelessWidget {
-  const BracketPlaceholderNode({super.key, required this.match});
+  const BracketPlaceholderNode({
+    super.key,
+    required this.match,
+    required this.onRevealWinner,
+    this.hiddenTeamAFromMatchId,
+    this.hiddenTeamBFromMatchId,
+  });
 
   final MatchModel match;
+  final ValueChanged<String> onRevealWinner;
+  final String? hiddenTeamAFromMatchId;
+  final String? hiddenTeamBFromMatchId;
 
   @override
   Widget build(BuildContext context) {
@@ -402,15 +426,39 @@ class BracketPlaceholderNode extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _teamRow(context, c, match.flagA, match.teamA),
+          _teamRow(
+            context,
+            c,
+            match.flagA,
+            match.teamA,
+            hiddenTeamAFromMatchId,
+          ),
           const SizedBox(height: 9),
-          _teamRow(context, c, match.flagB, match.teamB),
+          _teamRow(
+            context,
+            c,
+            match.flagB,
+            match.teamB,
+            hiddenTeamBFromMatchId,
+          ),
         ],
       ),
     );
   }
 
-  Widget _teamRow(BuildContext context, AppColors c, String flag, String name) {
+  Widget _teamRow(
+    BuildContext context,
+    AppColors c,
+    String flag,
+    String name,
+    String? hiddenFromMatchId,
+  ) {
+    if (hiddenFromMatchId != null) {
+      return _HiddenWinnerRow(
+        sourceMatchId: hiddenFromMatchId,
+        onReveal: onRevealWinner,
+      );
+    }
     final hasTeam = name.trim().isNotEmpty;
     return Row(
       children: [
@@ -433,6 +481,62 @@ class BracketPlaceholderNode extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HiddenWinnerRow extends StatelessWidget {
+  const _HiddenWinnerRow({required this.sourceMatchId, required this.onReveal});
+
+  final String sourceMatchId;
+  final ValueChanged<String> onReveal;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return SizedBox(
+      height: 27,
+      child: Row(
+        children: [
+          Icon(Icons.visibility_off_outlined, size: 14, color: c.muted),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              context.l10n.t('bracketWinnerHidden'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: c.muted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Tooltip(
+            message: context.l10n.t('bracketRevealWinner'),
+            child: TextButton(
+              key: ValueKey('reveal-winner-$sourceMatchId'),
+              onPressed: () => onReveal(sourceMatchId),
+              style: TextButton.styleFrom(
+                foregroundColor: c.accent,
+                minimumSize: const Size(54, 27),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              child: Text(
+                context.l10n.t('reveal'),
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

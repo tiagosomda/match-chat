@@ -46,6 +46,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/match-chat/app/tournaments/$(tid)/matches/$(mid)).data;
     }
 
+    // Collection-group queries need a recursive rule. The database is shared,
+    // so require the app discriminator that clients also include in the query;
+    // this does not grant access to other apps' `predictions` collections.
+    match /{path=**}/predictions/{uid} {
+      allow read: if isSignedIn()
+        && resource.data.appId == 'match-chat';
+    }
+
     // ---- app root ------------------------------------------------------
     match /match-chat/app {
       allow read: if isSignedIn();
@@ -98,6 +106,8 @@ service cloud.firestore {
             allow create, update: if isParticipant()
               && request.auth.uid == uid
               && request.resource.data.userId == request.auth.uid
+              && request.resource.data.appId == 'match-chat'
+              && request.resource.data.tournamentId == tid
               && matchDoc(tid, mid).status == 'upcoming';
             // Owners may delete their own prediction before kickoff; admins any.
             allow delete: if isAdmin()

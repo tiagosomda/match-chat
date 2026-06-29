@@ -52,8 +52,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       app.matches.watchAll(widget.tournamentId).first,
       app.leaderboard.load(widget.tournamentId),
     ]);
-    final preds =
-        results[0] as List<({String matchId, Prediction prediction})>;
+    final preds = results[0] as List<({String matchId, Prediction prediction})>;
     final matches = results[1] as List<MatchModel>;
     final leaderboard = results[2] as List<LeaderboardEntry>;
 
@@ -146,6 +145,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return Center(
                       child: CircularProgressIndicator(color: c.accent),
+                    );
+                  }
+                  if (snap.hasError) {
+                    return Center(
+                      child: Text(
+                        context.l10n.t('couldNotLoadProfile'),
+                        style: TextStyle(color: c.muted),
+                      ),
                     );
                   }
                   final data = snap.data;

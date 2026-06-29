@@ -614,17 +614,16 @@ class _ChatRow extends StatelessWidget {
         Avatar(
           name: message.displayName,
           favoriteTeam: message.favoriteTeam,
-          size: 32,
+          size: 28,
           onTap: onUser,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
                     child: GestureDetector(
@@ -660,15 +659,15 @@ class _ChatRow extends StatelessWidget {
                       color: c.muted,
                     ),
                   ),
+                  if (taggedMatch != null) ...[
+                    const SizedBox(width: 6),
+                    Expanded(child: _tagChip(c, taggedMatch!)),
+                  ],
                 ],
               ),
               if (message.replyToName != null) ...[
                 const SizedBox(height: 5),
                 _replyBadge(context, c),
-              ],
-              if (taggedMatch != null) ...[
-                const SizedBox(height: 5),
-                _tagChip(c, taggedMatch!),
               ],
               const SizedBox(height: 5),
               _body(context),
@@ -727,18 +726,18 @@ class _ChatRow extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '${m.flagA} ${m.flagB}  ${m.teamA} vs ${m.teamB}',
-              style: TextStyle(
-                color: c.text,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                '${m.flagA} ${m.flagB}  ${m.teamA} vs ${m.teamB}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            if (onTagTap != null) ...[
-              const SizedBox(width: 5),
-              Icon(Icons.arrow_outward, size: 12, color: c.muted),
-            ],
           ],
         ),
       ),

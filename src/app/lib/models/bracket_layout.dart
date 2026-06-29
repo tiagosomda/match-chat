@@ -2,6 +2,11 @@ import 'dart:ui' show Offset, Rect, Size;
 
 import 'match.dart';
 
+class _HiddenWinnerSources {
+  String? teamA;
+  String? teamB;
+}
+
 /// Sizing for the bracket canvas. Defaults are tuned to read well on a phone
 /// once the whole bracket is zoomed to fit; panning and zooming reveal detail.
 class BracketMetrics {
@@ -39,6 +44,8 @@ class BracketNodeLayout {
     required this.rect,
     this.isThirdPlace = false,
     this.isPlaceholder = false,
+    this.hiddenTeamAFromMatchId,
+    this.hiddenTeamBFromMatchId,
   });
 
   final MatchModel match;
@@ -59,6 +66,15 @@ class BracketNodeLayout {
   /// True for a synthesized "TBD" slot — a round that hasn't been drawn yet, so
   /// it has no real fixture behind it. Rendered non-interactively.
   final bool isPlaceholder;
+
+  /// The feeder match whose winner occupies this slot but is hidden from this
+  /// viewer. These are populated for both synthesized and backend-authored
+  /// parent fixtures so neither path can leak an unrevealed result.
+  final String? hiddenTeamAFromMatchId;
+  final String? hiddenTeamBFromMatchId;
+
+  bool get hasHiddenWinner =>
+      hiddenTeamAFromMatchId != null || hiddenTeamBFromMatchId != null;
 
   Offset get leftCenter => Offset(rect.left, rect.center.dy);
   Offset get rightCenter => Offset(rect.right, rect.center.dy);
@@ -111,6 +127,7 @@ class BracketLayout {
   factory BracketLayout.fromMatches(
     List<MatchModel> matches, {
     BracketMetrics metrics = const BracketMetrics(),
+    Set<String> revealedWinnerMatchIds = const <String>{},
   }) {
     // The third-place playoff is shown detached, below the final.
     MatchModel? thirdPlaceMatch;
@@ -147,6 +164,7 @@ class BracketLayout {
     final columnRounds = <int>[];
     final columnMatches = <List<MatchModel>>[];
     final placeholderIds = <String>{};
+    var hiddenWinners = <String, _HiddenWinnerSources>{};
     if (presentKeys.isNotEmpty) {
       final minRound = presentKeys.first;
       final maxRound = presentKeys.last > _finalRoundIndex
@@ -167,10 +185,13 @@ class BracketLayout {
         columnMatches.add(column);
       }
 
-      // Backend-authored teams always win. When a later fixture is still empty,
-      // derive each completed child's winner into the corresponding parent
-      // slot so the bracket can advance optimistically between poller updates.
-      _prefillWinners(columnMatches);
+      // Hide each advancing team until this viewer reveals its feeder match.
+      // This also masks backend-authored parent teams; otherwise a poller
+      // update could leak the winner even after local prefill was made safe.
+      hiddenWinners = _applyWinnerVisibility(
+        columnMatches,
+        revealedWinnerMatchIds,
+      );
     }
 
     final nodeByKey = <String, BracketNodeLayout>{};
@@ -202,6 +223,8 @@ class BracketLayout {
             metrics.nodeHeight,
           ),
           isPlaceholder: placeholderIds.contains(group[s].id),
+          hiddenTeamAFromMatchId: hiddenWinners[group[s].id]?.teamA,
+          hiddenTeamBFromMatchId: hiddenWinners[group[s].id]?.teamB,
         );
         nodes.add(node);
         nodeByKey['$dr:$s'] = node;
@@ -288,7 +311,19 @@ class BracketLayout {
   /// that round `r` holds `2^(_finalRoundIndex - r)` matches (Final = 1).
   static const int _finalRoundIndex = 5;
 
-  static void _prefillWinners(List<List<MatchModel>> columns) {
+  static Map<String, _HiddenWinnerSources> _applyWinnerVisibility(
+    List<List<MatchModel>> columns,
+    Set<String> revealedWinnerMatchIds,
+  ) {
+    final hiddenWinners = <String, _HiddenWinnerSources>{};
+    // Keep the unredacted fixtures for winner derivation in later rounds. A
+    // semi-final's entrants may be hidden because its quarter-finals are still
+    // private, but explicitly revealing that semi-final must still be able to
+    // populate the Final with its real winner.
+    final originalById = <String, MatchModel>{
+      for (final column in columns)
+        for (final match in column) match.id: match,
+    };
     for (
       var displayRound = 0;
       displayRound < columns.length - 1;
@@ -297,11 +332,29 @@ class BracketLayout {
       final children = columns[displayRound];
       final parents = columns[displayRound + 1];
       for (var childSlot = 0; childSlot < children.length; childSlot++) {
-        final winner = _winnerOf(children[childSlot]);
-        if (winner == null) continue;
+        final child = originalById[children[childSlot].id]!;
+        if (child.status != MatchStatus.finished) continue;
         final parentSlot = childSlot ~/ 2;
         if (parentSlot >= parents.length) continue;
         final parent = parents[parentSlot];
+
+        if (!revealedWinnerMatchIds.contains(child.id)) {
+          final sources = hiddenWinners.putIfAbsent(
+            parent.id,
+            _HiddenWinnerSources.new,
+          );
+          if (childSlot.isEven) {
+            sources.teamA = child.id;
+            parents[parentSlot] = _withTeams(parent, teamA: '');
+          } else {
+            sources.teamB = child.id;
+            parents[parentSlot] = _withTeams(parent, teamB: '');
+          }
+          continue;
+        }
+
+        final winner = _winnerOf(child);
+        if (winner == null) continue;
         if (childSlot.isEven) {
           if (_isTeamMissing(parent.teamA)) {
             parents[parentSlot] = _withTeams(parent, teamA: winner);
@@ -311,6 +364,7 @@ class BracketLayout {
         }
       }
     }
+    return hiddenWinners;
   }
 
   static String? _winnerOf(MatchModel match) {
