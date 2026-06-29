@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/match.dart';
+import '../models/prediction.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
+import 'friends_reveal.dart';
 
 /// A single match rendered as a bracket node: two team rows with hidden scores,
 /// a status tint, and an info affordance — a compact cousin of the match-list
@@ -20,6 +22,9 @@ class BracketNode extends StatelessWidget {
     required this.onToggleScore,
     required this.onInfo,
     this.isThirdPlace = false,
+    this.myPrediction,
+    this.friendIds = const <String>[],
+    this.revealedFriendIds = const <String>{},
   });
 
   final MatchModel match;
@@ -28,6 +33,15 @@ class BracketNode extends StatelessWidget {
   final VoidCallback onToggleScore;
   final VoidCallback onInfo;
   final bool isThirdPlace;
+
+  /// The viewer's own prediction for this match, if any.
+  final Prediction? myPrediction;
+
+  /// Ids of the viewer's friends (to render the FriendsReveal badge).
+  final List<String> friendIds;
+
+  /// Which of those friends have already revealed this match's score.
+  final Set<String> revealedFriendIds;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +67,7 @@ class BracketNode extends StatelessWidget {
             Container(width: 4, color: status),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 9, 8, 9),
+                padding: const EdgeInsets.fromLTRB(11, 8, 8, 8),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +77,8 @@ class BracketNode extends StatelessWidget {
                         showScore, aWins, bWins),
                     _teamRow(c, match.flagB, match.teamB, match.scoreB,
                         showScore, bWins, aWins),
-                    _footerRow(c),
+                    if (myPrediction != null) _predictionRow(context, c),
+                    _footerRow(context, c, showScore),
                   ],
                 ),
               ),
@@ -75,41 +90,79 @@ class BracketNode extends StatelessWidget {
   }
 
   Widget _topRow(BuildContext context, AppColors c, Color status) {
-    return Row(
+    // Show description (e.g. "Quarter-Final") when it's distinct from the
+    // round label already shown in the column header.
+    final desc = match.description.trim();
+    final countdown = match.displayStatus == MatchStatus.upcoming
+        ? Formatting.untilKickoff(match.scheduledAt)
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: status, shape: BoxShape.circle),
+        Row(
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: status, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                isThirdPlace
+                    ? context.l10n.t('bracketThirdPlace')
+                    : bracketStatusLabel(context, match),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontSize: 8.5,
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.w700,
+                  color: status,
+                ),
+              ),
+            ),
+            if (countdown != null) ...[
+              Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
+              const SizedBox(width: 3),
+              Text(
+                countdown,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w700,
+                  color: c.accent,
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onInfo,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 3, 2, 3),
+                child: Icon(Icons.info_outline, size: 15, color: c.muted),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 5),
-        Expanded(
-          child: Text(
-            isThirdPlace
-                ? context.l10n.t('bracketThirdPlace')
-                : bracketStatusLabel(context, match),
+        if (desc.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            desc.toUpperCase(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: AppTheme.mono,
-              fontSize: 8.5,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w700,
-              color: status,
+              fontSize: 7.5,
+              letterSpacing: 0.8,
+              color: c.muted,
             ),
           ),
-        ),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onInfo,
-          // Roomy, inset tap target: the glyph sits off the corner and the
-          // padding gives a comfortable ~28px touch area without crowding the
-          // status label.
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 3, 2, 3),
-            child: Icon(Icons.info_outline, size: 15, color: c.muted),
-          ),
-        ),
+        ],
       ],
     );
   }
@@ -149,20 +202,96 @@ class BracketNode extends StatelessWidget {
     );
   }
 
-  Widget _footerRow(AppColors c) {
+  /// "YOUR PICK" chip — same amber-tinted pill as the list card.
+  Widget _predictionRow(BuildContext context, AppColors c) {
+    final p = myPrediction!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.12), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            context.l10n.t('yourPickUpper'),
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 7.5,
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+              color: c.muted,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(match.flagA, style: const TextStyle(fontSize: 10)),
+          const SizedBox(width: 3),
+          Text(
+            p.scoreText,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              color: c.accent2,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(match.flagB, style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _footerRow(BuildContext context, AppColors c, bool showScore) {
     final time = Formatting.shortKickoff(match.scheduledAt);
     final loc = match.shortLocation;
-    final label = loc != null ? '$time  ·  $loc' : time;
-    return Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontFamily: AppTheme.mono,
-        fontSize: 8.5,
-        letterSpacing: 0.4,
-        color: c.muted,
-      ),
+    final timeLabel = loc != null ? '$time  ·  $loc' : time;
+
+    return Row(
+      children: [
+        Icon(Icons.chat_bubble_outline, size: 10, color: c.muted),
+        const SizedBox(width: 4),
+        Text(
+          '${match.commentCount}',
+          style: TextStyle(
+            fontFamily: AppTheme.mono,
+            fontSize: 8.5,
+            color: c.muted,
+          ),
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            timeLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 8.5,
+              letterSpacing: 0.4,
+              color: c.muted,
+            ),
+          ),
+        ),
+        if (friendIds.isNotEmpty) ...[
+          const SizedBox(width: 4),
+          _FriendsBadge(
+            match: match,
+            friendIds: friendIds,
+            revealedFriendIds: revealedFriendIds,
+          ),
+        ],
+        if (showScore) ...[
+          const SizedBox(width: 4),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onToggleScore,
+            child: Icon(Icons.visibility_off_outlined, size: 11, color: c.muted),
+          ),
+        ],
+      ],
     );
   }
 
@@ -200,6 +329,51 @@ class BracketNode extends StatelessWidget {
               Icon(Icons.visibility_outlined, size: 12, color: c.accent),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A tiny inline friends-reveal badge that just shows the count and eye icon,
+/// compact enough to sit in the bracket node footer row without overflowing.
+class _FriendsBadge extends StatelessWidget {
+  const _FriendsBadge({
+    required this.match,
+    required this.friendIds,
+    required this.revealedFriendIds,
+  });
+
+  final MatchModel match;
+  final List<String> friendIds;
+  final Set<String> revealedFriendIds;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final count = revealedFriendIds.length;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showFriendsRevealSheet(
+        context,
+        match: match,
+        friendIds: friendIds,
+        revealedFriendIds: revealedFriendIds,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.visibility_outlined, size: 10, color: c.accent),
+          const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              color: c.accent,
+            ),
+          ),
+        ],
       ),
     );
   }

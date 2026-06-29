@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bracket_layout.dart';
 import '../models/match.dart';
+import '../models/prediction.dart';
 import '../models/user_match_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -27,6 +28,9 @@ class BracketView extends StatefulWidget {
     required this.reveals,
     required this.onOpenMatch,
     required this.onToggleScore,
+    this.myPreds = const <String, Prediction>{},
+    this.friendIds = const <String>[],
+    this.revealedByMatch = const <String, Set<String>>{},
   });
 
   /// Identifies the tournament so the pan/zoom is remembered per-bracket.
@@ -37,6 +41,15 @@ class BracketView extends StatefulWidget {
   final Map<String, UserMatchState> reveals;
   final void Function(String matchId) onOpenMatch;
   final void Function(String matchId, bool current) onToggleScore;
+
+  /// The viewer's own predictions, keyed by match id.
+  final Map<String, Prediction> myPreds;
+
+  /// Ids of the viewer's friends.
+  final List<String> friendIds;
+
+  /// Which friends have revealed each match's score, keyed by match id.
+  final Map<String, Set<String>> revealedByMatch;
 
   @override
   State<BracketView> createState() => _BracketViewState();
@@ -287,6 +300,10 @@ class _BracketViewState extends State<BracketView> {
           widget.reveals[match.id]?.scoreRevealed ?? false,
         ),
         onInfo: () => _showInfo(match),
+        myPrediction: widget.myPreds[match.id],
+        friendIds: widget.friendIds,
+        revealedFriendIds:
+            widget.revealedByMatch[match.id] ?? const <String>{},
       ),
     );
   }

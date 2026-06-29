@@ -257,27 +257,49 @@ class _MatchesScreenState extends State<MatchesScreen> {
       color: c.text,
     );
 
+    // Shared header — identical in both views so the toggle never jumps.
+    // Title gets its own line; the count + toggle share the row below it.
+    final header = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            app.tournament!.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: titleStyle,
+          ),
+          if (hasKnockout) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _viewToggle(c),
+                if (!showBracket) ...[
+                  const Spacer(),
+                  MonoLabel(
+                    context.l10n.tp('shownCount', {'n': '${visible.length}'}),
+                    fontSize: 11,
+                  ),
+                ],
+              ],
+            ),
+          ] else if (!showBracket) ...[
+            const SizedBox(height: 4),
+            MonoLabel(
+              context.l10n.tp('shownCount', {'n': '${visible.length}'}),
+              fontSize: 11,
+            ),
+          ],
+        ],
+      ),
+    );
+
     if (showBracket) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    app.tournament!.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: titleStyle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _viewToggle(c),
-              ],
-            ),
-          ),
+          header,
           Expanded(
             child: BracketView(
               tournamentId: tid,
@@ -285,63 +307,83 @@ class _MatchesScreenState extends State<MatchesScreen> {
               reveals: reveals,
               onOpenMatch: (mid) => _open(tid, mid),
               onToggleScore: (mid, current) => _toggleScore(app, mid, current),
+              myPreds: myPreds,
+              friendIds: friendIds,
+              revealedByMatch: revealedByMatch,
             ),
           ),
         ],
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(app.tournament!.name, style: titleStyle),
-            MonoLabel(
-              context.l10n.tp('shownCount', {'n': '${visible.length}'}),
-              fontSize: 11,
-            ),
-          ],
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: header),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _searchField(c),
+              const SizedBox(height: 13),
+              _chips(c, liveCount),
+              const SizedBox(height: 13),
+            ]),
+          ),
         ),
-        if (hasKnockout) ...[
-          const SizedBox(height: 13),
-          Align(alignment: Alignment.centerLeft, child: _viewToggle(c)),
-        ],
-        const SizedBox(height: 13),
-        _searchField(c),
-        const SizedBox(height: 13),
-        _chips(c, liveCount),
-        const SizedBox(height: 13),
         if (visible.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
+          SliverFillRemaining(
+            hasScrollBody: false,
             child: Center(
-              child: Text(
-                context.l10n.t('noMatchesSearch'),
-                style: TextStyle(color: c.muted),
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Text(
+                  context.l10n.t('noMatchesSearch'),
+                  style: TextStyle(color: c.muted),
+                ),
               ),
             ),
           )
         else
-          for (final m in visible) ...[
-            _MatchCard(
-              match: m,
-              revealed: reveals[m.id]?.scoreRevealed ?? false,
-              friendIds: friendIds,
-              revealedFriendIds: revealedByMatch[m.id] ?? const <String>{},
-              myPrediction: myPreds[m.id],
-              onOpen: () => _open(tid, m.id),
-              onToggleScore: () => _toggleScore(
-                app,
-                m.id,
-                reveals[m.id]?.scoreRevealed ?? false,
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final items = visible;
+                  if (index < items.length) {
+                    final m = items[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 13),
+                      child: _MatchCard(
+                        match: m,
+                        revealed: reveals[m.id]?.scoreRevealed ?? false,
+                        friendIds: friendIds,
+                        revealedFriendIds:
+                            revealedByMatch[m.id] ?? const <String>{},
+                        myPrediction: myPreds[m.id],
+                        onOpen: () => _open(tid, m.id),
+                        onToggleScore: () => _toggleScore(
+                          app,
+                          m.id,
+                          reveals[m.id]?.scoreRevealed ?? false,
+                        ),
+                      ),
+                    );
+                  }
+                  // Archived toggle at the very end
+                  if (index == items.length && _hasArchived(all)) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 28),
+                      child: _archivedToggle(c),
+                    );
+                  }
+                  return const SizedBox(height: 28);
+                },
+                childCount: visible.length +
+                    (_hasArchived(all) ? 1 : 1), // +1 for bottom padding
               ),
             ),
-            const SizedBox(height: 13),
-          ],
-        if (_hasArchived(all)) _archivedToggle(c),
+          ),
       ],
     );
   }
@@ -368,34 +410,24 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   Widget _viewSeg(AppColors c, _View v, String label, IconData icon) {
     final active = _view == v;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _view = v);
-        _persist();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? c.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: active ? Colors.white : c.muted),
-            const SizedBox(width: 6),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                fontFamily: AppTheme.mono,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-                color: active ? Colors.white : c.muted,
-              ),
-            ),
-          ],
+    return Tooltip(
+      message: label,
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _view = v);
+          _persist();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: active ? c.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Center(
+            child: Icon(icon, size: 16, color: active ? Colors.white : c.muted),
+          ),
         ),
       ),
     );

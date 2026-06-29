@@ -6,8 +6,8 @@ import 'match.dart';
 /// once the whole bracket is zoomed to fit; panning and zooming reveal detail.
 class BracketMetrics {
   const BracketMetrics({
-    this.nodeWidth = 168,
-    this.nodeHeight = 108,
+    this.nodeWidth = 180,
+    this.nodeHeight = 140,
     this.hGap = 52,
     this.vGap = 22,
     this.padding = 22,
