@@ -11,8 +11,8 @@ import '../utils/formatting.dart';
 import 'friends_reveal.dart';
 
 /// A single match rendered as a bracket node: two team rows with hidden scores,
-/// a centered kickoff header and status tint — a compact cousin of the
-/// match-list card, sharing its reveal/blur and status-color conventions.
+/// a single-line status/kickoff header — a compact cousin of the match-list
+/// card, sharing its reveal/blur and status-color conventions.
 class BracketNode extends StatelessWidget {
   const BracketNode({
     super.key,
@@ -69,14 +69,12 @@ class BracketNode extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _kickoffRow(c),
-                    const SizedBox(height: 4),
-                    _statusRow(context, c, status),
+                    _headerRow(context, c, status),
                     if (match.shortLocation != null) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       _venueRow(c),
                     ],
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _teamRow(
                       c,
                       match.flagA,
@@ -113,61 +111,70 @@ class BracketNode extends StatelessWidget {
     );
   }
 
-  Widget _kickoffRow(AppColors c) {
-    return SizedBox(
-      width: double.infinity,
-      child: Text(
-        Formatting.kickoff(match.scheduledAt),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: c.muted,
-          fontFamily: AppTheme.mono,
-          fontSize: 8.5,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _statusRow(BuildContext context, AppColors c, Color status) {
+  Widget _headerRow(BuildContext context, AppColors c, Color status) {
     final countdown = match.displayStatus == MatchStatus.upcoming
         ? Formatting.untilKickoff(match.scheduledAt)
         : null;
     return Row(
       children: [
+        _statusChip(context, c, status, countdown),
+        const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            isThirdPlace
-                ? context.l10n.t('bracketThirdPlace')
-                : bracketStatusLabel(context, match),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.mono,
-              fontSize: 8.5,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w700,
-              color: status,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                Formatting.kickoff(match.scheduledAt),
+                key: ValueKey('node-kickoff-${match.id}'),
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: c.muted,
+                  fontFamily: AppTheme.mono,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ),
-        if (countdown != null) ...[
-          const SizedBox(width: 6),
-          Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
-          const SizedBox(width: 3),
-          Text(
-            countdown,
-            style: TextStyle(
-              fontFamily: AppTheme.mono,
-              fontSize: 8.5,
-              fontWeight: FontWeight.w700,
-              color: c.accent,
-            ),
-          ),
-        ],
       ],
+    );
+  }
+
+  Widget _statusChip(
+    BuildContext context,
+    AppColors c,
+    Color status,
+    String? countdown,
+  ) {
+    final label = [
+      isThirdPlace
+          ? context.l10n.t('bracketThirdPlace')
+          : bracketStatusLabel(context, match),
+      ?countdown,
+    ].join(' · ');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(status.withValues(alpha: 0.10), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: status.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          fontSize: 8.5,
+          letterSpacing: 0.45,
+          fontWeight: FontWeight.w700,
+          color: status,
+        ),
+      ),
     );
   }
 

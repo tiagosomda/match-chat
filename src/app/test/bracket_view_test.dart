@@ -134,9 +134,20 @@ void main() {
     expect(find.text('Germany'), findsOneWidget);
     expect(find.text('Mexico'), findsNothing);
 
-    // Kickoff gets a dedicated centered line above the node metadata/teams.
+    // Kickoff stays intact beside the status/countdown pill and above teams.
     final brazilKickoff = find.text(Formatting.kickoff(matches[2].scheduledAt));
     expect(brazilKickoff, findsOneWidget);
+    final kickoffText = tester.widget<Text>(brazilKickoff);
+    expect(kickoffText.maxLines, 1);
+    expect(kickoffText.softWrap, isFalse);
+    expect(kickoffText.overflow, isNull);
+    final brazilStatus = find.textContaining('TOMORROW');
+    expect(brazilStatus, findsOneWidget);
+    expect(
+      (tester.getCenter(brazilKickoff).dy - tester.getCenter(brazilStatus).dy)
+          .abs(),
+      lessThan(1),
+    );
     expect(
       tester.getCenter(brazilKickoff).dy,
       lessThan(tester.getCenter(find.text('Brazil')).dy),

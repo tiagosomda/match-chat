@@ -217,10 +217,10 @@ class _BracketViewState extends State<BracketView> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    // The 128px baseline fits kickoff, status, venue, and both teams. Optional
+    // The single-line header lets the core node stay compact. Optional
     // prediction/friend rows add only the height they actually need.
     final nodeHeight =
-        128.0 +
+        120.0 +
         (widget.myPreds.isNotEmpty ? 18.0 : 0.0) +
         (widget.friendIds.isNotEmpty ? 12.0 : 0.0);
     final metrics = BracketMetrics(nodeHeight: nodeHeight);
