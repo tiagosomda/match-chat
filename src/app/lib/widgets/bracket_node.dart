@@ -100,9 +100,12 @@ class BracketNode extends StatelessWidget {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onInfo,
+          // Roomy, inset tap target: the glyph sits off the corner and the
+          // padding gives a comfortable ~28px touch area without crowding the
+          // status label.
           child: Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Icon(Icons.info_outline, size: 14, color: c.muted),
+            padding: const EdgeInsets.fromLTRB(10, 3, 2, 3),
+            child: Icon(Icons.info_outline, size: 15, color: c.muted),
           ),
         ),
       ],
