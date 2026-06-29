@@ -1,0 +1,120 @@
+2026-06-28 00:19:52,773 urllib3.connectionpool DEBUG Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2026-06-28 00:19:52,856 urllib3.connectionpool DEBUG https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2026-06-28 00:19:53,327 poller INFO Poller started for FIFA World Cup 2026 (league=1 season=2026)
+2026-06-28 00:19:53,343 urllib3.connectionpool DEBUG Starting new HTTPS connection (1): v3.football.api-sports.io:443
+2026-06-28 00:19:53,594 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026 HTTP/1.1" 200 None
+2026-06-28 00:19:53,776 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /standings?league=1&season=2026 HTTP/1.1" 200 None
+2026-06-28 00:19:54,129 poller INFO Daily sync: 88 fixtures upserted (budget remaining: 7460)
+2026-06-28 00:19:54,285 poller INFO Idle; sleeping 3600s (budget remaining: 7460)
+2026-06-28 11:58:26,719 urllib3.connectionpool DEBUG Resetting dropped connection: oauth2.googleapis.com
+2026-06-28 11:58:26,814 urllib3.connectionpool DEBUG https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2026-06-28 11:58:27,281 urllib3.connectionpool DEBUG Resetting dropped connection: v3.football.api-sports.io
+2026-06-28 11:58:27,523 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 11:58:27,525 poller INFO Live set -1 (fetching final): [1561329]
+2026-06-28 11:58:27,699 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?ids=1561329 HTTP/1.1" 200 None
+2026-06-28 11:58:27,701 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 12:03:27,899 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:03:27,901 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:03:28,094 poller INFO Updated 1561329: live 0-0
+2026-06-28 12:03:28,095 poller INFO Live set +1: [1561329]
+2026-06-28 12:03:28,095 poller DEBUG Poll summary: 1 in play, 1 written
+2026-06-28 12:08:28,292 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:08:28,293 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:08:28,293 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:13:28,535 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:13:28,537 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:13:28,537 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:15:37,136 poller INFO Stopped.
+2026-06-28 12:15:38,618 urllib3.connectionpool DEBUG Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2026-06-28 12:15:38,704 urllib3.connectionpool DEBUG https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2026-06-28 12:15:39,141 poller INFO Poller started for FIFA World Cup 2026 (league=1 season=2026)
+2026-06-28 12:15:39,158 urllib3.connectionpool DEBUG Starting new HTTPS connection (1): v3.football.api-sports.io:443
+2026-06-28 12:15:39,433 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026 HTTP/1.1" 200 None
+2026-06-28 12:15:39,641 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /standings?league=1&season=2026 HTTP/1.1" 200 None
+2026-06-28 12:15:39,961 poller INFO Daily sync: 88 fixtures upserted (budget remaining: 7453)
+2026-06-28 12:15:40,350 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:15:40,352 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:15:40,352 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:20:40,552 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:20:40,553 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:20:40,554 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:25:40,761 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:25:40,763 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:25:40,763 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:30:41,002 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:30:41,004 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:30:41,004 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:35:41,216 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:35:41,218 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:35:41,218 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:40:41,629 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:40:41,631 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:40:41,631 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:45:41,867 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:45:41,870 poller DEBUG Poll: fixture 1561329 status=1H score=0-0
+2026-06-28 12:45:41,870 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:50:42,076 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:50:42,078 poller DEBUG Poll: fixture 1561329 status=HT score=0-0
+2026-06-28 12:50:42,079 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 12:55:42,283 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 12:55:42,286 poller DEBUG Poll: fixture 1561329 status=HT score=0-0
+2026-06-28 12:55:42,286 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:00:42,591 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:00:42,593 poller DEBUG Poll: fixture 1561329 status=HT score=0-0
+2026-06-28 13:00:42,593 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:05:42,828 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:05:42,831 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:05:42,831 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:10:43,055 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:10:43,057 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:10:43,057 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:15:43,281 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:15:43,283 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:15:43,283 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:20:43,510 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:20:43,512 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:20:43,512 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:25:43,716 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:25:43,718 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:25:43,718 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:30:43,958 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:30:43,960 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:30:43,960 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:35:44,186 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:35:44,189 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:35:44,189 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:40:44,437 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:40:44,439 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:40:44,440 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:45:44,643 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:45:44,645 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:45:44,645 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:50:44,858 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:50:44,860 poller DEBUG Poll: fixture 1561329 status=2H score=0-0
+2026-06-28 13:50:44,861 poller DEBUG Poll summary: 1 in play, 0 written
+2026-06-28 13:55:45,080 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 13:55:45,082 poller DEBUG Poll: fixture 1561329 status=2H score=0-1
+2026-06-28 13:55:45,263 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures/events?fixture=1561329 HTTP/1.1" 200 None
+2026-06-28 13:55:45,355 urllib3.connectionpool DEBUG Resetting dropped connection: oauth2.googleapis.com
+2026-06-28 13:55:45,457 urllib3.connectionpool DEBUG https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2026-06-28 13:55:45,924 poller INFO Updated 1561329: live 0-1
+2026-06-28 13:55:45,925 poller DEBUG Poll summary: 1 in play, 1 written
+2026-06-28 14:00:46,536 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 14:00:46,538 poller INFO Live set -1 (fetching final): [1561329]
+2026-06-28 14:00:46,734 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?ids=1561329 HTTP/1.1" 200 None
+2026-06-28 14:00:46,949 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures/events?fixture=1561329 HTTP/1.1" 200 None
+2026-06-28 14:00:47,556 poller INFO Updated 1561329: finished 0-1
+2026-06-28 14:00:47,556 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 14:05:47,771 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 14:05:47,773 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 14:10:47,999 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 14:10:48,002 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 14:15:48,203 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 14:15:48,206 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 14:39:18,376 urllib3.connectionpool DEBUG Resetting dropped connection: v3.football.api-sports.io
+2026-06-28 14:39:18,642 urllib3.connectionpool DEBUG https://v3.football.api-sports.io:443 "GET /fixtures?league=1&season=2026&status=1H-HT-2H-ET-BT-P-SUSP-INT-LIVE HTTP/1.1" 200 None
+2026-06-28 14:39:18,643 poller DEBUG Poll summary: 0 in play, 0 written
+2026-06-28 15:55:27,233 urllib3.connectionpool DEBUG Resetting dropped connection: oauth2.googleapis.com
+2026-06-28 15:55:27,324 urllib3.connectionpool DEBUG https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2026-06-28 15:55:39,034 poller INFO Recomputed leaderboard standings: 2 player(s)
+2026-06-28 15:55:39,157 poller INFO Idle; sleeping 3600s (budget remaining: 7424)
