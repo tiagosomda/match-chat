@@ -662,7 +662,7 @@ class _ChatRow extends StatelessWidget {
                   ),
                 ],
               ),
-              if (isReplyToMe) ...[
+              if (message.replyToName != null) ...[
                 const SizedBox(height: 5),
                 _replyBadge(context, c),
               ],
@@ -680,23 +680,33 @@ class _ChatRow extends StatelessWidget {
   }
 
   Widget _replyBadge(BuildContext context, AppColors c) {
+    final color = isReplyToMe ? c.accent : c.muted;
+    final label = isReplyToMe
+        ? context.l10n.t('buzzReplyToYou')
+        : message.replyToName!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: c.accent.withValues(alpha: 0.14),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.reply, size: 11, color: c.accent),
+          Icon(Icons.reply, size: 11, color: color),
           const SizedBox(width: 4),
-          MonoLabel(
-            context.l10n.t('buzzReplyToYou'),
-            color: c.accent,
-            fontSize: 8.5,
-            letterSpacing: 0.8,
-            fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 8.5,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
