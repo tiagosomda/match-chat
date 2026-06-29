@@ -28,6 +28,8 @@ enum _Filter { all, upcoming, live, finished }
 
 enum _View { list, bracket }
 
+enum _ViewToggleDensity { full, activeLabelOnly, iconsOnly, compact }
+
 class _MatchesScreenState extends State<MatchesScreen> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
@@ -262,25 +264,44 @@ class _MatchesScreenState extends State<MatchesScreen> {
       color: c.text,
     );
 
-    // Shared header — identical in both views so the toggle never jumps.
-    // The title and optional list/bracket toggle each get their own line.
+    // Shared header — identical in both views so the toggle never jumps. The
+    // view switch sits beside the tournament name and progressively sheds
+    // labels before shrinking when a long title leaves less room.
     final header = Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: c.line)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            app.tournament!.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: titleStyle,
-          ),
-          if (hasKnockout) ...[const SizedBox(height: 10), _viewToggle(c)],
-        ],
-      ),
+      child: hasKnockout
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                final density = _viewToggleDensity(
+                  constraints.maxWidth,
+                  app.tournament!.name,
+                  titleStyle,
+                );
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        app.tournament!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _viewToggle(c, density),
+                  ],
+                );
+              },
+            )
+          : Text(
+              app.tournament!.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle,
+            ),
     );
 
     if (showBracket) {
@@ -408,9 +429,67 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
-  Widget _viewToggle(AppColors c) {
+  _ViewToggleDensity _viewToggleDensity(
+    double availableWidth,
+    String title,
+    TextStyle titleStyle,
+  ) {
+    const gap = 12.0;
+    final titleWidth = _textWidth(title, titleStyle);
+
+    for (final density in const [
+      _ViewToggleDensity.full,
+      _ViewToggleDensity.activeLabelOnly,
+      _ViewToggleDensity.iconsOnly,
+    ]) {
+      if (titleWidth + gap + _viewToggleWidth(density) <= availableWidth) {
+        return density;
+      }
+    }
+    return _ViewToggleDensity.compact;
+  }
+
+  double _viewToggleWidth(_ViewToggleDensity density) {
+    final compact = density == _ViewToggleDensity.compact;
+    final outerPadding = compact ? 2.0 : 3.0;
+    final horizontalPadding = compact ? 7.0 : 10.0;
+    final iconSize = compact ? 14.0 : 16.0;
+    final labelStyle = TextStyle(
+      fontFamily: AppTheme.grotesk,
+      fontSize: compact ? 10.5 : 12,
+      fontWeight: FontWeight.w700,
+    );
+
+    double segmentWidth(_View view, String label) {
+      final showLabel = switch (density) {
+        _ViewToggleDensity.full => true,
+        _ViewToggleDensity.activeLabelOnly => _view == view,
+        _ViewToggleDensity.iconsOnly || _ViewToggleDensity.compact => false,
+      };
+      return horizontalPadding * 2 +
+          iconSize +
+          (showLabel ? 6 + _textWidth(label.toUpperCase(), labelStyle) : 0);
+    }
+
+    return outerPadding * 2 +
+        segmentWidth(_View.list, context.l10n.t('viewList')) +
+        segmentWidth(_View.bracket, context.l10n.t('viewBracket'));
+  }
+
+  double _textWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    return painter.width;
+  }
+
+  Widget _viewToggle(AppColors c, _ViewToggleDensity density) {
+    final compact = density == _ViewToggleDensity.compact;
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(compact ? 2 : 3),
       decoration: BoxDecoration(
         color: c.surface2,
         borderRadius: BorderRadius.circular(999),
@@ -424,20 +503,34 @@ class _MatchesScreenState extends State<MatchesScreen> {
             _View.list,
             context.l10n.t('viewList'),
             Icons.view_agenda_outlined,
+            density,
           ),
           _viewSeg(
             c,
             _View.bracket,
             context.l10n.t('viewBracket'),
             Icons.account_tree_outlined,
+            density,
           ),
         ],
       ),
     );
   }
 
-  Widget _viewSeg(AppColors c, _View v, String label, IconData icon) {
+  Widget _viewSeg(
+    AppColors c,
+    _View v,
+    String label,
+    IconData icon,
+    _ViewToggleDensity density,
+  ) {
     final active = _view == v;
+    final compact = density == _ViewToggleDensity.compact;
+    final showLabel = switch (density) {
+      _ViewToggleDensity.full => true,
+      _ViewToggleDensity.activeLabelOnly => active,
+      _ViewToggleDensity.iconsOnly || _ViewToggleDensity.compact => false,
+    };
     return Tooltip(
       message: label,
       child: GestureDetector(
@@ -447,8 +540,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: compact ? 28 : 34,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 10),
           decoration: BoxDecoration(
             color: active ? c.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
@@ -457,17 +550,23 @@ class _MatchesScreenState extends State<MatchesScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: active ? Colors.white : c.muted),
-                const SizedBox(width: 6),
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    fontFamily: AppTheme.grotesk,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : c.muted,
-                  ),
+                Icon(
+                  icon,
+                  size: compact ? 14 : 16,
+                  color: active ? Colors.white : c.muted,
                 ),
+                if (showLabel) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    label.toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: AppTheme.grotesk,
+                      fontSize: compact ? 10.5 : 12,
+                      fontWeight: FontWeight.w700,
+                      color: active ? Colors.white : c.muted,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
