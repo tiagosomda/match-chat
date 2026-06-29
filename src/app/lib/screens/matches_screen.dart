@@ -351,22 +351,48 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   final items = visible;
                   if (index < items.length) {
                     final m = items[index];
+                    final showStage =
+                        m.description.trim().isNotEmpty &&
+                        (index == 0 ||
+                            items[index - 1].description != m.description);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 13),
-                      child: _MatchCard(
-                        match: m,
-                        revealed: reveals[m.id]?.scoreRevealed ?? false,
-                        friendIds: friendIds,
-                        revealedFriendIds:
-                            revealedByMatch[m.id] ?? const <String>{},
-                        myPrediction: myPreds[m.id],
-                        onOpen: () => _open(tid, m.id),
-                        onToggleScore: () => _toggleScore(
-                          app,
-                          m.id,
-                          reveals[m.id]?.scoreRevealed ?? false,
-                        ),
-                        goalsRevealed: reveals[m.id]?.goalsRevealed ?? false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (showStage) ...[
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                2,
+                                index == 0 ? 0 : 5,
+                                2,
+                                8,
+                              ),
+                              child: MonoLabel(
+                                m.description.toUpperCase(),
+                                fontSize: 10,
+                                letterSpacing: 1.4,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                          _MatchCard(
+                            match: m,
+                            revealed: reveals[m.id]?.scoreRevealed ?? false,
+                            friendIds: friendIds,
+                            revealedFriendIds:
+                                revealedByMatch[m.id] ?? const <String>{},
+                            myPrediction: myPreds[m.id],
+                            onOpen: () => _open(tid, m.id),
+                            onToggleScore: () => _toggleScore(
+                              app,
+                              m.id,
+                              reveals[m.id]?.scoreRevealed ?? false,
+                            ),
+                            goalsRevealed:
+                                reveals[m.id]?.goalsRevealed ?? false,
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -716,65 +742,20 @@ class _MatchCard extends StatelessWidget {
       child: Opacity(
         opacity: match.isHidden ? 0.62 : 1,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+          padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: c.line),
           ),
           child: Column(
             children: [
-              Center(
-                child: MonoLabel(
-                  match.description.toUpperCase(),
-                  fontSize: 10,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const SizedBox(height: 10),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _phaseLabel(context),
-                          style: TextStyle(
-                            fontFamily: AppTheme.mono,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.4,
-                            color: _statusColor(c),
-                          ),
-                        ),
-                        if (match.shortLocation != null) ...[
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.place_outlined,
-                                size: 11,
-                                color: c.muted,
-                              ),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  match.shortLocation!,
-                                  style: TextStyle(
-                                    color: c.muted,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  _statusChip(context, c, countdown),
                   if (match.isHidden) ...[
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 7,
@@ -792,51 +773,41 @@ class _MatchCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 8),
                   ],
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (countdown != null) ...[
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.hourglass_bottom,
-                              size: 11,
-                              color: c.accent,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              countdown,
-                              style: TextStyle(
-                                fontFamily: AppTheme.mono,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                                color: c.accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                      ],
-                      Text(
-                        Formatting.kickoff(match.scheduledAt),
-                        maxLines: 2,
-                        softWrap: true,
-                        style: TextStyle(
-                          color: c.muted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      Formatting.kickoff(match.scheduledAt),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: c.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              if (match.shortLocation != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.place_outlined, size: 12, color: c.muted),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        match.shortLocation!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: c.muted, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -850,9 +821,7 @@ class _MatchCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 _yourPick(context, c),
               ],
-              if (match.goals.isNotEmpty ||
-                  !goalsRevealed ||
-                  goalsRevealed) ...[
+              if (goalsRevealed) ...[
                 const SizedBox(height: 10),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
@@ -878,51 +847,44 @@ class _MatchCard extends StatelessWidget {
                       ),
                     );
                   },
-                  child: goalsRevealed
-                      ? (match.goals.isEmpty
-                            ? KeyedSubtree(
-                                key: const ValueKey('goals-status'),
-                                child: _goalsStatus(
-                                  context,
-                                  c,
-                                  context.l10n.t('noGoalsYet'),
-                                  app,
-                                ),
-                              )
-                            : KeyedSubtree(
-                                key: const ValueKey('goals-summary'),
-                                child: _goalsSummary(context, c, app),
-                              ))
+                  child: match.goals.isEmpty
+                      ? KeyedSubtree(
+                          key: const ValueKey('goals-status'),
+                          child: _goalsStatus(
+                            context,
+                            c,
+                            context.l10n.t('noGoalsYet'),
+                            app,
+                          ),
+                        )
                       : KeyedSubtree(
-                          key: const ValueKey('goals-reveal'),
-                          child: _goalsRevealAction(context, c, app),
+                          key: const ValueKey('goals-summary'),
+                          child: _goalsSummary(context, c, app),
                         ),
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 11),
               Container(
-                padding: const EdgeInsets.only(top: 11),
+                padding: const EdgeInsets.only(top: 10),
                 decoration: BoxDecoration(
                   border: Border(top: BorderSide(color: c.line)),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 13,
-                            color: c.muted,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${match.commentCount}',
-                            style: TextStyle(color: c.muted, fontSize: 12),
-                          ),
-                        ],
-                      ),
+                    if (!goalsRevealed)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _goalsRevealAction(context, c, app),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    Icon(Icons.chat_bubble_outline, size: 13, color: c.muted),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${match.commentCount}',
+                      style: TextStyle(color: c.muted, fontSize: 12),
                     ),
                     if (friendIds.isNotEmpty) ...[
                       const SizedBox(width: 8),
@@ -958,6 +920,29 @@ class _MatchCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(BuildContext context, AppColors c, String? countdown) {
+    final color = _statusColor(c);
+    final label = [_phaseLabel(context), ?countdown].join(' · ');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(color.withValues(alpha: 0.10), c.surface),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: AppTheme.mono,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: color,
         ),
       ),
     );
@@ -1006,26 +991,24 @@ class _MatchCard extends StatelessWidget {
     return GestureDetector(
       onTap: () =>
           app.reveals.setReveal(app.firebaseUser!.uid, match.id, goals: true),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: c.surface2,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: c.line),
-        ),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.sports_soccer, size: 12, color: c.accent),
+            Icon(Icons.sports_soccer, size: 13, color: c.accent),
             const SizedBox(width: 6),
-            Text(
-              context.l10n.t('revealGoals'),
-              style: TextStyle(
-                fontFamily: AppTheme.mono,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: c.accent,
+            Expanded(
+              child: Text(
+                context.l10n.t('revealGoals'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.mono,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  color: c.accent,
+                ),
               ),
             ),
           ],

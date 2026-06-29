@@ -20,9 +20,9 @@ import '../widgets/ui.dart';
 
 /// The pan-and-zoom knockout bracket. Renders the tournament's knockout matches
 /// on an [InteractiveViewer] canvas: two-finger drag to pan, pinch to zoom (plus
-/// on-screen controls for pointer users), tap a node to open the match, tap its
-/// info icon for time / date / status. Scores stay hidden behind the same
-/// per-user reveal as the match list. See docs/bracket-screen.md.
+/// on-screen controls for pointer users), and tap a node to open its match
+/// sheet. Scores stay hidden behind the same per-user reveal as the match list.
+/// See docs/bracket-screen.md.
 class BracketView extends StatefulWidget {
   const BracketView({
     super.key,
@@ -217,7 +217,14 @@ class _BracketViewState extends State<BracketView> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final layout = BracketLayout.fromMatches(widget.matches);
+    // The 128px baseline fits kickoff, status, venue, and both teams. Optional
+    // prediction/friend rows add only the height they actually need.
+    final nodeHeight =
+        128.0 +
+        (widget.myPreds.isNotEmpty ? 18.0 : 0.0) +
+        (widget.friendIds.isNotEmpty ? 12.0 : 0.0);
+    final metrics = BracketMetrics(nodeHeight: nodeHeight);
+    final layout = BracketLayout.fromMatches(widget.matches, metrics: metrics);
     if (layout.isEmpty) return const _BracketEmpty();
     _canvas = layout.canvasSize;
 
@@ -314,14 +321,12 @@ class _BracketViewState extends State<BracketView> {
       child: BracketNode(
         match: match,
         revealed: widget.reveals[match.id]?.scoreRevealed ?? false,
-        goalsRevealed: widget.reveals[match.id]?.goalsRevealed ?? false,
         isThirdPlace: node.isThirdPlace,
         onOpen: () => _showInfo(match),
         onToggleScore: () => widget.onToggleScore(
           match.id,
           widget.reveals[match.id]?.scoreRevealed ?? false,
         ),
-        onInfo: () => _showInfo(match),
         myPrediction: widget.myPreds[match.id],
         friendIds: widget.friendIds,
         revealedFriendIds: widget.revealedByMatch[match.id] ?? const <String>{},
@@ -784,24 +789,27 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
           color: c.accent,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.visibility_outlined,
-              size: 14,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              context.l10n.t('reveal'),
-              style: TextStyle(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.visibility_outlined,
+                size: 14,
                 color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                context.l10n.t('reveal'),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

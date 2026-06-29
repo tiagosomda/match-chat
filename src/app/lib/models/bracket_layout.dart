@@ -7,7 +7,7 @@ import 'match.dart';
 class BracketMetrics {
   const BracketMetrics({
     this.nodeWidth = 214,
-    this.nodeHeight = 148,
+    this.nodeHeight = 128,
     this.hGap = 58,
     this.vGap = 28,
     this.padding = 24,

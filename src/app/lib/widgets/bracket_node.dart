@@ -11,17 +11,15 @@ import '../utils/formatting.dart';
 import 'friends_reveal.dart';
 
 /// A single match rendered as a bracket node: two team rows with hidden scores,
-/// a status tint, and an info affordance — a compact cousin of the match-list
-/// card, sharing its reveal/blur and status-color conventions.
+/// a centered kickoff header and status tint — a compact cousin of the
+/// match-list card, sharing its reveal/blur and status-color conventions.
 class BracketNode extends StatelessWidget {
   const BracketNode({
     super.key,
     required this.match,
     required this.revealed,
-    required this.goalsRevealed,
     required this.onOpen,
     required this.onToggleScore,
-    required this.onInfo,
     this.isThirdPlace = false,
     this.myPrediction,
     this.friendIds = const <String>[],
@@ -30,10 +28,8 @@ class BracketNode extends StatelessWidget {
 
   final MatchModel match;
   final bool revealed;
-  final bool goalsRevealed;
   final VoidCallback onOpen;
   final VoidCallback onToggleScore;
-  final VoidCallback onInfo;
   final bool isThirdPlace;
 
   /// The viewer's own prediction for this match, if any.
@@ -66,15 +62,21 @@ class BracketNode extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 4, color: status),
+            Container(width: 3, color: status.withValues(alpha: 0.62)),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 8, 8, 8),
+                padding: const EdgeInsets.fromLTRB(11, 8, 9, 8),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _topRow(context, c, status),
+                    _kickoffRow(c),
+                    const SizedBox(height: 4),
+                    _statusRow(context, c, status),
+                    if (match.shortLocation != null) ...[
+                      const SizedBox(height: 3),
+                      _venueRow(c),
+                    ],
+                    const SizedBox(height: 10),
                     _teamRow(
                       c,
                       match.flagA,
@@ -93,8 +95,14 @@ class BracketNode extends StatelessWidget {
                       bWins,
                       aWins,
                     ),
-                    if (myPrediction != null) _predictionRow(context, c),
-                    _footerRow(context, c, showScore),
+                    if (myPrediction != null) ...[
+                      const SizedBox(height: 2),
+                      _predictionRow(context, c),
+                    ],
+                    if (friendIds.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      _friendsRow(),
+                    ],
                   ],
                 ),
               ),
@@ -105,108 +113,80 @@ class BracketNode extends StatelessWidget {
     );
   }
 
-  Widget _topRow(BuildContext context, AppColors c, Color status) {
+  Widget _kickoffRow(AppColors c) {
+    return SizedBox(
+      width: double.infinity,
+      child: Text(
+        Formatting.kickoff(match.scheduledAt),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: c.muted,
+          fontFamily: AppTheme.mono,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _statusRow(BuildContext context, AppColors c, Color status) {
     final countdown = match.displayStatus == MatchStatus.upcoming
         ? Formatting.untilKickoff(match.scheduledAt)
         : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: status, shape: BoxShape.circle),
+        Expanded(
+          child: Text(
+            isThirdPlace
+                ? context.l10n.t('bracketThirdPlace')
+                : bracketStatusLabel(context, match),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 8.5,
+              letterSpacing: 1,
+              fontWeight: FontWeight.w700,
+              color: status,
             ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isThirdPlace
-                        ? context.l10n.t('bracketThirdPlace')
-                        : bracketStatusLabel(context, match),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTheme.mono,
-                      fontSize: 8.5,
-                      letterSpacing: 1,
-                      fontWeight: FontWeight.w700,
-                      color: status,
-                    ),
-                  ),
-                  if (match.shortLocation != null) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(Icons.place_outlined, size: 8, color: c.muted),
-                        const SizedBox(width: 2),
-                        Flexible(
-                          child: Text(
-                            match.shortLocation!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: c.muted,
-                              fontSize: 8.2,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
+          ),
+        ),
+        if (countdown != null) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
+          const SizedBox(width: 3),
+          Text(
+            countdown,
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              color: c.accent,
             ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (countdown != null) ...[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.hourglass_bottom, size: 9, color: c.accent),
-                        const SizedBox(width: 3),
-                        Text(
-                          countdown,
-                          style: TextStyle(
-                            fontFamily: AppTheme.mono,
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w700,
-                            color: c.accent,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                  ],
-                  Text(
-                    Formatting.kickoff(match.scheduledAt),
-                    maxLines: 2,
-                    softWrap: true,
-                    style: TextStyle(
-                      color: c.muted,
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _venueRow(AppColors c) {
+    return Row(
+      children: [
+        Icon(Icons.place_outlined, size: 8, color: c.muted),
+        const SizedBox(width: 3),
+        Expanded(
+          child: Text(
+            match.shortLocation!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: c.muted,
+              fontSize: 8.2,
+              fontWeight: FontWeight.w500,
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -223,27 +203,30 @@ class BracketNode extends StatelessWidget {
   ) {
     final isTbd = name.trim().isEmpty;
     final color = dim && !isTbd ? c.muted : c.text;
-    return Row(
-      children: [
-        Text(isTbd ? '🏳️' : flag, style: const TextStyle(fontSize: 15)),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Builder(
-            builder: (context) => Text(
-              isTbd ? context.l10n.t('bracketTbd') : name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isTbd ? c.muted : color,
-                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 13,
+    return SizedBox(
+      height: 27,
+      child: Row(
+        children: [
+          Text(isTbd ? '🏳️' : flag, style: const TextStyle(fontSize: 15)),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Builder(
+              builder: (context) => Text(
+                isTbd ? context.l10n.t('bracketTbd') : name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isTbd ? c.muted : color,
+                  fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 13,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        _scoreCell(c, score, showScore, emphasize),
-      ],
+          const SizedBox(width: 6),
+          _scoreCell(c, score, showScore, emphasize),
+        ],
+      ),
     );
   }
 
@@ -289,29 +272,14 @@ class BracketNode extends StatelessWidget {
     );
   }
 
-  Widget _footerRow(BuildContext context, AppColors c, bool showScore) {
+  Widget _friendsRow() {
     return Row(
       children: [
-        if (friendIds.isNotEmpty) ...[
-          const SizedBox(width: 6),
-          _FriendsBadge(
-            match: match,
-            friendIds: friendIds,
-            revealedFriendIds: revealedFriendIds,
-          ),
-        ],
-        const Spacer(),
-        if (showScore) ...[
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onToggleScore,
-            child: Icon(
-              Icons.visibility_off_outlined,
-              size: 11,
-              color: c.muted,
-            ),
-          ),
-        ],
+        _FriendsBadge(
+          match: match,
+          friendIds: friendIds,
+          revealedFriendIds: revealedFriendIds,
+        ),
       ],
     );
   }

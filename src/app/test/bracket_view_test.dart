@@ -9,6 +9,7 @@ import 'package:match_chat/models/user_match_state.dart';
 import 'package:match_chat/screens/bracket_view.dart';
 import 'package:match_chat/theme/app_colors.dart';
 import 'package:match_chat/theme/app_theme.dart';
+import 'package:match_chat/utils/formatting.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _harness(Widget child) {
@@ -37,6 +38,7 @@ MatchModel _m(
   int? round,
   int? slot,
   DateTime? at,
+  String? venue,
 }) {
   return MatchModel(
     id: id,
@@ -49,6 +51,7 @@ MatchModel _m(
     roundIndexRaw: round,
     bracketSlot: slot,
     scheduledAt: at,
+    venue: venue,
   );
 }
 
@@ -97,6 +100,7 @@ void main() {
         round: 4,
         slot: 0,
         at: now.add(const Duration(days: 1)),
+        venue: 'NRG Stadium',
       ),
       _m(
         'grp',
@@ -129,6 +133,14 @@ void main() {
     expect(find.text('Brazil'), findsOneWidget);
     expect(find.text('Germany'), findsOneWidget);
     expect(find.text('Mexico'), findsNothing);
+
+    // Kickoff gets a dedicated centered line above the node metadata/teams.
+    final brazilKickoff = find.text(Formatting.kickoff(matches[2].scheduledAt));
+    expect(brazilKickoff, findsOneWidget);
+    expect(
+      tester.getCenter(brazilKickoff).dy,
+      lessThan(tester.getCenter(find.text('Brazil')).dy),
+    );
 
     // Round header and zoom controls are present.
     expect(find.text('Quarter-finals'), findsOneWidget);
