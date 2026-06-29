@@ -486,13 +486,33 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           children: [
             _goalsStageHeader(context, c, app, match, revealView),
             AnimatedSize(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
               alignment: Alignment.topCenter,
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
+                duration: const Duration(milliseconds: 240),
+                reverseDuration: const Duration(milliseconds: 180),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final offsetAnimation =
+                      Tween<Offset>(
+                        begin: const Offset(0, 0.03),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      );
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: offsetAnimation,
+                      child: child,
+                    ),
+                  );
+                },
                 child: content,
               ),
             ),
@@ -547,61 +567,81 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       GoalRevealView.scorers => 2,
     };
 
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < 3; i++) ...[
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i <= activeIndex ? c.accent : c.surface2,
-                  border: Border.all(
-                    color: i <= activeIndex ? c.accent : c.line,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 140),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final offsetAnimation =
+            Tween<Offset>(
+              begin: const Offset(0, 0.02),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            );
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offsetAnimation, child: child),
+        );
+      },
+      child: Column(
+        key: ValueKey(activeIndex),
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: i <= activeIndex ? c.accent : c.surface2,
+                    border: Border.all(
+                      color: i <= activeIndex ? c.accent : c.line,
+                    ),
                   ),
                 ),
-              ),
-              if (i < 2) const SizedBox(width: 6),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        MonoLabel(labels[activeIndex], fontSize: 8.5, letterSpacing: 1.2),
-        if (revealView != GoalRevealView.hidden) ...[
-          const SizedBox(height: 6),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => app.reveals.setReveal(
-              app.firebaseUser!.uid,
-              match.id,
-              goals: false,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
-                const SizedBox(width: 4),
-                Text(
-                  context.l10n.t('hideUpper'),
-                  style: TextStyle(
-                    fontFamily: AppTheme.mono,
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: c.muted,
-                  ),
-                ),
+                if (i < 2) const SizedBox(width: 6),
               ],
-            ),
+            ],
           ),
+          const SizedBox(height: 6),
+          MonoLabel(labels[activeIndex], fontSize: 8.5, letterSpacing: 1.2),
+          if (revealView != GoalRevealView.hidden) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => app.reveals.setReveal(
+                app.firebaseUser!.uid,
+                match.id,
+                goals: false,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
+                  const SizedBox(width: 4),
+                  Text(
+                    context.l10n.t('hideUpper'),
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: c.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
         ],
-        const SizedBox(height: 10),
-      ],
+      ),
     );
   }
 

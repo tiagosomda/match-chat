@@ -101,16 +101,50 @@ class BracketNode extends StatelessWidget {
                         !goalsRevealed ||
                         goalsRevealed) ...[
                       const SizedBox(height: 6),
-                      goalsRevealed
-                          ? (match.goals.isEmpty
-                                ? _goalsStatus(
-                                    context,
-                                    c,
-                                    context.l10n.t('noGoalsYet'),
-                                    app,
-                                  )
-                                : _goalsSummary(context, c, app))
-                          : _goalsRevealAction(context, c, app),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        reverseDuration: const Duration(milliseconds: 160),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          final offsetAnimation =
+                              Tween<Offset>(
+                                begin: const Offset(0, 0.03),
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              );
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: goalsRevealed
+                            ? (match.goals.isEmpty
+                                  ? KeyedSubtree(
+                                      key: const ValueKey('goals-status'),
+                                      child: _goalsStatus(
+                                        context,
+                                        c,
+                                        context.l10n.t('noGoalsYet'),
+                                        app,
+                                      ),
+                                    )
+                                  : KeyedSubtree(
+                                      key: const ValueKey('goals-summary'),
+                                      child: _goalsSummary(context, c, app),
+                                    ))
+                            : KeyedSubtree(
+                                key: const ValueKey('goals-reveal'),
+                                child: _goalsRevealAction(context, c, app),
+                              ),
+                      ),
                     ],
                     _footerRow(context, c, showScore),
                   ],
