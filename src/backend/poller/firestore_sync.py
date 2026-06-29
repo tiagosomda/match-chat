@@ -105,11 +105,13 @@ class FirestoreSync:
         return processed
 
     def _rename_user_messages(self, uid: str, name: str) -> int:
-        """Rewrite the denormalized displayName on every doc authored by [uid]
+        """Rewrite the denormalized displayName on every doc authored by [uid],
+        and replyToName on docs that reference [uid] as a reply target,
         across the chat, comments and predictions collection groups."""
         count = 0
         for group in ("chat", "comments", "predictions"):
             try:
+                # Update displayName for messages authored by this user
                 query = self.db.collection_group(group).where("userId", "==", uid)
                 batch = self.db.batch()
                 pending = 0
@@ -118,6 +120,21 @@ class FirestoreSync:
                     pending += 1
                     count += 1
                     if pending >= 400:  # Firestore batch limit is 500
+                        batch.commit()
+                        batch = self.db.batch()
+                        pending = 0
+                if pending:
+                    batch.commit()
+
+                # Update replyToName for messages that reference this user as reply target
+                reply_query = self.db.collection_group(group).where("replyToUserId", "==", uid)
+                batch = self.db.batch()
+                pending = 0
+                for doc in reply_query.stream():
+                    batch.update(doc.reference, {"replyToName": name})
+                    pending += 1
+                    count += 1
+                    if pending >= 400:
                         batch.commit()
                         batch = self.db.batch()
                         pending = 0
