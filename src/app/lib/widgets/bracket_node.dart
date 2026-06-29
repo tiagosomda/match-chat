@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/match.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../utils/formatting.dart';
 
 /// A single match rendered as a bracket node: two team rows with hidden scores,
 /// a status tint, and an info affordance — a compact cousin of the match-list
@@ -62,6 +63,7 @@ class BracketNode extends StatelessWidget {
                         showScore, aWins, bWins),
                     _teamRow(c, match.flagB, match.teamB, match.scoreB,
                         showScore, bWins, aWins),
+                    _footerRow(c),
                   ],
                 ),
               ),
@@ -144,6 +146,23 @@ class BracketNode extends StatelessWidget {
         const SizedBox(width: 6),
         _scoreCell(c, score, showScore, emphasize),
       ],
+    );
+  }
+
+  Widget _footerRow(AppColors c) {
+    final time = Formatting.shortKickoff(match.scheduledAt);
+    final loc = match.shortLocation;
+    final label = loc != null ? '$time  ·  $loc' : time;
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: AppTheme.mono,
+        fontSize: 8.5,
+        letterSpacing: 0.4,
+        color: c.muted,
+      ),
     );
   }
 
