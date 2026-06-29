@@ -242,12 +242,15 @@ def _recompute_standings(fs: FirestoreSync) -> None:
         log.warning("Standings recompute failed (%s)", e)
 
 
-def _backfill_renames(fs: FirestoreSync) -> None:
-    """Best-effort display-name backfill; never let it disrupt the poll loop."""
+def _backfill_renames(fs: FirestoreSync) -> bool:
+    """Best-effort display-name backfill; never let it disrupt the poll loop.
+    Returns True if any renames were processed."""
     try:
-        fs.backfill_renames()
+        processed = fs.backfill_renames()
+        return processed > 0
     except Exception as e:
         log.warning("Rename backfill failed (%s)", e)
+        return False
 
 
 def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
@@ -356,8 +359,10 @@ def run_forever() -> None:
             reconcile(api, fs, cache, schedule)
 
             # Trickle display-name changes onto a few users' old messages (#14).
-            # Firestore-only work, no API quota cost.
-            _backfill_renames(fs)
+            # Firestore-only work, no API quota cost. If names changed, recompute
+            # standings since prediction displayNames may have been updated.
+            if _backfill_renames(fs):
+                _recompute_standings(fs)
 
             if _in_any_window(schedule, now, cfg.prekickoff_wake):
                 run_live_loop(api, fs, cache, schedule, cfg)
