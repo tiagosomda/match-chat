@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:match_chat/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:match_chat/models/match.dart';
 import 'package:match_chat/models/user_match_state.dart';
 import 'package:match_chat/screens/bracket_view.dart';
@@ -55,6 +56,7 @@ void main() {
   testWidgets('renders on a phone screen and opens the info sheet', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

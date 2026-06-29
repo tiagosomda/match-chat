@@ -54,6 +54,9 @@ class _BracketViewState extends State<BracketView> {
   bool _fitted = false;
   SharedPreferences? _prefs;
   bool _prefsLoaded = false;
+  // True once the correct initial transform is applied; the canvas stays in
+  // Offstage until then so there is no visible snap from identity → fitted.
+  bool _ready = false;
 
   String get _storageKey => 'bracketView:${widget.tournamentId}';
 
@@ -69,13 +72,12 @@ class _BracketViewState extends State<BracketView> {
     super.dispose();
   }
 
-  /// Restore this tournament's saved pan/zoom, or fall back to a one-time fit
-  /// once the viewport is measured. Gates [_maybeFit] so the auto-fit never
-  /// briefly overrides a restored view.
+  /// Restore this tournament's saved pan/zoom. Always ends with a setState so
+  /// the build loop can proceed to [_maybeReveal], which applies the fit and
+  /// shows the canvas in a single frame — no snap from identity → fitted.
   Future<void> _loadPersisted() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    var restored = false;
     final saved = prefs.getStringList(_storageKey);
     if (saved != null && saved.length == 3) {
       final scale = double.tryParse(saved[0]);
@@ -85,14 +87,10 @@ class _BracketViewState extends State<BracketView> {
         _controller.value =
             _transform(scale.clamp(_minScale, _maxScale), dx, dy);
         _fitted = true;
-        restored = true;
       }
     }
     _prefs = prefs;
-    _prefsLoaded = true;
-    if (!restored) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFit());
-    }
+    setState(() => _prefsLoaded = true);
   }
 
   /// Remember the current pan/zoom so it survives across sessions.
@@ -108,16 +106,18 @@ class _BracketViewState extends State<BracketView> {
     ]);
   }
 
-  void _maybeFit() {
-    if (!mounted ||
-        !_prefsLoaded ||
-        _fitted ||
-        _viewport.isEmpty ||
-        _canvas.isEmpty) {
-      return;
+  /// Called every build until the canvas is ready to show. Applies the initial
+  /// fit if no persisted state was restored, then reveals the canvas — both in
+  /// the same setState so the correct transform is painted on the first visible
+  /// frame.
+  void _maybeReveal() {
+    if (!mounted || _ready || !_prefsLoaded) return;
+    if (!_fitted) {
+      if (_viewport.isEmpty || _canvas.isEmpty) return;
+      _fitted = true;
+      _fit();
     }
-    _fitted = true;
-    _fit();
+    setState(() => _ready = true);
   }
 
   void _fit() {
@@ -190,8 +190,14 @@ class _BracketViewState extends State<BracketView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewport = Size(constraints.maxWidth, constraints.maxHeight);
-        WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFit());
-        return Stack(
+        // Keep scheduling until ready so both the "restored" and "fresh-fit"
+        // paths converge on the first correctly-positioned frame.
+        if (!_ready) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _maybeReveal());
+        }
+        return Offstage(
+          offstage: !_ready,
+          child: Stack(
           children: [
             Positioned.fill(
               child: InteractiveViewer(
@@ -215,6 +221,7 @@ class _BracketViewState extends State<BracketView> {
             Positioned(right: 14, bottom: 14, child: _zoomControls(c)),
             Positioned(left: 16, bottom: 18, child: _hint(c)),
           ],
+        ),
         );
       },
     );
