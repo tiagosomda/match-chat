@@ -242,80 +242,80 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _friendsSection(c, data.friends, app),
         ],
         if (app.showPredictions) ...[
-        const SizedBox(height: 14),
-        SurfaceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      context.l10n.t('predictions'),
-                      style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                  if (data.entry != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color.alphaBlend(
-                          c.accent2.withValues(alpha: 0.15),
-                          c.surface,
-                        ),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: c.accent2.withValues(alpha: 0.3),
+          const SizedBox(height: 14),
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        context.l10n.t('predictions'),
+                        style: TextStyle(
+                          color: c.text,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '#${data.entry!.rank}',
-                            style: TextStyle(
-                              fontFamily: AppTheme.mono,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              color: c.accent2,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${data.entry!.points} ${context.l10n.t('ptsUpper')}',
-                            style: TextStyle(
-                              fontFamily: AppTheme.mono,
-                              fontSize: 11,
-                              color: c.accent2,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
+                    if (data.entry != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Color.alphaBlend(
+                            c.accent2.withValues(alpha: 0.15),
+                            c.surface,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: c.accent2.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '#${data.entry!.rank}',
+                              style: TextStyle(
+                                fontFamily: AppTheme.mono,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                color: c.accent2,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${data.entry!.points} ${context.l10n.t('ptsUpper')}',
+                              style: TextStyle(
+                                fontFamily: AppTheme.mono,
+                                fontSize: 11,
+                                color: c.accent2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 13),
-              if (data.predictions.isEmpty)
-                Text(
-                  context.l10n.t('noPredictionsYet'),
-                  style: TextStyle(color: c.muted, fontSize: 13),
-                )
-              else
-                for (final row in data.predictions) ...[
-                  _predRow(c, row),
-                  const SizedBox(height: 13),
-                ],
-            ],
+                ),
+                const SizedBox(height: 13),
+                if (data.predictions.isEmpty)
+                  Text(
+                    context.l10n.t('noPredictionsYet'),
+                    style: TextStyle(color: c.muted, fontSize: 13),
+                  )
+                else
+                  for (final row in data.predictions) ...[
+                    _predRow(c, row),
+                    const SizedBox(height: 13),
+                  ],
+              ],
+            ),
           ),
-        ),
         ],
       ],
     );
