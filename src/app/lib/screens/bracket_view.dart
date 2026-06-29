@@ -47,7 +47,7 @@ class _BracketViewState extends State<BracketView> {
   // Low floor so a fitted full bracket still has room to pinch further out
   // instead of hitting a wall (which read as "snapping").
   static const double _minScale = 0.12;
-  static const double _maxScale = 2.4;
+  static const double _maxScale = 5.0;
 
   Size _viewport = Size.zero;
   Size _canvas = Size.zero;
