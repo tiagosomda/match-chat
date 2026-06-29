@@ -97,8 +97,11 @@ class _BracketViewState extends State<BracketView> {
       final dx = double.tryParse(saved[1]);
       final dy = double.tryParse(saved[2]);
       if (scale != null && dx != null && dy != null) {
-        _controller.value =
-            _transform(scale.clamp(_minScale, _maxScale), dx, dy);
+        _controller.value = _transform(
+          scale.clamp(_minScale, _maxScale),
+          dx,
+          dy,
+        );
         _fitted = true;
       }
     }
@@ -211,30 +214,30 @@ class _BracketViewState extends State<BracketView> {
         return Offstage(
           offstage: !_ready,
           child: Stack(
-          children: [
-            Positioned.fill(
-              child: InteractiveViewer(
-                transformationController: _controller,
-                constrained: false,
-                panEnabled: true,
-                scaleEnabled: true,
-                minScale: _minScale,
-                maxScale: _maxScale,
-                boundaryMargin: EdgeInsets.all(
-                  math.max(_canvas.longestSide, 1200.0),
-                ),
-                onInteractionEnd: (_) => _persist(),
-                child: SizedBox(
-                  width: layout.canvasSize.width,
-                  height: layout.canvasSize.height,
-                  child: _canvasContent(c, layout),
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  transformationController: _controller,
+                  constrained: false,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  minScale: _minScale,
+                  maxScale: _maxScale,
+                  boundaryMargin: EdgeInsets.all(
+                    math.max(_canvas.longestSide, 1200.0),
+                  ),
+                  onInteractionEnd: (_) => _persist(),
+                  child: SizedBox(
+                    width: layout.canvasSize.width,
+                    height: layout.canvasSize.height,
+                    child: _canvasContent(c, layout),
+                  ),
                 ),
               ),
-            ),
-            Positioned(right: 14, bottom: 14, child: _zoomControls(c)),
-            Positioned(left: 16, bottom: 18, child: _hint(c)),
-          ],
-        ),
+              Positioned(right: 14, bottom: 14, child: _zoomControls(c)),
+              Positioned(left: 16, bottom: 18, child: _hint(c)),
+            ],
+          ),
         );
       },
     );
@@ -293,6 +296,7 @@ class _BracketViewState extends State<BracketView> {
       child: BracketNode(
         match: match,
         revealed: widget.reveals[match.id]?.scoreRevealed ?? false,
+        goalsRevealed: widget.reveals[match.id]?.goalsRevealed ?? false,
         isThirdPlace: node.isThirdPlace,
         onOpen: () => widget.onOpenMatch(match.id),
         onToggleScore: () => widget.onToggleScore(
@@ -302,8 +306,7 @@ class _BracketViewState extends State<BracketView> {
         onInfo: () => _showInfo(match),
         myPrediction: widget.myPreds[match.id],
         friendIds: widget.friendIds,
-        revealedFriendIds:
-            widget.revealedByMatch[match.id] ?? const <String>{},
+        revealedFriendIds: widget.revealedByMatch[match.id] ?? const <String>{},
       ),
     );
   }

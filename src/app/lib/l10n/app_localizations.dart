@@ -197,6 +197,10 @@ const Map<String, String> _en = {
   'comments': 'Chat',
   'goalsCount': '{n} GOALS',
   'revealGoals': 'Reveal goals',
+  'noGoalsYet': 'No goals yet',
+  'goalsStage1': '1/3 · Reveal goals',
+  'goalsStage2': '2/3 · Show goal times',
+  'goalsStage3': '3/3 · Show scorers',
   'goalsTapScorers': 'GOALS · TAP TO SEE SCORERS',
   'scorersTapHide': 'SCORERS · TAP TO HIDE NAMES',
   'friendSingular': 'friend',
@@ -234,8 +238,7 @@ const Map<String, String> _en = {
   'predictionsLocked': 'Predictions locked',
   'predictionsLockedLiveDesc':
       'The match has kicked off — predictions are closed.',
-  'predictionsLockedOverDesc':
-      'This match is over — predictions are closed.',
+  'predictionsLockedOverDesc': 'This match is over — predictions are closed.',
   // comments
   'revealComments': 'Reveal comments',
   'commentsHidden': '{n} COMMENTS HIDDEN',
@@ -378,7 +381,8 @@ const Map<String, String> _en = {
   'viewPublicProfile': 'Public profile',
   'noFriendsYet': 'No friends yet.',
   // buzz screen
-  'buzzInfoBanner': 'pure chaos of match chats.\ntap a game badge to focus on one conversation.',
+  'buzzInfoBanner':
+      'pure chaos of match chats.\ntap a game badge to focus on one conversation.',
 };
 
 // ---------------------------------------------------------------------------
@@ -530,9 +534,11 @@ const Map<String, String> _es = {
   'buzzNewSince': 'NUEVO DESDE TU ÚLTIMA VISITA',
   'buzzJumpLatest': 'Recientes',
   'buzzReplyToYou': 'TE RESPONDIÓ',
-  'noMessagesYet': 'Nada por aquí todavía — abre un partido para empezar el chat.',
+  'noMessagesYet':
+      'Nada por aquí todavía — abre un partido para empezar el chat.',
   'revealMatchToRead': 'Muestra el partido para leer',
-  'buzzInfoBanner': 'puro caos de chats de partidos.\ntoca la etiqueta de un juego para centrarte en una conversación.',
+  'buzzInfoBanner':
+      'puro caos de chats de partidos.\ntoca la etiqueta de un juego para centrarte en una conversación.',
   'displayNameLabel': 'NOMBRE',
   'yourName': 'Tu nombre',
   'displayNameHint': 'Cómo apareces en el chat, comentarios y pronósticos.',
@@ -790,7 +796,8 @@ const Map<String, String> _pt = {
   'buzzReplyToYou': 'RESPONDEU-TE',
   'noMessagesYet': 'Nada por aqui ainda — abre um jogo para começar o chat.',
   'revealMatchToRead': 'Revela o jogo para ler',
-  'buzzInfoBanner': 'puro caos dos chats de jogos.\ntoca na etiqueta de um jogo para focar numa conversa.',
+  'buzzInfoBanner':
+      'puro caos dos chats de jogos.\ntoca na etiqueta de um jogo para focar numa conversa.',
   'displayNameLabel': 'NOME',
   'yourName': 'O teu nome',
   'displayNameHint': 'Como apareces no chat, comentários e palpites.',
@@ -971,7 +978,8 @@ const Map<String, String> _ptBR = {
   'deleteUpper': 'EXCLUIR',
   'couldNotSave': 'Não foi possível salvar: {e}',
   'couldNotDelete': 'Não foi possível excluir: {e}',
-  'noMessagesYet': 'Nada por aqui ainda — abra uma partida para começar o chat.',
+  'noMessagesYet':
+      'Nada por aqui ainda — abra uma partida para começar o chat.',
   'revealMatchToRead': 'Revele a partida para ler',
   'displayNameHint': 'Como você aparece no chat, comentários e palpites.',
   'nameChangeTitle': 'Mudar seu nome?',
@@ -979,7 +987,8 @@ const Map<String, String> _ptBR = {
       'Seu nome nos chats e comentários existentes não será atualizado na hora '
       '— ele se ajusta com o tempo. Você só pode mudar seu nome uma vez a cada '
       '3 dias.',
-  'nameChangeCooldown': 'Você poderá mudar seu nome novamente em {days} dia(s).',
+  'nameChangeCooldown':
+      'Você poderá mudar seu nome novamente em {days} dia(s).',
   'favoriteTeam': 'Time favorito',
   'favoriteTeamHint': 'Sua bandeira vira seu avatar no app.',
   'noFavoriteTeam': 'Sem time favorito',

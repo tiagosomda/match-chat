@@ -118,36 +118,34 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   List<MatchModel> _apply(List<MatchModel> matches) {
     final q = _query.toLowerCase().trim();
-    final list =
-        matches.where((m) {
-          // Archived/auto-hidden matches only appear when the toggle is on (#12).
-          if (m.isHidden && !_showArchived) return false;
-          switch (_filter) {
-            case _Filter.upcoming:
-              if (m.displayStatus != MatchStatus.upcoming) return false;
-              break;
-            case _Filter.live:
-              // The live filter is padded to include matches about to start and
-              // those that just finished (#13).
-              const liveish = {
-                MatchPhase.liveSoon,
-                MatchPhase.live,
-                MatchPhase.justFinished,
-              };
-              if (!liveish.contains(m.displayPhase)) return false;
-              break;
-            case _Filter.finished:
-              if (m.displayStatus != MatchStatus.finished) return false;
-              break;
-            case _Filter.all:
-              break;
-          }
-          if (q.isEmpty) return true;
-          return ('${m.teamA} ${m.teamB} ${m.description}')
-              .toLowerCase()
-              .contains(q);
-        }).toList()
-        ..sort(_displayOrder);
+    final list = matches.where((m) {
+      // Archived/auto-hidden matches only appear when the toggle is on (#12).
+      if (m.isHidden && !_showArchived) return false;
+      switch (_filter) {
+        case _Filter.upcoming:
+          if (m.displayStatus != MatchStatus.upcoming) return false;
+          break;
+        case _Filter.live:
+          // The live filter is padded to include matches about to start and
+          // those that just finished (#13).
+          const liveish = {
+            MatchPhase.liveSoon,
+            MatchPhase.live,
+            MatchPhase.justFinished,
+          };
+          if (!liveish.contains(m.displayPhase)) return false;
+          break;
+        case _Filter.finished:
+          if (m.displayStatus != MatchStatus.finished) return false;
+          break;
+        case _Filter.all:
+          break;
+      }
+      if (q.isEmpty) return true;
+      return ('${m.teamA} ${m.teamB} ${m.description}').toLowerCase().contains(
+        q,
+      );
+    }).toList()..sort(_displayOrder);
     return list;
   }
 
@@ -244,8 +242,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
   }) {
     // Count matches that are actually in progress (not "live soon" / "just
     // finished") so the Live chip badge is a truthful at-a-glance signal.
-    final liveCount =
-        all.where((m) => m.displayPhase == MatchPhase.live).length;
+    final liveCount = all
+        .where((m) => m.displayPhase == MatchPhase.live)
+        .length;
     // The bracket toggle only appears once the tournament has knockout matches.
     final hasKnockout = all.any((m) => m.isKnockout);
     final showBracket = hasKnockout && _view == _View.bracket;
@@ -367,6 +366,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                           m.id,
                           reveals[m.id]?.scoreRevealed ?? false,
                         ),
+                        goalsRevealed: reveals[m.id]?.goalsRevealed ?? false,
                       ),
                     );
                   }
@@ -379,7 +379,8 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   }
                   return const SizedBox(height: 28);
                 },
-                childCount: visible.length +
+                childCount:
+                    visible.length +
                     (_hasArchived(all) ? 1 : 1), // +1 for bottom padding
               ),
             ),
@@ -399,10 +400,18 @@ class _MatchesScreenState extends State<MatchesScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _viewSeg(c, _View.list, context.l10n.t('viewList'),
-              Icons.view_agenda_outlined),
-          _viewSeg(c, _View.bracket, context.l10n.t('viewBracket'),
-              Icons.account_tree_outlined),
+          _viewSeg(
+            c,
+            _View.list,
+            context.l10n.t('viewList'),
+            Icons.view_agenda_outlined,
+          ),
+          _viewSeg(
+            c,
+            _View.bracket,
+            context.l10n.t('viewBracket'),
+            Icons.account_tree_outlined,
+          ),
         ],
       ),
     );
@@ -497,7 +506,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
       child: TextButton.icon(
         onPressed: () => setState(() => _showArchived = !_showArchived),
         icon: Icon(
-          _showArchived ? Icons.visibility_off_outlined : Icons.inventory_2_outlined,
+          _showArchived
+              ? Icons.visibility_off_outlined
+              : Icons.inventory_2_outlined,
           size: 16,
           color: c.muted,
         ),
@@ -635,6 +646,7 @@ class _MatchCard extends StatelessWidget {
   const _MatchCard({
     required this.match,
     required this.revealed,
+    required this.goalsRevealed,
     required this.friendIds,
     required this.revealedFriendIds,
     required this.myPrediction,
@@ -644,6 +656,7 @@ class _MatchCard extends StatelessWidget {
 
   final MatchModel match;
   final bool revealed;
+  final bool goalsRevealed;
   final List<String> friendIds;
   final Set<String> revealedFriendIds;
 
@@ -692,6 +705,7 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.read<AppState>();
     final c = context.colors;
     final showScore = revealed && match.hasScore;
     final countdown = match.displayStatus == MatchStatus.upcoming
@@ -810,6 +824,21 @@ class _MatchCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 _yourPick(context, c),
               ],
+              if (match.goals.isNotEmpty ||
+                  !goalsRevealed ||
+                  goalsRevealed) ...[
+                const SizedBox(height: 10),
+                goalsRevealed
+                    ? (match.goals.isEmpty
+                          ? _goalsStatus(
+                              context,
+                              c,
+                              context.l10n.t('noGoalsYet'),
+                              app,
+                            )
+                          : _goalsSummary(context, c, app))
+                    : _goalsRevealAction(context, c, app),
+              ],
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.only(top: 11),
@@ -918,6 +947,180 @@ class _MatchCard extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(match.flagB, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _goalsRevealAction(BuildContext context, AppColors c, AppState app) {
+    return GestureDetector(
+      onTap: () =>
+          app.reveals.setReveal(app.firebaseUser!.uid, match.id, goals: true),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: c.surface2,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sports_soccer, size: 12, color: c.accent),
+            const SizedBox(width: 6),
+            Text(
+              context.l10n.t('revealGoals'),
+              style: TextStyle(
+                fontFamily: AppTheme.mono,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: c.accent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _goalsStatus(
+    BuildContext context,
+    AppColors c,
+    String label,
+    AppState app,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontFamily: AppTheme.mono,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: c.muted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => app.reveals.setReveal(
+              app.firebaseUser!.uid,
+              match.id,
+              goals: false,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.t('hideUpper'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: c.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _goalsSummary(BuildContext context, AppColors c, AppState app) {
+    final goals = [...match.goals]
+      ..sort((a, b) => (a.minute ?? 999).compareTo(b.minute ?? 999));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: c.surface2,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: c.line),
+                ),
+                child: Text(
+                  '${goals.length} GOALS',
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: c.accent,
+                  ),
+                ),
+              ),
+              for (final goal in goals)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: c.line),
+                  ),
+                  child: Text(
+                    goal.timeLabel.isEmpty ? '??' : goal.timeLabel,
+                    style: TextStyle(
+                      fontFamily: AppTheme.mono,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: c.text,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => app.reveals.setReveal(
+              app.firebaseUser!.uid,
+              match.id,
+              goals: false,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.t('hideUpper'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: c.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -14,6 +14,7 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatting.dart';
+import '../utils/reveal_state.dart';
 import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/friends_reveal.dart';
@@ -429,35 +430,45 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   }
 
   /// The revealable goal-scorers widget shown under the score (item #11).
-  /// Renders nothing until the poller has recorded any goals.
   Widget _goalsWidget(
     BuildContext context,
     AppState app,
     MatchModel match,
     UserMatchState reveal,
   ) {
-    if (match.goals.isEmpty) return const SizedBox.shrink();
     final c = context.colors;
 
     // The three mutually exclusive states of this panel. Each carries a stable
     // key so the AnimatedSwitcher cross-fades — and AnimatedSize grows/shrinks —
     // between them instead of snapping when the viewer toggles scorers.
+    final revealView = goalRevealView(
+      goalsRevealed: reveal.goalsRevealed,
+      showScorers: _showScorers,
+    );
     final Widget content;
-    if (!reveal.goalsRevealed) {
-      content = KeyedSubtree(
-        key: const ValueKey('goals-reveal'),
-        child: _goalsReveal(c, app, match),
-      );
-    } else if (_showScorers) {
-      content = KeyedSubtree(
-        key: const ValueKey('goals-scorers'),
-        child: _scorersView(c, match),
-      );
-    } else {
-      content = KeyedSubtree(
-        key: const ValueKey('goals-times'),
-        child: _goalTimesView(c, match),
-      );
+    switch (revealView) {
+      case GoalRevealView.hidden:
+        content = KeyedSubtree(
+          key: const ValueKey('goals-reveal'),
+          child: _goalsReveal(c, app, match, revealView),
+        );
+        break;
+      case GoalRevealView.scorers:
+        content = KeyedSubtree(
+          key: const ValueKey('goals-scorers'),
+          child: match.goals.isEmpty
+              ? _noGoalsView(c, app, match)
+              : _scorersView(c, match),
+        );
+        break;
+      case GoalRevealView.times:
+        content = KeyedSubtree(
+          key: const ValueKey('goals-times'),
+          child: match.goals.isEmpty
+              ? _noGoalsView(c, app, match)
+              : _goalTimesView(c, match),
+        );
+        break;
     }
 
     return Container(
@@ -471,22 +482,32 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             ? () => setState(() => _showScorers = !_showScorers)
             : null,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: content,
-          ),
+        child: Column(
+          children: [
+            _goalsStageHeader(context, c, app, match, revealView),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: content,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _goalsReveal(AppColors c, AppState app, MatchModel match) {
+  Widget _goalsReveal(
+    AppColors c,
+    AppState app,
+    MatchModel match,
+    GoalRevealView revealView,
+  ) {
     return Column(
       children: [
         MonoLabel(
@@ -502,6 +523,101 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             app.firebaseUser!.uid,
             match.id,
             goals: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _goalsStageHeader(
+    BuildContext context,
+    AppColors c,
+    AppState app,
+    MatchModel match,
+    GoalRevealView revealView,
+  ) {
+    final labels = [
+      context.l10n.t('goalsStage1'),
+      context.l10n.t('goalsStage2'),
+      context.l10n.t('goalsStage3'),
+    ];
+    final activeIndex = switch (revealView) {
+      GoalRevealView.hidden => 0,
+      GoalRevealView.times => 1,
+      GoalRevealView.scorers => 2,
+    };
+
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i <= activeIndex ? c.accent : c.surface2,
+                  border: Border.all(
+                    color: i <= activeIndex ? c.accent : c.line,
+                  ),
+                ),
+              ),
+              if (i < 2) const SizedBox(width: 6),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        MonoLabel(labels[activeIndex], fontSize: 8.5, letterSpacing: 1.2),
+        if (revealView != GoalRevealView.hidden) ...[
+          const SizedBox(height: 6),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => app.reveals.setReveal(
+              app.firebaseUser!.uid,
+              match.id,
+              goals: false,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.visibility_off_outlined, size: 12, color: c.muted),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.t('hideUpper'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.mono,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: c.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _noGoalsView(AppColors c, AppState app, MatchModel match) {
+    return Column(
+      children: [
+        MonoLabel(context.l10n.t('noGoalsYet'), fontSize: 9.5),
+        const SizedBox(height: 10),
+        AccentButton(
+          label: context.l10n.t('hideUpper'),
+          icon: Icons.visibility_off_outlined,
+          pill: true,
+          onPressed: () => app.reveals.setReveal(
+            app.firebaseUser!.uid,
+            match.id,
+            goals: false,
           ),
         ),
       ],
@@ -1124,11 +1240,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           Row(
             children: [
               if (!dirty && mine != null) ...[
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 14,
-                  color: c.accent2,
-                ),
+                Icon(Icons.check_circle_outline, size: 14, color: c.accent2),
                 const SizedBox(width: 6),
               ],
               Expanded(

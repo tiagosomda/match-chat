@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:match_chat/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:match_chat/models/match.dart';
 import 'package:match_chat/models/user_match_state.dart';
 import 'package:match_chat/screens/bracket_view.dart';
 import 'package:match_chat/theme/app_colors.dart';
 import 'package:match_chat/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _harness(Widget child) {
   return MaterialApp(
@@ -63,16 +63,48 @@ void main() {
     final opened = <String>[];
     final now = DateTime.now();
     final matches = [
-      _m('qf0', 'Germany', 'Spain', 'Quarter-Final', MatchStatus.finished,
-          sa: 2, sb: 1, round: 3, slot: 0,
-          at: now.subtract(const Duration(days: 2))),
-      _m('qf1', 'France', 'Croatia', 'Quarter-Final', MatchStatus.finished,
-          sa: 1, sb: 0, round: 3, slot: 1,
-          at: now.subtract(const Duration(days: 2))),
-      _m('sf0', 'Brazil', 'Argentina', 'Semi-Final', MatchStatus.upcoming,
-          round: 4, slot: 0, at: now.add(const Duration(days: 1))),
-      _m('grp', 'Mexico', 'Poland', 'Group Stage · Group C',
-          MatchStatus.upcoming, at: now.add(const Duration(days: 1))),
+      _m(
+        'qf0',
+        'Germany',
+        'Spain',
+        'Quarter-Final',
+        MatchStatus.finished,
+        sa: 2,
+        sb: 1,
+        round: 3,
+        slot: 0,
+        at: now.subtract(const Duration(days: 2)),
+      ),
+      _m(
+        'qf1',
+        'France',
+        'Croatia',
+        'Quarter-Final',
+        MatchStatus.finished,
+        sa: 1,
+        sb: 0,
+        round: 3,
+        slot: 1,
+        at: now.subtract(const Duration(days: 2)),
+      ),
+      _m(
+        'sf0',
+        'Brazil',
+        'Argentina',
+        'Semi-Final',
+        MatchStatus.upcoming,
+        round: 4,
+        slot: 0,
+        at: now.add(const Duration(days: 1)),
+      ),
+      _m(
+        'grp',
+        'Mexico',
+        'Poland',
+        'Group Stage · Group C',
+        MatchStatus.upcoming,
+        at: now.add(const Duration(days: 1)),
+      ),
     ];
 
     await tester.pumpWidget(
