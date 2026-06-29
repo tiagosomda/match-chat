@@ -227,14 +227,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     UserMatchState reveal,
   ) {
     final c = context.colors;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.line),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
       child: Column(
         children: [
           // Top row: description (left) · status pill + kickoff time (right)
@@ -271,7 +265,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
           // Teams + score
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +274,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                 child: _teamColumn(context, c, match.flagA, match.teamA),
               ),
               SizedBox(
-                width: 100,
+                width: 112,
                 child: _centerCell(context, app, match, reveal),
               ),
               Expanded(
@@ -290,7 +284,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           ),
           // Venue below score, above goals, no divider
           if (match.hasLocation) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
             _venueLine(c, match),
           ],
           _goalsWidget(context, app, match, reveal),
@@ -804,8 +798,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           children: [
-            Text(flag, style: const TextStyle(fontSize: 40)),
-            const SizedBox(height: 8),
+            Text(flag, style: const TextStyle(fontSize: 44)),
+            const SizedBox(height: 10),
             Text(
               name,
               textAlign: TextAlign.center,

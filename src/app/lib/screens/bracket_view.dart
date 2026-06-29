@@ -509,7 +509,7 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,88 +524,85 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.line),
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: match.description.trim().isNotEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: MonoLabel(
-                                  match.description.toUpperCase(),
-                                  fontSize: 10,
-                                  letterSpacing: 1.6,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _statusPill(context, c, match),
-                          const SizedBox(height: 4),
-                          Text(
-                            Formatting.kickoff(match.scheduledAt),
-                            style: TextStyle(
-                              fontFamily: AppTheme.mono,
-                              fontSize: 10.5,
-                              color: c.muted,
-                            ),
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: match.description.trim().isNotEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: MonoLabel(
+                            match.description.toUpperCase(),
+                            fontSize: 10,
+                            letterSpacing: 1.6,
                           ),
-                        ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _statusPill(context, c, match),
+                    const SizedBox(height: 5),
+                    Text(
+                      Formatting.kickoff(match.scheduledAt),
+                      style: TextStyle(
+                        fontFamily: AppTheme.mono,
+                        fontSize: 10.5,
+                        color: c.muted,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _teamColumn(c, match.flagA, match.teamA)),
-                      const SizedBox(width: 10),
-                      SizedBox(width: 112, child: _centerCell(context, c)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
-                    ],
-                  ),
-                  if (match.hasLocation) ...[
-                    const SizedBox(height: 8),
-                    _venueLine(c, match),
-                  ],
-                  const SizedBox(height: 16),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: _goalsRevealed
-                        ? _goalsSummary(context, c)
-                        : _goalsRevealButton(context, c),
-                  ),
-                  const SizedBox(height: 12),
-                  if (widget.friendIds.isNotEmpty) ...[
-                    FriendsRevealBadge(
-                      match: match,
-                      friendIds: widget.friendIds,
-                      revealedFriendIds: widget.revealedFriendIds,
                     ),
-                    const SizedBox(height: 16),
                   ],
-                  AccentButton(
-                    label: context.l10n.t('openMatch'),
-                    icon: Icons.arrow_forward,
-                    expand: true,
-                    onPressed: widget.onOpen,
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _teamColumn(c, match.flagA, match.teamA)),
+                const SizedBox(width: 8),
+                SizedBox(width: 112, child: _centerCell(context, c)),
+                const SizedBox(width: 8),
+                Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
+              ],
+            ),
+            if (match.hasLocation) ...[
+              const SizedBox(height: 14),
+              _venueLine(c, match),
+            ],
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.only(top: 18),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: c.line)),
               ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _goalsRevealed
+                    ? _goalsSummary(context, c)
+                    : _goalsRevealButton(context, c),
+              ),
+            ),
+            if (widget.friendIds.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Center(
+                child: FriendsRevealBadge(
+                  match: match,
+                  friendIds: widget.friendIds,
+                  revealedFriendIds: widget.revealedFriendIds,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            AccentButton(
+              label: context.l10n.t('openMatch'),
+              icon: Icons.arrow_forward,
+              expand: true,
+              onPressed: widget.onOpen,
             ),
           ],
         ),
@@ -717,8 +714,8 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
   Widget _teamColumn(AppColors c, String flag, String name) {
     return Column(
       children: [
-        Text(flag, style: const TextStyle(fontSize: 40)),
-        const SizedBox(height: 8),
+        Text(flag, style: const TextStyle(fontSize: 44)),
+        const SizedBox(height: 10),
         Text(
           name,
           textAlign: TextAlign.center,
