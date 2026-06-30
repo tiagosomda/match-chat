@@ -175,6 +175,71 @@ void main() {
       expect(layout.nodes.where((n) => n.isPlaceholder).length, 4);
     });
 
+    test(
+      'a partial round keeps its authored slot instead of shifting upward',
+      () {
+        final layout = BracketLayout.fromMatches([
+          _m('m90', 'Round of 16', roundIndex: 2, bracketSlot: 1),
+        ]);
+
+        final m90 = layout.nodes.firstWhere((node) => node.match.id == 'm90');
+        final slotZero = layout.nodes.firstWhere(
+          (node) => node.roundIndex == 2 && node.displaySlot == 0,
+        );
+        expect(m90.displaySlot, 1);
+        expect(slotZero.isPlaceholder, isTrue);
+      },
+    );
+
+    test('FIFA 2026 slots connect the published Round-of-32 feeders', () {
+      MatchModel finished(String id, int slot, String winner) => _m(
+        id,
+        'Round of 32',
+        roundIndex: 1,
+        bracketSlot: slot,
+        teamA: winner,
+        teamB: 'Opponent',
+        status: MatchStatus.finished,
+        scoreA: 1,
+        scoreB: 0,
+      );
+
+      final layout = BracketLayout.fromMatches(
+        [
+          finished('m74', 0, 'Winner 74'),
+          finished('m77', 1, 'Winner 77'),
+          finished('m73', 2, 'Winner 73'),
+          finished('m75', 3, 'Winner 75'),
+          _m(
+            'm90',
+            'Round of 16',
+            roundIndex: 2,
+            bracketSlot: 1,
+            teamA: '',
+            teamB: '',
+          ),
+        ],
+        revealedWinnerMatchIds: const {'m74', 'm77', 'm73', 'm75'},
+      );
+
+      final m89 = layout.nodes.firstWhere(
+        (node) => node.roundIndex == 2 && node.displaySlot == 0,
+      );
+      final m90 = layout.nodes.firstWhere((node) => node.match.id == 'm90');
+      expect((m89.match.teamA, m89.match.teamB), ('Winner 74', 'Winner 77'));
+      expect((m90.match.teamA, m90.match.teamB), ('Winner 73', 'Winner 75'));
+    });
+
+    test('missing bracket slots never create speculative connectors', () {
+      final layout = BracketLayout.fromMatches([
+        _m('m73', 'Round of 32', roundIndex: 1),
+        _m('m74', 'Round of 32', roundIndex: 1),
+      ]);
+
+      expect(layout.nodes, isNotEmpty);
+      expect(layout.connectors, isEmpty);
+    });
+
     test('completed winners prefill empty slots in the next node', () {
       final layout = BracketLayout.fromMatches(
         [

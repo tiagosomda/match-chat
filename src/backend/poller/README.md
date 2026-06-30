@@ -12,7 +12,10 @@ matches are live but stays defensive about the daily quota.
 
 1. **Daily sync** — once per day, pulls the full schedule (`/fixtures?league=1&season=2026`)
    and upserts all ~104 match documents into Firestore, keyed by the API fixture
-   id. This also auto-populates the tournament, so no manual seeding is needed.
+   id. For World Cup 2026 knockout fixtures it also writes FIFA's stable
+   `matchNumber`, `roundIndex`, and authoritative `bracketSlot`; kickoff order is
+   never used to infer bracket connections. This also auto-populates the
+   tournament, so no manual seeding is needed.
 2. **Sleep** — idles until the next kickoff. Zero API requests while idle.
 3. **Live polling** — while any match is in play, polls a single status-filtered
    request (every 30s by default) that returns the score of *every* simultaneous
@@ -102,5 +105,8 @@ Leave it running. It logs each sync and each score update, and is safe to stop
   safe in the shared Firebase database.
 - Match docs are merge-written, so the app's own `commentCount` /
   `predictionCount` counters are never overwritten.
+- World Cup 2026 topology lives in `bracket_topology.py`. Unknown knockout
+  fixtures deliberately receive no slot, causing the app to omit connectors
+  instead of drawing a guessed path.
 - Because the poller now owns match data, the app's in-app **Seed sample data**
   button is only needed for local development without the poller running.

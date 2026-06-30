@@ -93,7 +93,7 @@ def daily_sync(api: ApiFootball, fs: FirestoreSync, cache: Cache) -> tuple:
     except Exception as e:  # standings are optional; degrade to no group letters
         log.warning("standings fetch failed (%s); group labels will be generic", e)
 
-    docs = [to_match_doc(fx, group_map) for fx in schedule]
+    docs = [to_match_doc(fx, group_map, fs.cfg.tournament_id) for fx in schedule]
     written = fs.upsert_matches(docs)
     for doc in docs:
         cache.set(doc["apiFixtureId"], doc["status"], doc["scoreA"], doc["scoreB"])

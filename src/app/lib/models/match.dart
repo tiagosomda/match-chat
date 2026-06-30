@@ -165,6 +165,7 @@ class MatchModel {
     this.archived = false,
     this.goals = const <GoalEvent>[],
     this.shootout,
+    this.matchNumber,
     this.roundIndexRaw,
     this.bracketSlot,
   });
@@ -193,6 +194,10 @@ class MatchModel {
   /// Present once a knockout match reaches a penalty shootout.
   final PenaltyShootout? shootout;
 
+  /// Tournament organizer's stable match number (for example FIFA's M90),
+  /// distinct from the data provider's fixture id.
+  final int? matchNumber;
+
   /// Explicit knockout round index from the doc (`roundIndex`), ascending toward
   /// the final, or null when unset. When null, [roundIndex] derives it from
   /// [description]. See the bracket screen (docs/bracket-screen.md).
@@ -200,7 +205,8 @@ class MatchModel {
 
   /// Explicit 0-based position of this match within its knockout round
   /// (`bracketSlot`), top → bottom, or null. Used to order and connect bracket
-  /// nodes; the layout falls back to kickoff order when unset.
+  /// nodes. Missing slots may affect display order but never create inferred
+  /// connector lines.
   final int? bracketSlot;
 
   /// A match is auto-hidden once its scheduled time is at least 2 days in the
@@ -385,6 +391,7 @@ class MatchModel {
               (d['shootout'] as Map).cast<String, dynamic>(),
             )
           : null,
+      matchNumber: (d['matchNumber'] as num?)?.toInt(),
       roundIndexRaw: (d['roundIndex'] as num?)?.toInt(),
       bracketSlot: (d['bracketSlot'] as num?)?.toInt(),
     );
@@ -404,6 +411,7 @@ class MatchModel {
     'city': city,
     'archived': archived,
     if (shootout != null) 'shootout': shootout!.toMap(),
+    'matchNumber': matchNumber,
     'roundIndex': roundIndexRaw,
     'bracketSlot': bracketSlot,
   };

@@ -165,6 +165,7 @@ class BracketLayout {
     final columnMatches = <List<MatchModel>>[];
     final placeholderIds = <String>{};
     var hiddenWinners = <String, _HiddenWinnerSources>{};
+    final hasAuthoritativeTopology = _hasAuthoritativeTopology(roundGroups);
     if (presentKeys.isNotEmpty) {
       final minRound = presentKeys.first;
       final maxRound = presentKeys.last > _finalRoundIndex
@@ -175,11 +176,30 @@ class BracketLayout {
         final expected = r <= _finalRoundIndex
             ? 1 << (_finalRoundIndex - r)
             : 1;
-        final column = <MatchModel>[...real];
-        for (var s = real.length; s < expected; s++) {
-          final placeholder = _placeholderMatch(r, s);
-          placeholderIds.add(placeholder.id);
-          column.add(placeholder);
+        final column = <MatchModel>[];
+        if (hasAuthoritativeTopology) {
+          final bySlot = <int, MatchModel>{
+            for (final match in real) match.bracketSlot!: match,
+          };
+          for (var s = 0; s < expected; s++) {
+            final match = bySlot[s];
+            if (match != null) {
+              column.add(match);
+            } else {
+              final placeholder = _placeholderMatch(r, s);
+              placeholderIds.add(placeholder.id);
+              column.add(placeholder);
+            }
+          }
+        } else {
+          // Keep rendering useful nodes when legacy/generic data lacks slots,
+          // but never treat this display-only order as bracket topology.
+          column.addAll(real);
+          for (var s = real.length; s < expected; s++) {
+            final placeholder = _placeholderMatch(r, s);
+            placeholderIds.add(placeholder.id);
+            column.add(placeholder);
+          }
         }
         columnRounds.add(r);
         columnMatches.add(column);
@@ -188,10 +208,12 @@ class BracketLayout {
       // Hide each advancing team until this viewer reveals its feeder match.
       // This also masks backend-authored parent teams; otherwise a poller
       // update could leak the winner even after local prefill was made safe.
-      hiddenWinners = _applyWinnerVisibility(
-        columnMatches,
-        revealedWinnerMatchIds,
-      );
+      if (hasAuthoritativeTopology) {
+        hiddenWinners = _applyWinnerVisibility(
+          columnMatches,
+          revealedWinnerMatchIds,
+        );
+      }
     }
 
     final nodeByKey = <String, BracketNodeLayout>{};
@@ -233,21 +255,23 @@ class BracketLayout {
 
     // Each child (dr, s) feeds the parent (dr + 1, s ~/ 2).
     final connectors = <BracketConnector>[];
-    for (final child in nodes) {
-      final parent =
-          nodeByKey['${child.displayRound + 1}:${child.displaySlot ~/ 2}'];
-      if (parent == null) continue;
-      final start = child.rightCenter;
-      final end = parent.leftCenter;
-      final midX = (start.dx + end.dx) / 2;
-      connectors.add(
-        BracketConnector([
-          start,
-          Offset(midX, start.dy),
-          Offset(midX, end.dy),
-          end,
-        ], emphasized: child.match.status == MatchStatus.finished),
-      );
+    if (hasAuthoritativeTopology) {
+      for (final child in nodes) {
+        final parent =
+            nodeByKey['${child.displayRound + 1}:${child.displaySlot ~/ 2}'];
+        if (parent == null) continue;
+        final start = child.rightCenter;
+        final end = parent.leftCenter;
+        final midX = (start.dx + end.dx) / 2;
+        connectors.add(
+          BracketConnector([
+            start,
+            Offset(midX, start.dy),
+            Offset(midX, end.dy),
+            end,
+          ], emphasized: child.match.status == MatchStatus.finished),
+        );
+      }
     }
 
     var maxRight = metrics.padding + metrics.nodeWidth;
@@ -396,6 +420,7 @@ class BracketLayout {
     archived: match.archived,
     goals: match.goals,
     shootout: match.shootout,
+    matchNumber: match.matchNumber,
     roundIndexRaw: match.roundIndexRaw,
     bracketSlot: match.bracketSlot,
   );
@@ -427,5 +452,25 @@ class BracketLayout {
     if (ta != null && tb == null) return -1;
     if (ta == null && tb != null) return 1;
     return a.id.compareTo(b.id);
+  }
+
+  /// True only when every real knockout fixture has a unique, in-range slot.
+  /// Dates remain a display fallback; they are never evidence of an edge.
+  static bool _hasAuthoritativeTopology(
+    Map<int, List<MatchModel>> roundGroups,
+  ) {
+    for (final entry in roundGroups.entries) {
+      final expected = entry.key <= _finalRoundIndex
+          ? 1 << (_finalRoundIndex - entry.key)
+          : 1;
+      final seen = <int>{};
+      for (final match in entry.value) {
+        final slot = match.bracketSlot;
+        if (slot == null || slot < 0 || slot >= expected || !seen.add(slot)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }

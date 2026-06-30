@@ -17,6 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
+from bracket_topology import bracket_metadata
 from teams import normalize
 
 _FINISHED = {"FT", "AET", "PEN", "WO", "AWD"}
@@ -42,7 +43,9 @@ def fixture_id(fixture: dict) -> int:
     return fixture["fixture"]["id"]
 
 
-def to_match_doc(fixture: dict, group_map: dict) -> dict:
+def to_match_doc(
+    fixture: dict, group_map: dict, tournament_id: Optional[str] = None
+) -> dict:
     """Build the fields the poller writes. Excludes commentCount/predictionCount
     so the app's own counters are never clobbered (we always merge-write)."""
     fx = fixture["fixture"]
@@ -78,6 +81,14 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
     shootout = to_shootout(fixture)
     if shootout is not None:
         doc["shootout"] = shootout
+    if tournament_id == "world-cup-2026":
+        # Merge-writes must actively clear stale topology if a provider fixture
+        # stops matching the authoritative schedule.  Omitting these keys would
+        # leave an old (and potentially wrong) connector in Firestore.
+        doc.update(
+            {"matchNumber": None, "roundIndex": None, "bracketSlot": None}
+        )
+        doc.update(bracket_metadata(tournament_id, fixture))
     return doc
 
 

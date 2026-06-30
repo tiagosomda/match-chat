@@ -6,9 +6,8 @@ Scores stay hidden behind the same spoiler-free reveal as the match list; a
 small info affordance surfaces time / date / status without cluttering the node;
 tapping a node opens the existing match detail screen.
 
-> Status: **proposal / spec**. Nothing here is built yet. This document scopes
-> the work, calls out the one real blocker (there is no bracket data today), and
-> lays out an implementation plan.
+> Status: **implemented**. This document preserves the design rationale and
+> records the current topology contract.
 
 ---
 
@@ -29,12 +28,10 @@ tapping a node opens the existing match detail screen.
 - **Tap → match detail** — one `Navigator.push` to `MatchDetailScreen`, same as
   the match card.
 
-**The one genuine blocker:** the data has *no bracket shape*. Matches are a flat
-list whose only stage signal is a free-text `description` ("Round of 16",
-"Quarter-Final"). We can bucket nodes into columns from that string, but we
-**cannot reliably draw the connecting lines** (which two matches feed the next)
-without adding a little structure. See [Data model](#data-model-the-real-work) —
-this is the decision that gates everything else.
+The original blocker was that flat fixture data had no bracket shape. It is now
+resolved by explicit `roundIndex` and `bracketSlot` fields. The World Cup 2026
+poller assigns those fields from FIFA's published topology; the renderer refuses
+to infer edges from kickoff order when they are absent.
 
 T-shirt sizing once the data decision is made: **layout/connector engine = M**,
 **canvas + gestures = S–M**, **node + info bubble = S**, **data model + admin =
@@ -90,7 +87,7 @@ a "expand" affordance inside the bracket view if users want chrome-free space.
 
 ## Data model — the real work
 
-### What exists today
+### Current data contract
 
 Matches live at `match-chat/app/tournaments/{tid}/matches/{id}`
 ([`firestore_refs.dart`](../src/app/lib/services/firestore_refs.dart)) as a flat
@@ -99,13 +96,18 @@ collection. The relevant fields ([`match.dart`](../src/app/lib/models/match.dart
 | field | example | use for bracket |
 | --- | --- | --- |
 | `teamA` / `teamB` | `"Brazil"` / `"Argentina"` | node labels + flags |
-| `description` | `"Round of 16"`, `"Quarter-Final"`, `"Group Stage · Group B"` | the **only** stage signal |
+| `description` | `"Round of 16"`, `"Quarter-Final"`, `"Group Stage · Group B"` | display label + fallback stage signal |
 | `status`, `scoreA/B`, `scheduledAt`, `venue`, `city`, `goals` | — | node content + info bubble |
 | `apiFixtureId` (poller) | `1234567` | source id |
+| `matchNumber` | `90` | organizer's stable match number (FIFA M90) |
+| `roundIndex` / `bracketSlot` | `2` / `1` | authoritative node position and connector topology |
 
 The poller derives `description` from API-Football's `league.round` string
-([`mapping.py:_describe`](../src/backend/poller/mapping.py)). **There is no round
-index, no slot/position, and no "winner advances to match X" pointer.**
+([`mapping.py:_describe`](../src/backend/poller/mapping.py)). For World Cup 2026,
+[`bracket_topology.py`](../src/backend/poller/bracket_topology.py) maps the
+provider fixture's stage and host city to FIFA's official match number and
+published bracket slot. Unknown fixtures remain unslotted and therefore render
+without speculative connector lines.
 
 ### Why `description` alone is not enough
 
@@ -122,7 +124,7 @@ Two more gaps:
   "Winner Group A" / "W49". Our matches only have concrete team names, so early
   knockout nodes may not exist yet or carry placeholder names.
 
-### Recommended addition: two fields, edges become math
+### Explicit slots: edges become math
 
 Add to the knockout match docs (group matches leave them null → excluded from the
 bracket):
@@ -149,21 +151,21 @@ Optional niceties (defer unless needed):
 
 ### Who populates it
 
-| approach | effort | reliability |
-| --- | --- | --- |
-| **Admin sheet fields** (round + slot dropdowns in [`admin_edit_match_sheet.dart`](../src/app/lib/screens/admin_edit_match_sheet.dart)) | S–M | High — human-authored, always correct |
-| **Poller-derived** from `league.round` + a bracket/fixtures endpoint | M–L | Medium — pairing is finicky until teams are decided |
-| **Hybrid** (recommended) | M | Poller sets `roundIndex` from the round string via a normalizer; admin sets/corrects `bracketSlot` |
+The poller owns these fields for `world-cup-2026`. API-Football does not expose
+FIFA match numbers, so the tournament-specific resolver identifies each fixture
+from its knockout stage and host city (plus date for the two Dallas R32 games),
+then applies FIFA's published topology. The source mapping is covered by tests.
 
-**Recommendation:** hybrid. The normalizer (`round string → roundIndex`) is
-cheap and belongs in the poller next to `_describe`. `bracketSlot` is low-volume
-(a 16-team knockout is 15 matches) and worth authoring by hand for correctness.
+The renderer treats slots as mandatory evidence for edges. Kickoff time is only
+a display-order fallback: if any real knockout fixture has a missing, duplicate,
+or out-of-range slot, nodes remain visible but connectors and winner propagation
+are disabled.
 
-### App-side model changes
+### App-side model
 
-- `MatchModel`: add `final int? roundIndex;` and `final int? bracketSlot;`,
-  parse in `fromDoc`, write in `toMap`. Add `bool get isKnockout => roundIndex != null;`.
-- New `BracketLayout` value type (pure Dart, unit-testable): takes
+- `MatchModel` stores `matchNumber`, `roundIndex`, and `bracketSlot`, parses them
+  in `fromDoc`, and writes them in `toMap`.
+- `BracketLayout` is a pure, unit-tested value type that takes
   `List<MatchModel>` → ordered rounds, node positions, and connector segments.
   No Firestore, no widgets — just the geometry, so it's trivial to test.
 
@@ -388,16 +390,16 @@ src/app/lib/
   l10n/*                                 + new strings
   test/bracket_layout_test.dart          NEW — geometry unit tests
 src/backend/poller/
-  mapping.py                             + round-string → roundIndex normalizer
+  bracket_topology.py                    authoritative tournament mappings
 ```
 
 ---
 
 ## Risks & open questions
 
-- **Data authoring is the gating decision.** Without `roundIndex`/`bracketSlot`
-  (or equivalent), connectors can't be trusted. Confirm the hybrid
-  poller+admin approach before building the layout engine.
+- **Topology is fail-closed.** Without valid `bracketSlot` values, connectors
+  are intentionally omitted. Add an authoritative mapping before enabling a
+  new tournament's bracket edges.
 - **Web gesture feel** is the top polish risk — budget device testing.
 - **TBD nodes:** do undecided knockout matches exist as docs (with placeholder
   team names) before teams qualify, or do they appear only once scheduled? This
