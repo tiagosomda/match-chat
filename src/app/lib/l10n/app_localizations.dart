@@ -201,8 +201,20 @@ const Map<String, String> _en = {
   'decidedOnPenalties': 'DECIDED ON PENALTIES',
   'penaltyShootout': 'PENALTY SHOOTOUT',
   'revealScoreToReplay': 'Reveal the score to replay every kick.',
+  'reviewShootoutPrompt': 'Reveal each kick manually, in order.',
+  'simulatedShootoutPrompt':
+      'Actual kick events are unavailable. Review an illustrative reconstruction from the final tally.',
+  'kickDetailsUnavailable':
+      'Kick-by-kick details are not available for this match yet.',
   'wonOnPenalties': '{team} won {score} on penalties',
   'replayShootout': 'REPLAY SHOOTOUT',
+  'simulateShootout': 'SIMULATE SHOOTOUT',
+  'simulateAgain': 'SIMULATE AGAIN',
+  'simulatedKick': 'Simulated kick {n}',
+  'simulationDisclaimer':
+      'Simulation only — not actual match events. Kick order and outcomes are reconstructed from the final penalty score.',
+  'revealPenaltyResult': 'REVEAL PENALTY RESULT',
+  'hidePenaltyResult': 'HIDE PENALTY RESULT',
   'revealNextKick': 'REVEAL NEXT KICK',
   'revealAll': 'REVEAL ALL',
   'kickProgress': 'KICK {current} OF {total}',
@@ -497,8 +509,20 @@ const Map<String, String> _es = {
   'decidedOnPenalties': 'DECIDIDO POR PENALES',
   'penaltyShootout': 'TANDA DE PENALES',
   'revealScoreToReplay': 'Muestra el marcador para revivir cada penal.',
+  'reviewShootoutPrompt': 'Muestra cada penal manualmente y en orden.',
+  'simulatedShootoutPrompt':
+      'Los eventos reales no están disponibles. Revisa una reconstrucción ilustrativa basada en el resultado final.',
+  'kickDetailsUnavailable':
+      'El detalle de cada penal aún no está disponible para este partido.',
   'wonOnPenalties': '{team} ganó {score} por penales',
   'replayShootout': 'REVIVIR LA TANDA',
+  'simulateShootout': 'SIMULAR LA TANDA',
+  'simulateAgain': 'SIMULAR DE NUEVO',
+  'simulatedKick': 'Penal simulado {n}',
+  'simulationDisclaimer':
+      'Solo simulación: no son eventos reales. El orden y los resultados se reconstruyen a partir del marcador final de penales.',
+  'revealPenaltyResult': 'MOSTRAR RESULTADO DE PENALES',
+  'hidePenaltyResult': 'OCULTAR RESULTADO DE PENALES',
   'revealNextKick': 'MOSTRAR SIGUIENTE PENAL',
   'revealAll': 'MOSTRAR TODO',
   'kickProgress': 'PENAL {current} DE {total}',
@@ -779,8 +803,20 @@ const Map<String, String> _pt = {
   'decidedOnPenalties': 'DECIDIDO NOS PENÁLTIS',
   'penaltyShootout': 'DESEMPATE POR PENÁLTIS',
   'revealScoreToReplay': 'Revela o resultado para rever cada penálti.',
+  'reviewShootoutPrompt': 'Revela cada penálti manualmente e pela ordem.',
+  'simulatedShootoutPrompt':
+      'Os eventos reais não estão disponíveis. Revê uma reconstrução ilustrativa baseada no resultado final.',
+  'kickDetailsUnavailable':
+      'Os detalhes de cada penálti ainda não estão disponíveis para este jogo.',
   'wonOnPenalties': '{team} venceu {score} nos penáltis',
   'replayShootout': 'REVER PENÁLTIS',
+  'simulateShootout': 'SIMULAR PENÁLTIS',
+  'simulateAgain': 'SIMULAR NOVAMENTE',
+  'simulatedKick': 'Penálti simulado {n}',
+  'simulationDisclaimer':
+      'Apenas simulação — não são eventos reais. A ordem e os resultados são reconstruídos a partir do resultado final dos penáltis.',
+  'revealPenaltyResult': 'REVELAR RESULTADO DOS PENÁLTIS',
+  'hidePenaltyResult': 'OCULTAR RESULTADO DOS PENÁLTIS',
   'revealNextKick': 'REVELAR PRÓXIMO PENÁLTI',
   'revealAll': 'REVELAR TUDO',
   'kickProgress': 'PENÁLTI {current} DE {total}',

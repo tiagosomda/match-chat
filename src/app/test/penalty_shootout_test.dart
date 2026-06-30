@@ -37,7 +37,18 @@ MatchModel _match() => MatchModel(
   ),
 );
 
-Widget _app({bool revealed = true}) => MaterialApp(
+MatchModel _matchWithoutAttempts() => MatchModel(
+  id: 'no-attempts',
+  teamA: 'Germany',
+  teamB: 'Paraguay',
+  description: 'Round of 32',
+  status: MatchStatus.finished,
+  scoreA: 1,
+  scoreB: 1,
+  shootout: const PenaltyShootout(state: 'finished', scoreA: 3, scoreB: 4),
+);
+
+Widget _app({bool revealed = true, MatchModel? match}) => MaterialApp(
   locale: const Locale('en'),
   localizationsDelegates: const [AppLocalizations.delegate],
   supportedLocales: AppLocalizations.supportedLocales,
@@ -46,7 +57,10 @@ Widget _app({bool revealed = true}) => MaterialApp(
     body: SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: PenaltyShootoutCard(match: _match(), scoreRevealed: revealed),
+        child: PenaltyShootoutCard(
+          match: match ?? _match(),
+          scoreRevealed: revealed,
+        ),
       ),
     ),
   ),
@@ -76,7 +90,8 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    expect(find.text('1–0'), findsOneWidget);
+    expect(find.text('1–0'), findsNothing);
+    expect(find.text('Reveal each kick manually, in order.'), findsOneWidget);
     await tester.tap(find.text('REPLAY SHOOTOUT'));
     await tester.pumpAndSettle();
 
@@ -99,5 +114,44 @@ void main() {
     expect(find.text('KICK 2 OF 2'), findsOneWidget);
     expect(find.text('Away One'), findsOneWidget);
     expect(find.text('REPLAY SHOOTOUT'), findsOneWidget);
+  });
+
+  testWidgets('missing kick events use a clearly disclosed simulation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_app(match: _matchWithoutAttempts()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3–4'), findsNothing);
+    expect(
+      find.text(
+        'Actual kick events are unavailable. Review an illustrative reconstruction from the final tally.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('SIMULATE SHOOTOUT'), findsOneWidget);
+
+    await tester.tap(find.text('SIMULATE SHOOTOUT'));
+    await tester.pumpAndSettle();
+    expect(find.text('KICK 0 OF 10'), findsOneWidget);
+    expect(
+      find.text(
+        'Simulation only — not actual match events. Kick order and outcomes are reconstructed from the final penalty score.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('REVEAL NEXT KICK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Simulated kick 1'), findsOneWidget);
+
+    await tester.tap(find.text('REVEAL ALL'));
+    await tester.pumpAndSettle();
+    expect(find.text('Paraguay won 3–4 on penalties'), findsOneWidget);
+    expect(find.text('SIMULATE AGAIN'), findsOneWidget);
   });
 }

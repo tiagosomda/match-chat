@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../models/match.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../utils/shootout_simulation.dart';
 import 'ui.dart';
 
 /// Small, non-spoiling indicator used on compact match surfaces.
@@ -63,18 +64,30 @@ class PenaltyShootoutCard extends StatefulWidget {
 
 class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
   bool _replaying = false;
+  bool _resultRevealed = false;
   int _revealedCount = 0;
 
   PenaltyShootout get shootout => widget.match.shootout!;
 
-  List<PenaltyAttempt> get _attempts =>
+  List<PenaltyAttempt> get _officialAttempts =>
       [...shootout.attempts]..sort((a, b) => a.sequence.compareTo(b.sequence));
+
+  bool get _isSimulated => _officialAttempts.isEmpty;
+
+  List<PenaltyAttempt> get _attempts =>
+      _isSimulated ? simulateShootout(shootout) : _officialAttempts;
 
   @override
   void didUpdateWidget(covariant PenaltyShootoutCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.match.id != widget.match.id || !widget.scoreRevealed) {
+    final sourceChanged =
+        (oldWidget.match.shootout?.attempts.isEmpty ?? true) !=
+        (widget.match.shootout?.attempts.isEmpty ?? true);
+    if (oldWidget.match.id != widget.match.id ||
+        !widget.scoreRevealed ||
+        sourceChanged) {
       _replaying = false;
+      _resultRevealed = false;
       _revealedCount = 0;
     } else if (_revealedCount > _attempts.length) {
       _revealedCount = _attempts.length;
@@ -84,8 +97,14 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
   void _startReplay() {
     setState(() {
       _replaying = true;
+      _resultRevealed = false;
       _revealedCount = 0;
     });
+  }
+
+  void _toggleResult() {
+    HapticFeedback.selectionClick();
+    setState(() => _resultRevealed = !_resultRevealed);
   }
 
   void _revealNext() {
@@ -116,7 +135,7 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
         child: !widget.scoreRevealed
             ? _hidden(context, c)
             : !_replaying
-            ? _summary(context, c)
+            ? _landing(context, c)
             : _replay(context, c),
       ),
     );
@@ -159,7 +178,44 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
     );
   }
 
-  Widget _summary(BuildContext context, AppColors c) {
+  Widget _landing(BuildContext context, AppColors c) {
+    if (_resultRevealed) return _result(context, c);
+    final hasAttempts = _attempts.isNotEmpty;
+    return Column(
+      key: const ValueKey('shootout-landing'),
+      children: [
+        _header(context, c),
+        const SizedBox(height: 14),
+        Text(
+          context.l10n.t(
+            hasAttempts
+                ? _isSimulated
+                      ? 'simulatedShootoutPrompt'
+                      : 'reviewShootoutPrompt'
+                : 'kickDetailsUnavailable',
+          ),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: c.muted, fontSize: 12.5, height: 1.35),
+        ),
+        const SizedBox(height: 14),
+        _actionButton(
+          c,
+          context.l10n.t(
+            hasAttempts
+                ? _isSimulated
+                      ? 'simulateShootout'
+                      : 'replayShootout'
+                : 'revealPenaltyResult',
+          ),
+          hasAttempts ? Icons.replay : Icons.visibility_outlined,
+          hasAttempts ? _startReplay : _toggleResult,
+          primary: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _result(BuildContext context, AppColors c) {
     final winner = widget.match.winnerTeam;
     final label = winner == null
         ? context.l10n.t('statusPenaltiesLive')
@@ -168,7 +224,7 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
             'score': shootout.scoreText,
           });
     return Column(
-      key: const ValueKey('shootout-summary'),
+      key: const ValueKey('shootout-result'),
       children: [
         _header(context, c),
         const SizedBox(height: 16),
@@ -193,19 +249,12 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
           ),
         ),
         const SizedBox(height: 14),
-        if (_attempts.isEmpty)
-          Text(
-            context.l10n.t('waitingForKicks'),
-            style: TextStyle(color: c.muted, fontSize: 12),
-          )
-        else
-          _actionButton(
-            c,
-            context.l10n.t('replayShootout'),
-            Icons.replay,
-            _startReplay,
-            primary: true,
-          ),
+        _actionButton(
+          c,
+          context.l10n.t('hidePenaltyResult'),
+          Icons.visibility_off_outlined,
+          _toggleResult,
+        ),
       ],
     );
   }
@@ -225,6 +274,10 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
       key: const ValueKey('shootout-replay'),
       children: [
         _header(context, c),
+        if (_isSimulated) ...[
+          const SizedBox(height: 10),
+          _simulationNotice(context, c),
+        ],
         const SizedBox(height: 14),
         _attemptLane(
           c,
@@ -270,6 +323,21 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
                 )
               : _kickCallout(context, c, current),
         ),
+        if (complete && widget.match.winnerTeam != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.tp('wonOnPenalties', {
+              'team': widget.match.winnerTeam!,
+              'score': shootout.scoreText,
+            }),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: c.accent,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         Wrap(
           alignment: WrapAlignment.center,
@@ -278,7 +346,13 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
           children: [
             _actionButton(
               c,
-              context.l10n.t(complete ? 'replayShootout' : 'revealNextKick'),
+              context.l10n.t(
+                complete
+                    ? _isSimulated
+                          ? 'simulateAgain'
+                          : 'replayShootout'
+                    : 'revealNextKick',
+              ),
               complete ? Icons.replay : Icons.touch_app_outlined,
               complete ? _startReplay : _revealNext,
               primary: true,
@@ -403,7 +477,11 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
         const SizedBox(width: 7),
         Flexible(
           child: Text(
-            attempt.player,
+            _isSimulated
+                ? context.l10n.tp('simulatedKick', {
+                    'n': '${attempt.sequence + 1}',
+                  })
+                : attempt.player,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -421,6 +499,31 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
           fontWeight: FontWeight.w700,
         ),
       ],
+    );
+  }
+
+  Widget _simulationNotice(BuildContext context, AppColors c) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.accent2.withValues(alpha: 0.09), c.surface2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.accent2.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 14, color: c.accent2),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              context.l10n.t('simulationDisclaimer'),
+              style: TextStyle(color: c.muted, fontSize: 10.5, height: 1.35),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
