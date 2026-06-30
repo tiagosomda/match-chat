@@ -16,6 +16,7 @@ import '../widgets/bracket_connectors.dart';
 import '../widgets/bracket_node.dart';
 import '../widgets/friends_reveal.dart';
 import '../widgets/match_status_header.dart';
+import '../widgets/penalty_shootout.dart';
 import '../widgets/ui.dart';
 
 /// The pan-and-zoom knockout bracket. Renders the tournament's knockout matches
@@ -573,6 +574,10 @@ class _MatchInfoSheetState extends State<_MatchInfoSheet> {
                 Expanded(child: _teamColumn(c, match.flagB, match.teamB)),
               ],
             ),
+            if (match.wentToPenalties) ...[
+              const SizedBox(height: 12),
+              Center(child: PenaltyShootoutBadge(match: match)),
+            ],
             if (match.hasLocation) ...[
               const SizedBox(height: 14),
               _venueLine(c, match),

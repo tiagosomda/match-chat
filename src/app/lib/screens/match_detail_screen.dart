@@ -19,6 +19,7 @@ import '../utils/validation.dart';
 import '../widgets/avatar.dart';
 import '../widgets/friends_reveal.dart';
 import '../widgets/match_status_header.dart';
+import '../widgets/penalty_shootout.dart';
 import '../widgets/ui.dart';
 import 'admin_edit_match_sheet.dart';
 import 'country_matches_screen.dart';
@@ -317,6 +318,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             const SizedBox(height: 14),
             _venueLine(c, match),
           ],
+          if (match.wentToPenalties)
+            PenaltyShootoutCard(
+              match: match,
+              scoreRevealed: reveal.scoreRevealed,
+            ),
           _goalsWidget(context, app, match, reveal),
           _friendsCounter(context, app, match),
         ],

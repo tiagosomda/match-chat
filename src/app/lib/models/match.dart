@@ -72,6 +72,80 @@ class GoalEvent {
   }
 }
 
+/// One kick in a penalty shootout, in the order supplied by API-Football.
+class PenaltyAttempt {
+  const PenaltyAttempt({
+    required this.sequence,
+    required this.round,
+    required this.team,
+    required this.player,
+    required this.scored,
+  });
+
+  final int sequence;
+  final int round;
+  final String team;
+  final String player;
+  final bool scored;
+
+  factory PenaltyAttempt.fromMap(Map<String, dynamic> d) => PenaltyAttempt(
+    sequence: (d['sequence'] as num?)?.toInt() ?? 0,
+    round: (d['round'] as num?)?.toInt() ?? 1,
+    team: (d['team'] ?? 'A') as String,
+    player: (d['player'] ?? 'Unknown') as String,
+    scored: (d['scored'] ?? false) as bool,
+  );
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'sequence': sequence,
+    'round': round,
+    'team': team,
+    'player': player,
+    'scored': scored,
+  };
+}
+
+/// Penalty shootout summary and ordered attempts. It deliberately sits apart
+/// from [MatchModel.scoreA]/[MatchModel.scoreB], which remain the match result
+/// after regulation/extra time.
+class PenaltyShootout {
+  const PenaltyShootout({
+    required this.state,
+    required this.scoreA,
+    required this.scoreB,
+    this.attempts = const <PenaltyAttempt>[],
+  });
+
+  final String state;
+  final int scoreA;
+  final int scoreB;
+  final List<PenaltyAttempt> attempts;
+
+  bool get isLive => state == 'live';
+  bool get isFinished => state == 'finished';
+  String get scoreText => '$scoreA–$scoreB';
+
+  factory PenaltyShootout.fromMap(Map<String, dynamic> d) => PenaltyShootout(
+    state: (d['state'] ?? 'finished') as String,
+    scoreA: (d['scoreA'] as num?)?.toInt() ?? 0,
+    scoreB: (d['scoreB'] as num?)?.toInt() ?? 0,
+    attempts:
+        (d['attempts'] as List?)
+            ?.map(
+              (e) => PenaltyAttempt.fromMap((e as Map).cast<String, dynamic>()),
+            )
+            .toList() ??
+        const <PenaltyAttempt>[],
+  );
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'state': state,
+    'scoreA': scoreA,
+    'scoreB': scoreB,
+    'attempts': attempts.map((a) => a.toMap()).toList(),
+  };
+}
+
 /// A single match within a tournament.
 /// Stored at match-chat/app/tournaments/{tid}/matches/{id}.
 class MatchModel {
@@ -90,6 +164,7 @@ class MatchModel {
     this.predictionCount = 0,
     this.archived = false,
     this.goals = const <GoalEvent>[],
+    this.shootout,
     this.roundIndexRaw,
     this.bracketSlot,
   });
@@ -114,6 +189,9 @@ class MatchModel {
 
   /// Goal events (scorer + minute), set by the poller. Ordered by time.
   final List<GoalEvent> goals;
+
+  /// Present once a knockout match reaches a penalty shootout.
+  final PenaltyShootout? shootout;
 
   /// Explicit knockout round index from the doc (`roundIndex`), ascending toward
   /// the final, or null when unset. When null, [roundIndex] derives it from
@@ -155,6 +233,26 @@ class MatchModel {
   String get flagA => Teams.flagFor(teamA);
   String get flagB => Teams.flagFor(teamB);
   bool get hasScore => scoreA != null && scoreB != null;
+  bool get wentToPenalties => shootout != null;
+  bool get isShootoutLive => shootout?.isLive ?? false;
+
+  /// Winning side after accounting for shootouts. Null while unresolved or for
+  /// an ordinary finished draw.
+  String? get winnerSide {
+    if (status != MatchStatus.finished || !hasScore) return null;
+    if (scoreA! != scoreB!) return scoreA! > scoreB! ? 'A' : 'B';
+    final pens = shootout;
+    if (pens == null || !pens.isFinished || pens.scoreA == pens.scoreB) {
+      return null;
+    }
+    return pens.scoreA > pens.scoreB ? 'A' : 'B';
+  }
+
+  String? get winnerTeam => switch (winnerSide) {
+    'A' => teamA,
+    'B' => teamB,
+    _ => null,
+  };
 
   /// True once the scheduled kickoff time has passed (per the wall clock).
   /// Independent of the poller, so the UI can react the instant a match should
@@ -208,7 +306,9 @@ class MatchModel {
     if (status == MatchStatus.live || hasKickedOff) return MatchPhase.live;
     if (at != null) {
       final until = at.difference(now);
-      if (!until.isNegative && until <= liveSoonLead) return MatchPhase.liveSoon;
+      if (!until.isNegative && until <= liveSoonLead) {
+        return MatchPhase.liveSoon;
+      }
     }
     return MatchPhase.upcoming;
   }
@@ -280,6 +380,11 @@ class MatchModel {
               )
               .toList() ??
           const <GoalEvent>[],
+      shootout: d['shootout'] is Map
+          ? PenaltyShootout.fromMap(
+              (d['shootout'] as Map).cast<String, dynamic>(),
+            )
+          : null,
       roundIndexRaw: (d['roundIndex'] as num?)?.toInt(),
       bracketSlot: (d['bracketSlot'] as num?)?.toInt(),
     );
@@ -298,6 +403,7 @@ class MatchModel {
     'venue': venue,
     'city': city,
     'archived': archived,
+    if (shootout != null) 'shootout': shootout!.toMap(),
     'roundIndex': roundIndexRaw,
     'bracketSlot': bracketSlot,
   };

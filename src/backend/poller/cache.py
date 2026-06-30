@@ -1,11 +1,12 @@
 """Local JSON cache of the last-known state per fixture.
 
-Each entry is [status, scoreA, scoreB, goalsRecorded]. We only write a score to
+Each entry is [status, scoreA, scoreB, goalsRecorded, shootoutSignature,
+shootoutRecorded]. We only write a score to
 Firestore when the (status, scoreA, scoreB) triple actually changes, so the
 cache is what lets us avoid redundant writes — and survive a restart without
-re-emitting every score. The trailing goalsRecorded flag tracks whether the
-scorer list has been fetched yet, so goals can be backfilled for matches whose
-score was first recorded (by the daily sync) without them.
+re-emitting every score. The extra flags track whether goal scorers and a final
+shootout sequence have been fetched, so either can be backfilled after a daily
+schedule sync or a restart.
 """
 
 from __future__ import annotations
@@ -61,11 +62,51 @@ class Cache:
         prev = self._state.get(str(fixture_id))
         return bool(prev[3]) if prev and len(prev) > 3 else False
 
-    def set(self, fixture_id, status, score_a, score_b, goals_recorded=None) -> None:
-        """Record a fixture's state. When ``goals_recorded`` is omitted the
-        existing flag is preserved, so a daily-sync re-seed never clears scorers
-        we've already fetched."""
+    def shootout_signature(self, fixture_id):
+        """Stable JSON signature of the latest shootout payload, if any."""
+        prev = self._state.get(str(fixture_id))
+        return prev[4] if prev and len(prev) > 4 else None
+
+    def shootout_recorded(self, fixture_id) -> bool:
+        """Whether a finished shootout's complete attempt list was written."""
+        prev = self._state.get(str(fixture_id))
+        return bool(prev[5]) if prev and len(prev) > 5 else False
+
+    def set(
+        self,
+        fixture_id,
+        status,
+        score_a,
+        score_b,
+        goals_recorded=None,
+        shootout_signature=None,
+        shootout_recorded=None,
+    ) -> None:
+        """Record a fixture's state.
+
+        When ``goals_recorded`` is omitted (the daily-sync path), preserve the
+        existing flag only while the score is unchanged. If the score advanced
+        while the poller was offline, the schedule contains the new score but
+        not its scorer events, so the flag must be cleared to force a backfill.
+        Status-only changes can safely retain the already-recorded goal list.
+        """
         key = str(fixture_id)
         if goals_recorded is None:
-            goals_recorded = self.goals_recorded(key)
-        self._state[key] = [status, score_a, score_b, bool(goals_recorded)]
+            previous = self._state.get(key)
+            score_unchanged = previous is not None and previous[1:3] == [
+                score_a,
+                score_b,
+            ]
+            goals_recorded = score_unchanged and self.goals_recorded(key)
+        if shootout_signature is None:
+            shootout_signature = self.shootout_signature(key)
+        if shootout_recorded is None:
+            shootout_recorded = self.shootout_recorded(key)
+        self._state[key] = [
+            status,
+            score_a,
+            score_b,
+            bool(goals_recorded),
+            shootout_signature,
+            bool(shootout_recorded),
+        ]

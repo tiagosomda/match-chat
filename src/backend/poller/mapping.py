@@ -9,6 +9,7 @@ Target shape (see src/app/lib/models/match.dart):
     venue, city        stadium name and host city (strings or None)
     apiFixtureId       the source fixture id (also used as the doc id)
     goals              list of {team, player, minute, extra, penalty, ownGoal}
+    shootout           {state, scoreA, scoreB, attempts} when penalties occur
 """
 
 from __future__ import annotations
@@ -62,7 +63,7 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
     venue_name = (venue.get("name") or "").strip() or None
     venue_city = (venue.get("city") or "").strip() or None
 
-    return {
+    doc = {
         "apiFixtureId": fx["id"],
         "teamA": normalize(teams["home"].get("name")),
         "teamB": normalize(teams["away"].get("name")),
@@ -74,6 +75,10 @@ def to_match_doc(fixture: dict, group_map: dict) -> dict:
         "venue": venue_name,
         "city": venue_city,
     }
+    shootout = to_shootout(fixture)
+    if shootout is not None:
+        doc["shootout"] = shootout
+    return doc
 
 
 # Goal events whose detail should not count as a goal on the board.
@@ -115,6 +120,73 @@ def to_goals(events: list, home_id) -> list:
         )
     goals.sort(key=lambda g: (g["minute"] or 0) * 100 + (g["extra"] or 0))
     return goals
+
+
+def to_shootout(fixture: dict, events: Optional[list] = None) -> Optional[dict]:
+    """Translate API-Football's penalty tally and shootout events.
+
+    The fixture's regular ``goals`` remain the on-pitch result; shootout totals
+    live separately under ``score.penalty``. Individual kicks are returned by
+    the events endpoint as Goal/Penalty or Goal/Missed Penalty with the comment
+    "Penalty Shootout". Their response order is the kick order.
+
+    When ``events`` is omitted (the daily schedule sync), the summary is still
+    written and the existing nested ``attempts`` field is left untouched by the
+    merge write. Live/final reconciliation supplies the attempts explicitly.
+    """
+    fx = fixture.get("fixture") or {}
+    short = (fx.get("status") or {}).get("short")
+    penalty = ((fixture.get("score") or {}).get("penalty") or {})
+    score_a, score_b = penalty.get("home"), penalty.get("away")
+
+    shootout_events = []
+    for e in events or []:
+        if (e.get("type") or "").lower() != "goal":
+            continue
+        if (e.get("comments") or "") != "Penalty Shootout":
+            continue
+        detail = e.get("detail") or ""
+        if detail not in {"Penalty", "Missed Penalty"}:
+            continue
+        shootout_events.append(e)
+
+    has_shootout = (
+        short in {"P", "PEN"}
+        or score_a is not None
+        or score_b is not None
+        or bool(shootout_events)
+    )
+    if not has_shootout:
+        return None
+
+    home_id = ((fixture.get("teams") or {}).get("home") or {}).get("id")
+    attempts = []
+    for sequence, e in enumerate(shootout_events):
+        t = e.get("time") or {}
+        attempts.append(
+            {
+                "sequence": sequence,
+                "round": t.get("extra") or (sequence // 2 + 1),
+                "team": "A"
+                if ((e.get("team") or {}).get("id") == home_id)
+                else "B",
+                "player": (e.get("player") or {}).get("name") or "Unknown",
+                "scored": (e.get("detail") or "") == "Penalty",
+            }
+        )
+
+    # The tally can briefly lag the events endpoint. Never show a lower running
+    # score than the attempts we already received.
+    scored_a = sum(1 for a in attempts if a["team"] == "A" and a["scored"])
+    scored_b = sum(1 for a in attempts if a["team"] == "B" and a["scored"])
+    result = {
+        "state": "finished" if short == "PEN" else "live",
+        "scoreA": max(score_a or 0, scored_a),
+        "scoreB": max(score_b or 0, scored_b),
+    }
+    if events is not None:
+        result["attempts"] = attempts
+    return result
 
 
 def build_group_map(standings_response: list) -> dict:

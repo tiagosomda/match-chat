@@ -14,6 +14,7 @@ MatchModel _m(
   MatchStatus status = MatchStatus.upcoming,
   int? scoreA,
   int? scoreB,
+  PenaltyShootout? shootout,
 }) {
   return MatchModel(
     id: id,
@@ -23,6 +24,7 @@ MatchModel _m(
     status: status,
     scoreA: scoreA,
     scoreB: scoreB,
+    shootout: shootout,
     roundIndexRaw: roundIndex,
     bracketSlot: bracketSlot,
   );
@@ -328,6 +330,35 @@ void main() {
         (node) => node.roundIndex == 4 && node.displaySlot == 0,
       );
       expect(semi.match.teamA, isEmpty);
+    });
+
+    test('penalty winner advances after a tied match score', () {
+      final layout = BracketLayout.fromMatches(
+        [
+          _m(
+            'qf0',
+            'Quarter-Final',
+            roundIndex: 3,
+            bracketSlot: 0,
+            teamA: 'Brazil',
+            teamB: 'Japan',
+            status: MatchStatus.finished,
+            scoreA: 1,
+            scoreB: 1,
+            shootout: const PenaltyShootout(
+              state: 'finished',
+              scoreA: 4,
+              scoreB: 3,
+            ),
+          ),
+        ],
+        revealedWinnerMatchIds: const {'qf0'},
+      );
+
+      final semi = layout.nodes.firstWhere(
+        (node) => node.roundIndex == 4 && node.displaySlot == 0,
+      );
+      expect(semi.match.teamA, 'Brazil');
     });
   });
 }

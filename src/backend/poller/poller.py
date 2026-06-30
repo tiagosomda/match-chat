@@ -20,6 +20,7 @@ Run:  python poller.py
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import time
@@ -30,7 +31,14 @@ from api_football import ApiFootball, RequestBudget
 from cache import Cache
 from config import Config
 from firestore_sync import FirestoreSync
-from mapping import build_group_map, fixture_id, map_status, to_goals, to_match_doc
+from mapping import (
+    build_group_map,
+    fixture_id,
+    map_status,
+    to_goals,
+    to_match_doc,
+    to_shootout,
+)
 
 # How long after kickoff a match might still be in play (90' + half-time +
 # stoppage + extra time + penalties, with margin). Defines the polling window.
@@ -104,10 +112,41 @@ def _poll_interval(cfg: Config, budget: RequestBudget) -> int:
     return cfg.poll_interval
 
 
+def _shootout_signature(shootout: dict) -> str:
+    return json.dumps(shootout, sort_keys=True, separators=(",", ":"))
+
+
+def _shootout_is_complete(shootout: dict) -> bool:
+    """Whether a final event list contains the decisive kick.
+
+    API-Football gives us the scored tally but no expected attempt count. The
+    ordinary five-round phase is complete once neither side can catch the
+    other; sudden death is complete after an equal number of kicks with unequal
+    scores. We also verify that every scored kick in the tally has an event.
+    """
+    if shootout.get("state") != "finished":
+        return False
+    attempts = shootout.get("attempts") or []
+    if not attempts:
+        return False
+    score_a = shootout.get("scoreA") or 0
+    score_b = shootout.get("scoreB") or 0
+    scored_a = sum(1 for a in attempts if a.get("team") == "A" and a.get("scored"))
+    scored_b = sum(1 for a in attempts if a.get("team") == "B" and a.get("scored"))
+    if scored_a != score_a or scored_b != score_b:
+        return False
+    kicks_a = sum(1 for a in attempts if a.get("team") == "A")
+    kicks_b = sum(1 for a in attempts if a.get("team") == "B")
+    if kicks_a <= 5 and kicks_b <= 5:
+        return (
+            score_a > score_b + (5 - kicks_b)
+            or score_b > score_a + (5 - kicks_a)
+        )
+    return kicks_a == kicks_b and score_a != score_b
+
+
 def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict) -> bool:
-    """Write a fixture's score/status if it changed, and (back)fill its scorer
-    list when goals are on the board but none have been recorded yet. Returns
-    True if anything was written."""
+    """Write changed score/status, regular goals, and penalty-shootout kicks."""
     fx = fixture["fixture"]
     fid = fx["id"]
     short = fx.get("status", {}).get("short")
@@ -116,34 +155,71 @@ def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict
     score_a, score_b = score.get("home"), score.get("away")
 
     score_changed = cache.changed(fid, new_status, score_a, score_b)
-    has_goals = (score_a or 0) + (score_b or 0) > 0
+    expected_goals = (score_a or 0) + (score_b or 0)
+    has_goals = expected_goals > 0
     # Fetch the scorer list when the score just changed, or when there are goals
     # on the board we've never recorded — e.g. the score was first written by the
     # daily sync, which writes scores but not scorers, so change-detection alone
     # would never trigger the fetch.
     need_goals = has_goals and (score_changed or not cache.goals_recorded(fid))
-
-    if not score_changed and not need_goals:
-        return False
+    shootout_summary = to_shootout(fixture)
+    has_shootout = shootout_summary is not None
+    # A missed kick does not change score.penalty, so while status=P the events
+    # endpoint must be checked each poll. Finished shootouts are retried until a
+    # complete decisive sequence has been persisted.
+    need_shootout = has_shootout and (
+        short == "P" or not cache.shootout_recorded(fid)
+    )
 
     goals_recorded = cache.goals_recorded(fid)
+    shootout_recorded = cache.shootout_recorded(fid)
     fetched_goals = None
+    shootout_doc = None
+    shootout_signature = cache.shootout_signature(fid)
+    shootout_changed = False
+    fetched_events = None
     # Refreshing the scorers costs one extra request, but only fires at scoring /
-    # status-change moments (or once, to backfill), so it stays well within the
-    # daily budget.
-    if need_goals and not api.budget.exhausted:
+    # status-change moments (or once, to backfill). During a shootout it also
+    # fires once per poll because misses cannot be inferred from the tally.
+    if (need_goals or need_shootout) and not api.budget.exhausted:
         try:
             home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
-            fetched = to_goals(api.events(fid), home_id)
-            if fetched:  # events can lag the score; retry next poll if empty
-                fetched_goals = fetched
-                goals_recorded = True
+            fetched_events = api.events(fid)
+            fetched = to_goals(fetched_events, home_id)
+            # The events endpoint can lag by one goal while still returning a
+            # non-empty list. Only mark it complete when every goal currently
+            # on the scoreboard has a matching event; otherwise leave the flag
+            # false so the next poll retries.
+            if need_goals:
+                if len(fetched) >= expected_goals:
+                    fetched_goals = fetched
+                    goals_recorded = True
+                else:
+                    goals_recorded = False
+                    log.debug(
+                        "Events incomplete for %s: got %d of %d goal(s); will retry",
+                        fid, len(fetched), expected_goals,
+                    )
         except Exception as e:  # events are best-effort; never block a score write
             log.warning("events fetch failed for %s (%s)", fid, e)
 
+    if has_shootout:
+        if fetched_events is not None:
+            shootout_doc = to_shootout(fixture, fetched_events)
+            candidate = _shootout_signature(shootout_doc)
+            shootout_changed = candidate != shootout_signature
+            shootout_signature = candidate
+            shootout_recorded = _shootout_is_complete(shootout_doc)
+        elif shootout_signature is None:
+            # Even without event capacity, surface that the match reached
+            # penalties. The next successful P/PEN fetch will add attempts.
+            shootout_doc = shootout_summary
+            shootout_signature = _shootout_signature(shootout_doc)
+            shootout_changed = True
+
     # Nothing new to persist if the score is unchanged and scorers still aren't
-    # available — avoid a redundant write and log line every poll.
-    if not score_changed and fetched_goals is None:
+    # available and the shootout sequence is unchanged.
+    if not score_changed and fetched_goals is None and not shootout_changed:
         return False
 
     doc = {
@@ -154,10 +230,28 @@ def _write_live(api: ApiFootball, fs: FirestoreSync, cache: Cache, fixture: dict
     }
     if fetched_goals is not None:
         doc["goals"] = fetched_goals
+    elif score_changed and expected_goals == 0:
+        # A disallowed/corrected goal can move the score back to 0-0. Clear any
+        # stale scorer events that were written for the former score.
+        doc["goals"] = []
+        goals_recorded = True
+    if shootout_changed and shootout_doc is not None:
+        doc["shootout"] = shootout_doc
 
     fs.update_score(doc)
-    cache.set(fid, new_status, score_a, score_b, goals_recorded=goals_recorded)
-    log.info("Updated %s: %s %s-%s", fid, new_status, score_a, score_b)
+    cache.set(
+        fid,
+        new_status,
+        score_a,
+        score_b,
+        goals_recorded=goals_recorded,
+        shootout_signature=shootout_signature,
+        shootout_recorded=shootout_recorded,
+    )
+    pens = ""
+    if shootout_doc is not None:
+        pens = f" pens={shootout_doc['scoreA']}-{shootout_doc['scoreB']}"
+    log.info("Updated %s: %s %s-%s%s", fid, new_status, score_a, score_b, pens)
     return True
 
 
@@ -257,7 +351,8 @@ def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
     """Fixture ids in the recent lookback that still need a (re)write: either
     their live window elapsed without the cache recording them as finished, or
     there are goals on the board whose scorers we never fetched (e.g. the score
-    came from the daily sync, which writes scores but not scorers).
+    came from the daily sync, which writes scores but not scorers), or a final
+    penalty shootout whose complete kick sequence has not been recorded.
 
     These are matches the live loop never fully handled — typically because the
     poller wasn't running during their window. Bounded to a recent lookback so we
@@ -275,7 +370,11 @@ def _needs_reconcile(schedule: list, cache: Cache, now: datetime) -> list:
         g = fx.get("goals") or {}
         has_goals = (g.get("home") or 0) + (g.get("away") or 0) > 0
         missing_goals = has_goals and not cache.goals_recorded(fid)
-        if unfinished or missing_goals:
+        short = ((fx.get("fixture") or {}).get("status") or {}).get("short")
+        missing_shootout = (
+            short == "PEN" or cache.shootout_signature(fid) is not None
+        ) and not cache.shootout_recorded(fid)
+        if unfinished or missing_goals or missing_shootout:
             ids.append(fid)
     return ids
 

@@ -102,6 +102,11 @@ Color matchStatusColor(AppColors c, MatchModel match) {
 
 String matchStatusLabel(BuildContext context, MatchModel match) {
   final l = context.l10n;
+  if (match.wentToPenalties) {
+    return match.isShootoutLive
+        ? l.t('statusPenaltiesLive')
+        : l.t('statusFullTimePens');
+  }
   switch (match.displayPhase) {
     case MatchPhase.live:
       return l.t('statusLive');

@@ -54,8 +54,8 @@ class BracketNode extends StatelessWidget {
     final status = matchStatusColor(c, match);
     final showScore = revealed && match.hasScore;
     final isFullTime = match.status == MatchStatus.finished;
-    final aWins = showScore && (match.scoreA ?? 0) > (match.scoreB ?? 0);
-    final bWins = showScore && (match.scoreB ?? 0) > (match.scoreA ?? 0);
+    final aWins = showScore && match.winnerSide == 'A';
+    final bWins = showScore && match.winnerSide == 'B';
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -163,12 +163,13 @@ class BracketNode extends StatelessWidget {
     Color status,
     String? countdown,
   ) {
-    final label = [
-      isThirdPlace
-          ? context.l10n.t('bracketThirdPlace')
-          : matchStatusLabel(context, match),
-      ?countdown,
-    ].join(' · ');
+    final statusLabel = isThirdPlace
+        ? [
+            context.l10n.t('bracketThirdPlace'),
+            if (match.wentToPenalties) context.l10n.t('statusPensShort'),
+          ].join(' · ')
+        : matchStatusLabel(context, match);
+    final label = [statusLabel, ?countdown].join(' · ');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(

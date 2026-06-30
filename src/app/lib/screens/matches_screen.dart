@@ -928,6 +928,11 @@ class _MatchCard extends StatelessWidget {
 
   String _phaseLabel(BuildContext context) {
     final l = context.l10n;
+    if (match.wentToPenalties) {
+      return match.isShootoutLive
+          ? l.t('statusPenaltiesLive')
+          : l.t('statusFullTimePens');
+    }
     switch (match.displayPhase) {
       case MatchPhase.live:
         return l.t('statusLive');

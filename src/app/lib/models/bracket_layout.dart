@@ -368,11 +368,7 @@ class BracketLayout {
   }
 
   static String? _winnerOf(MatchModel match) {
-    if (match.status != MatchStatus.finished || !match.hasScore) return null;
-    final scoreA = match.scoreA!;
-    final scoreB = match.scoreB!;
-    if (scoreA == scoreB) return null;
-    return scoreA > scoreB ? match.teamA : match.teamB;
+    return match.winnerTeam;
   }
 
   static bool _isTeamMissing(String team) {
@@ -399,6 +395,7 @@ class BracketLayout {
     predictionCount: match.predictionCount,
     archived: match.archived,
     goals: match.goals,
+    shootout: match.shootout,
     roundIndexRaw: match.roundIndexRaw,
     bracketSlot: match.bracketSlot,
   );
