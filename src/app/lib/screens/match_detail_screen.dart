@@ -318,12 +318,12 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             const SizedBox(height: 14),
             _venueLine(c, match),
           ],
+          _goalsWidget(context, app, match, reveal),
           if (match.wentToPenalties)
             PenaltyShootoutCard(
               match: match,
               scoreRevealed: reveal.scoreRevealed,
             ),
-          _goalsWidget(context, app, match, reveal),
           _friendsCounter(context, app, match),
         ],
       ),
