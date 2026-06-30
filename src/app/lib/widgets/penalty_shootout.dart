@@ -124,11 +124,9 @@ class _PenaltyShootoutCardState extends State<PenaltyShootoutCard> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 18),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.lineStrong),
+        border: Border(top: BorderSide(color: c.line)),
       ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 180),
